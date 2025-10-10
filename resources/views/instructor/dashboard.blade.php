@@ -3,6 +3,7 @@
 
 @section('content')
 <style>
+    /* Keep all your existing styles - they're perfect */
     body {
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
         background-color: #e8eef2;
@@ -156,9 +157,6 @@
     .menu-item i {
         color: #6b7280;
         font-size: 0.95rem;
-    }
-    .menu-item.text-danger:hover {
-        background-color: #fef2f2;
     }
     .details-panel {
         background-color: #fff;
@@ -485,15 +483,17 @@
 </style>
 
 <div class="exam-content">
-     <a href="{{ route ('instructor.exams.create')}}">
-                            <button type="submit" class="btn" style="background-color: #5f8a9a; color: white; border-radius: 8px; padding: 10px 28px; font-size: 0.95rem; font-weight: 500; border: none;">
-                            Create New Exam
-                        </button>
-                        </a>
     <div class="container-fluid">
         @if(session('success'))
             <div class="alert alert-success alert-dismissible fade show" role="alert">
                 {{ session('success') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        @endif
+
+        @if(session('error'))
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                {{ session('error') }}
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
         @endif
@@ -505,7 +505,7 @@
         </form>
 
         <div class="row">
-            <!-- Left Section - Exam Cards (3 columns max) -->
+            <!-- Left Section - Exam Cards -->
             <div class="col-lg-7 col-md-6 mb-4">
                 <div class="recents-label">Recents</div>
                 
@@ -542,7 +542,7 @@
                                             {{ $exam->exam_title }}
                                         </div>
                                         <div class="exam-date-text">
-                                            Last edited {{ $exam->created_at->diffForHumans() }}
+                                            Last edited {{ $exam->updated_at->diffForHumans() }}
                                         </div>
                                     </div>
                                 </div>
@@ -551,14 +551,8 @@
                                     <a href="{{ route('instructor.exams.show', $exam->exam_id) }}" target="_blank" class="menu-item text-decoration-none">
                                         <i class="bi bi-box-arrow-up-right"></i> Open in new tab
                                     </a>
-                                    {{-- <a href="{{ route('instructor.exams.download', $exam->exam_id) }}" class="menu-item text-decoration-none">
-                                        <i class="bi bi-download"></i> Download
-                                    </a> --}}
-                                    <div class="menu-item">
+                                    <div class="menu-item" onclick="openAddCollaboratorModal({{ $exam->exam_id }})">
                                         <i class="bi bi-person-plus"></i> Add Collaborator
-                                    </div>
-                                    <div class="menu-item">
-                                        <i class="bi bi-pencil"></i> Rename
                                     </div>
                                     <form action="{{ route('instructor.exams.duplicate', $exam->exam_id) }}" method="POST" class="m-0">
                                         @csrf
@@ -594,8 +588,8 @@
 
                         <div class="collaborator-section">
                             <div class="collaborator-header">
-                                <div class="collaborator-label">Collaborator</div>
-                                <button class="add-collab-btn" onclick="openAddCollaboratorModal()">+ Add a collaborator</button>
+                                <div class="collaborator-label">Creator</div>
+                                <button class="add-collab-btn" onclick="openAddCollaboratorModal({{ $selectedExam->exam_id }})">+ Add a collaborator</button>
                             </div>
                             <div class="collaborator-info">
                                 @if($selectedExam->user && $selectedExam->user->profile_picture)
@@ -648,7 +642,7 @@
                         </div>
 
                         <div class="detail-row">
-                            <div class="detail-label">Revision Notes</div>
+                            <div class="detail-label">Description</div>
                             <div class="detail-value" id="detail-notes">
                                 {{ $selectedExam->exam_desc ?? 'None' }}
                             </div>
@@ -689,12 +683,12 @@
                     
                     <!-- Exam Title -->
                     <div class="mb-3">
-                        <input type="text" class="form-control" name="exam_title" placeholder="Computer Programming 1 Prelim" required style="border-radius: 8px; padding: 12px 16px; border: 1px solid #d1d5db; font-size: 0.95rem;">
+                        <input type="text" class="form-control" name="exam_title" placeholder="Exam Title" required style="border-radius: 8px; padding: 12px 16px; border: 1px solid #d1d5db; font-size: 0.95rem;">
                     </div>
 
                     <!-- Exam Description -->
                     <div class="mb-3">
-                        <input type="text" class="form-control" name="exam_desc" placeholder="Exam on programming" style="border-radius: 8px; padding: 12px 16px; border: 1px solid #d1d5db; font-size: 0.95rem;">
+                        <textarea class="form-control" name="exam_desc" placeholder="Exam Description (optional)" rows="2" style="border-radius: 8px; padding: 12px 16px; border: 1px solid #d1d5db; font-size: 0.95rem;"></textarea>
                     </div>
 
                     <!-- Settings Section -->
@@ -705,39 +699,11 @@
                             <!-- Subject -->
                             <div class="col-md-6 mb-3">
                                 <label style="font-size: 0.875rem; color: #374151; font-weight: 500; margin-bottom: 6px; display: block;">Subject</label>
-                                <select class="form-select" name="subject_id" required style="border-radius: 8px; padding: 10px 14px; border: 1px solid #d1d5db; font-size: 0.875rem;">
-                                    <option value="">Computer...</option>
-                                    @if(isset($subjects))
-                                        @foreach($subjects as $subject)
-                                            <option value="{{ $subject->id }}">{{ $subject->subject_name }}</option>
-                                        @endforeach
-                                    @endif
-                                </select>
-                            </div>
-
-                            <!-- Class Assignment -->
-                            <div class="col-md-6 mb-3">
-                                <label style="font-size: 0.875rem; color: #374151; font-weight: 500; margin-bottom: 6px; display: block;">Class Assignment</label>
-                                <select class="form-select" name="class_assignment" required style="border-radius: 8px; padding: 10px 14px; border: 1px solid #d1d5db; font-size: 0.875rem;">
-                                    <option value="">1A, 1B, 1C, 1G, 1F</option>
-                                    <option value="1A">1A</option>
-                                    <option value="1B">1B</option>
-                                    <option value="1C">1C</option>
-                                    <option value="1G">1G</option>
-                                    <option value="1F">1F</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            <!-- Term -->
-                            <div class="col-md-6 mb-3">
-                                <label style="font-size: 0.875rem; color: #374151; font-weight: 500; margin-bottom: 6px; display: block;">Term</label>
-                                <select class="form-select" name="term" required style="border-radius: 8px; padding: 10px 14px; border: 1px solid #d1d5db; font-size: 0.875rem;">
-                                    <option value="">Preliminaries</option>
-                                    <option value="Preliminaries">Preliminaries</option>
-                                    <option value="Midterm">Midterm</option>
-                                    <option value="Finals">Finals</option>
+                                <select class="form-select" name="subject_id" id="subjectSelect" required onchange="loadClassesBySubject()" style="border-radius: 8px; padding: 10px 14px; border: 1px solid #d1d5db; font-size: 0.875rem;">
+                                    <option value="">Select Subject</option>
+                                    @foreach($subjects as $subject)
+                                        <option value="{{ $subject->subject_id }}">{{ $subject->subject_name }}</option>
+                                    @endforeach
                                 </select>
                             </div>
 
@@ -745,35 +711,37 @@
                             <div class="col-md-6 mb-3">
                                 <label style="font-size: 0.875rem; color: #374151; font-weight: 500; margin-bottom: 6px; display: block;">Duration</label>
                                 <div class="input-group" style="border-radius: 8px; overflow: hidden;">
-                                    <input type="number" class="form-control" name="duration" value="0" min="0" required style="border: 1px solid #d1d5db; font-size: 0.875rem; padding: 10px 14px;">
+                                    <input type="number" class="form-control" name="duration" value="60" min="0" required style="border: 1px solid #d1d5db; font-size: 0.875rem; padding: 10px 14px;">
                                     <span class="input-group-text" style="background-color: #f9fafb; border: 1px solid #d1d5db; border-left: none; color: #6b7280; font-size: 0.875rem;">mins</span>
                                 </div>
                             </div>
                         </div>
 
                         <div class="row">
-                            <!-- Schedule Start -->
-                            <div class="col-md-6 mb-3">
-                                <label style="font-size: 0.875rem; color: #374151; font-weight: 500; margin-bottom: 6px; display: block;">Schedule Start</label>
-                                <input type="datetime-local" class="form-control" name="schedule_start" required style="border-radius: 8px; padding: 10px 14px; border: 1px solid #d1d5db; font-size: 0.875rem;">
+                            <!-- Class Assignment (Multiple Selection) -->
+                            <div class="col-md-12 mb-3">
+                                <label style="font-size: 0.875rem; color: #374151; font-weight: 500; margin-bottom: 6px; display: block;">Class Assignment (Optional)</label>
+                                <select class="form-select" name="class_ids[]" id="classSelect" multiple style="border-radius: 8px; padding: 10px 14px; border: 1px solid #d1d5db; font-size: 0.875rem; min-height: 100px;">
+                                    <option value="">Select subject first</option>
+                                </select>
+                                <small class="text-muted">Hold Ctrl/Cmd to select multiple classes</small>
                             </div>
+                        </div>
 
-                            <!-- Schedule End -->
-                            <div class="col-md-6 mb-3">
-                                <label style="font-size: 0.875rem; color: #374151; font-weight: 500; margin-bottom: 6px; display: block;">Schedule End</label>
-                                <input type="datetime-local" class="form-control" name="schedule_end" required style="border-radius: 8px; padding: 10px 14px; border: 1px solid #d1d5db; font-size: 0.875rem;">
+                        <div class="row">
+                            <!-- Schedule Date -->
+                            <div class="col-md-12 mb-3">
+                                <label style="font-size: 0.875rem; color: #374151; font-weight: 500; margin-bottom: 6px; display: block;">Schedule Date</label>
+                                <input type="datetime-local" class="form-control" name="schedule_date" required style="border-radius: 8px; padding: 10px 14px; border: 1px solid #d1d5db; font-size: 0.875rem;">
                             </div>
                         </div>
                     </div>
 
                     <!-- Create Button -->
                     <div class="d-flex justify-content-end">
-                        <a href="{{ route ('instructor.exams.create')}}">
-                            <button type="submit" class="btn" style="background-color: #5f8a9a; color: white; border-radius: 8px; padding: 10px 28px; font-size: 0.95rem; font-weight: 500; border: none;">
+                        <button type="submit" class="btn" style="background-color: #5f8a9a; color: white; border-radius: 8px; padding: 10px 28px; font-size: 0.95rem; font-weight: 500; border: none;">
                             Create New Exam
                         </button>
-                        </a>
-                        
                     </div>
                 </form>
             </div>
@@ -796,7 +764,7 @@
                 <!-- Search Bar -->
                 <div class="collab-search-bar">
                     <i class="bi bi-search" style="color: #9ca3af;"></i>
-                    <input type="text" id="collabSearchInput" placeholder="Search for users" oninput="searchCollaborators()">
+                    <input type="text" id="collabSearchInput" placeholder="Search for teachers" oninput="searchCollaborators()">
                 </div>
 
                 <!-- Search Results -->
@@ -826,17 +794,48 @@
 
 @push('scripts')
 <script>
-    // Sample teachers data (replace with actual API call)
-    const teachers = [
-        { id: 1, name: 'Teacher Name 2', email: 'something@mail.com', avatar: null },
-        { id: 2, name: 'Teacher Name 3', email: 'something@mail.com', avatar: null },
-        { id: 3, name: 'Teacher Name 4', email: 'teacher4@mail.com', avatar: null },
-        { id: 4, name: 'Instructor Name 1', email: 'instructor1@mail.com', avatar: null }
-    ];
-
     let selectedCollaborators = [];
+    let currentExamId = null;
 
-    function openAddCollaboratorModal() {
+    function openNewExamModal() {
+        // Reset form
+        document.getElementById('newExamForm').reset();
+        document.getElementById('classSelect').innerHTML = '<option value="">Select subject first</option>';
+        
+        const modal = new bootstrap.Modal(document.getElementById('newExamModal'));
+        modal.show();
+    }
+
+    function loadClassesBySubject() {
+        const subjectId = document.getElementById('subjectSelect').value;
+        const classSelect = document.getElementById('classSelect');
+        
+        if (!subjectId) {
+            classSelect.innerHTML = '<option value="">Select subject first</option>';
+            return;
+        }
+        
+        classSelect.innerHTML = '<option value="">Loading...</option>';
+        
+        fetch(`{{ route('instructor.classes.get') }}?subject_id=${subjectId}`)
+            .then(response => response.json())
+            .then(classes => {
+                if (classes.length === 0) {
+                    classSelect.innerHTML = '<option value="">No classes available</option>';
+                } else {
+                    classSelect.innerHTML = classes.map(cls => 
+                        `<option value="${cls.class_id}">${cls.display}</option>`
+                    ).join('');
+                }
+            })
+            .catch(error => {
+                console.error('Error loading classes:', error);
+                classSelect.innerHTML = '<option value="">Error loading classes</option>';
+            });
+    }
+
+    function openAddCollaboratorModal(examId) {
+        currentExamId = examId;
         selectedCollaborators = [];
         document.getElementById('selectedCollabsList').innerHTML = '';
         document.getElementById('collabSearchInput').value = '';
@@ -847,45 +846,51 @@
         modal.show();
     }
 
+    let searchTimeout;
     function searchCollaborators() {
-        const searchTerm = document.getElementById('collabSearchInput').value.toLowerCase();
+        const searchTerm = document.getElementById('collabSearchInput').value;
         const resultsContainer = document.getElementById('collabSearchResults');
         
         if (searchTerm.length === 0) {
             resultsContainer.style.display = 'none';
             return;
         }
-
-        const filteredTeachers = teachers.filter(teacher => 
-            teacher.name.toLowerCase().includes(searchTerm) || 
-            teacher.email.toLowerCase().includes(searchTerm)
-        );
-
-        if (filteredTeachers.length > 0) {
-            resultsContainer.style.display = 'block';
-            resultsContainer.innerHTML = filteredTeachers.map(teacher => `
-                <div class="collab-user-item" onclick="selectCollaborator(${teacher.id})">
-                    ${teacher.avatar ? 
-                        `<img src="${teacher.avatar}" alt="${teacher.name}" class="collab-user-avatar">` :
-                        `<div class="collab-user-avatar" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 0.75rem;">
-                            ${teacher.name.charAt(0).toUpperCase()}
-                        </div>`
+        
+        // Debounce search
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            fetch(`{{ route('instructor.teachers.search') }}?search=${encodeURIComponent(searchTerm)}&exam_id=${currentExamId}`)
+                .then(response => response.json())
+                .then(teachers => {
+                    if (teachers.length > 0) {
+                        resultsContainer.style.display = 'block';
+                        resultsContainer.innerHTML = teachers.map(teacher => `
+                            <div class="collab-user-item" onclick="selectCollaborator(${teacher.id}, '${teacher.name}', '${teacher.email}')">
+                                <div class="collab-user-avatar" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 0.75rem;">
+                                    ${teacher.name.charAt(0).toUpperCase()}
+                                </div>
+                                <div class="collab-user-info">
+                                    <div class="collab-user-name">${teacher.name}</div>
+                                    <div class="collab-user-email">${teacher.email}</div>
+                                </div>
+                            </div>
+                        `).join('');
+                    } else {
+                        resultsContainer.style.display = 'block';
+                        resultsContainer.innerHTML = '<p class="text-muted text-center p-3">No teachers found</p>';
                     }
-                    <div class="collab-user-info">
-                        <div class="collab-user-name">${teacher.name}</div>
-                    </div>
-                </div>
-            `).join('');
-        } else {
-            resultsContainer.style.display = 'block';
-            resultsContainer.innerHTML = '<p class="text-muted text-center p-3">No users found</p>';
-        }
+                })
+                .catch(error => {
+                    console.error('Error searching teachers:', error);
+                    resultsContainer.innerHTML = '<p class="text-danger text-center p-3">Error searching teachers</p>';
+                });
+        }, 300);
     }
 
-    function selectCollaborator(teacherId) {
-        const teacher = teachers.find(t => t.id === teacherId);
+    function selectCollaborator(teacherId, name, email) {
+        const teacher = { id: teacherId, name: name, email: email };
         
-        if (teacher && !selectedCollaborators.find(c => c.id === teacherId)) {
+        if (!selectedCollaborators.find(c => c.id === teacherId)) {
             selectedCollaborators.push(teacher);
             renderSelectedCollaborators();
             document.getElementById('addCollabSubmitBtn').disabled = false;
@@ -909,19 +914,16 @@
         const container = document.getElementById('selectedCollabsList');
         
         if (selectedCollaborators.length === 0) {
-            container.innerHTML = '';
+            container.innerHTML = '<p class="text-muted text-center" style="padding: 20px 0;">No collaborators selected</p>';
             return;
         }
 
         container.innerHTML = selectedCollaborators.map(collab => `
             <div class="selected-collab-item">
                 <div class="selected-collab-info">
-                    ${collab.avatar ? 
-                        `<img src="${collab.avatar}" alt="${collab.name}" class="selected-collab-avatar">` :
-                        `<div class="selected-collab-avatar" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 0.75rem;">
-                            ${collab.name.charAt(0).toUpperCase()}
-                        </div>`
-                    }
+                    <div class="selected-collab-avatar" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 0.75rem;">
+                        ${collab.name.charAt(0).toUpperCase()}
+                    </div>
                     <div class="selected-collab-details">
                         <div class="selected-collab-name">${collab.name}</div>
                         <div class="selected-collab-email">${collab.email}</div>
@@ -935,25 +937,60 @@
     }
 
     function submitCollaborators() {
-        if (selectedCollaborators.length === 0) return;
+        if (selectedCollaborators.length === 0 || !currentExamId) return;
         
-        // Here you would send the selected collaborators to your backend
-        console.log('Adding collaborators:', selectedCollaborators);
+        const submitBtn = document.getElementById('addCollabSubmitBtn');
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Adding...';
         
-        // Close modal
-        const modal = bootstrap.Modal.getInstance(document.getElementById('addCollaboratorModal'));
-        modal.hide();
-        
-        // Show success message
-        alert(`Added ${selectedCollaborators.length} collaborator(s) successfully!`);
-        
-        // Reset
-        selectedCollaborators = [];
-    }
-
-    function openNewExamModal() {
-        const modal = new bootstrap.Modal(document.getElementById('newExamModal'));
-        modal.show();
+        fetch(`/instructor/exams/${currentExamId}/collaborators`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: JSON.stringify({
+                collaborators: selectedCollaborators.map(c => c.id)
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Close modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('addCollaboratorModal'));
+                modal.hide();
+                
+                // Show success message
+                const alertDiv = document.createElement('div');
+                alertDiv.className = 'alert alert-success alert-dismissible fade show';
+                alertDiv.innerHTML = `
+                    ${data.message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+                document.querySelector('.exam-content .container-fluid').insertBefore(
+                    alertDiv,
+                    document.querySelector('.search-bar')
+                );
+                
+                // Auto dismiss after 5 seconds
+                setTimeout(() => alertDiv.remove(), 5000);
+                
+                // Reset
+                selectedCollaborators = [];
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Add as Collaborator';
+            } else {
+                alert('Error: ' + (data.error || 'Failed to add collaborators'));
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Add as Collaborator';
+            }
+        })
+        .catch(error => {
+            console.error('Error adding collaborators:', error);
+            alert('Failed to add collaborators. Please try again.');
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Add as Collaborator';
+        });
     }
 
     function toggleCardMenu(event, menuId) {
@@ -983,7 +1020,7 @@
         cardElement.classList.add('active');
 
         // Fetch exam details via AJAX
-        fetch(`/exams/${examId}`)
+        fetch(`/instructor/api/exams/${examId}/details`)
             .then(response => response.json())
             .then(data => {
                 const exam = data.exam;
@@ -995,7 +1032,6 @@
                 document.getElementById('detail-subject').textContent = data.subject_name;
                 document.getElementById('detail-created').textContent = data.formatted_created_at;
                 
-                // Handle updated_at safely
                 const modifiedElement = document.getElementById('detail-modified');
                 if (modifiedElement) {
                     modifiedElement.textContent = data.formatted_updated_at || data.formatted_created_at || 'N/A';

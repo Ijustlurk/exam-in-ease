@@ -5,40 +5,39 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Exam;
-use App\Models\User;      // Assuming User model for Students/Users    // Assuming Exam model
+use App\Models\User;
 use App\Models\Subject;
+use App\Models\ClassModel;
 
 class DashboardController extends Controller
 {
-    //
     public function index(Request $request)
     {
+        $userRole = Auth::user()->roles[0]->name;
 
-        if (Auth::user()->roles[0]->name == "admin") {
-
-            // 2. Fetch Dynamic Data
+        // ADMIN DASHBOARD
+        if ($userRole == "admin") {
+            // Count: Total Exams
             $totalExams = Exam::count();
 
-            // Count: Students (Assumes User model has a 'role' column)
+            // Count: Students
             $totalStudents = User::whereHas('roles', function ($query) {
                 $query->where('name', 'student');
             })->count();
 
-            // Count: Subjects (Assumes Subject model)
+            // Count: Subjects
             $totalSubjects = Subject::count();
 
-            // Count: Active Users (Assumes all logged-in users are in the User model, and we count active ones)
-            // If 'is_active' column is used in User model:
+            // Count: Active Users
             $totalActiveUsers = User::count();
 
-
-            // Fetch recent exams:
+            // Fetch recent exams
             $recentExams = Exam::with('user', 'subject')
                 ->orderBy('created_at', 'desc')
-                ->limit(5) // Increased limit for better visibility
+                ->limit(5)
                 ->get();
 
-            // --- PASS DATA TO THE VIEW ---
+            // Pass data to view
             $data = [
                 'totalExams' => $totalExams,
                 'totalStudents' => $totalStudents,
@@ -48,32 +47,31 @@ class DashboardController extends Controller
             ];
 
             return view('admin.dashboard', $data);
-
         }
 
-        if (Auth::user()->roles[0]->name == "programchair") {
+        // PROGRAM CHAIR DASHBOARD
+        if ($userRole == "programchair") {
+            // Count: Total Exams
             $totalExams = Exam::count();
 
-            // Count: Students (Assumes User model has a 'role' column)
+            // Count: Students
             $totalStudents = User::whereHas('roles', function ($query) {
                 $query->where('name', 'student');
             })->count();
 
-            // Count: Subjects (Assumes Subject model)
+            // Count: Subjects
             $totalSubjects = Subject::count();
 
-            // Count: Active Users (Assumes all logged-in users are in the User model, and we count active ones)
-            // If 'is_active' column is used in User model:
+            // Count: Active Users
             $totalActiveUsers = User::count();
 
-
-            // Fetch recent exams:
+            // Fetch recent exams
             $recentExams = Exam::with('user', 'subject')
                 ->orderBy('created_at', 'desc')
-                ->limit(5) // Increased limit for better visibility
+                ->limit(5)
                 ->get();
 
-            // --- PASS DATA TO THE VIEW ---
+            // Pass data to view
             $data = [
                 'totalExams' => $totalExams,
                 'totalStudents' => $totalStudents,
@@ -83,24 +81,52 @@ class DashboardController extends Controller
             ];
 
             return view('program-chair.dashboard', $data);
+        }
 
-        } else {
+        // INSTRUCTOR DASHBOARD
+        if ($userRole == "instructor") {
             $search = $request->input('search');
+            $teacherId = Auth::id();
 
+            // Get exams created by OR collaborated on by the current teacher
             $exams = Exam::with(['user', 'subject'])
-                ->where('user_id', Auth::id())
+                ->where(function($query) use ($teacherId) {
+                    $query->where('user_id', $teacherId)
+                          ->orWhereHas('collaborations', function($q) use ($teacherId) {
+                              $q->where('teacher_id', $teacherId);
+                          });
+                })
                 ->when($search, function ($query, $search) {
                     return $query->where('exam_title', 'like', "%{$search}%")
                         ->orWhere('exam_desc', 'like', "%{$search}%");
                 })
-                ->orderBy('created_at', 'desc')
+                ->orderBy('updated_at', 'desc')
                 ->get();
 
             // Get the first exam for initial display
             $selectedExam = $exams->first();
-            return view('instructor.dashboard', compact('exams', 'selectedExam'));
-            ;
+            
+            // Format created_at for selected exam if it exists
+            if ($selectedExam) {
+                $selectedExam->formatted_created_at = $selectedExam->created_at->format('F j, Y');
+            }
+
+            // Get all subjects for the "New Exam" modal
+            $subjects = Subject::all();
+
+            // Get classes assigned to this teacher for the "New Exam" modal
+            $classes = ClassModel::whereHas('teacherAssignments', function($query) use ($teacherId) {
+                    $query->where('teacher_id', $teacherId);
+                })
+                ->where('status', 'Active')
+                ->with('subject')
+                ->get();
+
+            return view('instructor.dashboard', compact('exams', 'selectedExam', 'subjects', 'classes'));
         }
 
+        // DEFAULT: STUDENT OR OTHER ROLES
+        // You can add student dashboard logic here or redirect
+        return redirect()->route('login')->with('error', 'Unauthorized access');
     }
 }

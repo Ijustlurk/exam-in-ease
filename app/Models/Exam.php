@@ -53,8 +53,8 @@ class Exam extends Model
      */
     public function sections()
     {
-        return $this->hasMany(ExamSection::class, 'exam_id', 'exam_id')
-                    ->orderBy('section_order', 'asc');
+        return $this->hasMany(Section::class, 'exam_id', 'exam_id')
+                    ->orderBy('created_at', 'asc');
     }
 
     /**
@@ -67,10 +67,66 @@ class Exam extends Model
     }
 
     /**
+     * Alternative name for items (for controller compatibility)
+     */
+    public function examItems()
+    {
+        return $this->items();
+    }
+
+    /**
+     * Relationship with Exam Collaborations
+     */
+    public function collaborations()
+    {
+        return $this->hasMany(ExamCollaboration::class, 'exam_id', 'exam_id');
+    }
+
+    /**
+     * Relationship with Exam Assignments (Classes)
+     */
+    public function assignments()
+    {
+        return $this->hasMany(ExamAssignment::class, 'exam_id', 'exam_id');
+    }
+
+    /**
+     * Relationship with Exam Approvals
+     */
+    public function approvals()
+    {
+        return $this->hasMany(ExamApproval::class, 'exam_id', 'exam_id');
+    }
+
+    /**
      * Get formatted created date
      */
     public function getFormattedCreatedAtAttribute()
     {
         return $this->created_at->format('F j, Y');
+    }
+
+    /**
+     * Check if a user is the creator of this exam
+     */
+    public function isCreator($userId)
+    {
+        return $this->user_id == $userId;
+    }
+
+    /**
+     * Check if a user is a collaborator on this exam
+     */
+    public function isCollaborator($userId)
+    {
+        return $this->collaborations()->where('teacher_id', $userId)->exists();
+    }
+
+    /**
+     * Check if a user has access to this exam (creator or collaborator)
+     */
+    public function hasAccess($userId)
+    {
+        return $this->isCreator($userId) || $this->isCollaborator($userId);
     }
 }

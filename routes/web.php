@@ -126,8 +126,10 @@ Route::
 
         });
 // Instructor Routes
+// Add these routes to your existing instructor routes group
+
 Route::
-        namespace('App\Http\Controllers\Instructor')
+    namespace('App\Http\Controllers\Instructor')
     ->prefix('instructor')
     ->name('instructor.')
     ->middleware(['auth', 'can:instructor-access'])
@@ -152,6 +154,19 @@ Route::
         // Sections
         Route::put('/exams/{examId}/sections/{sectionId}', [ExamController::class, 'updateSection'])->name('exams.sections.update');
 
+        // NEW ROUTES FOR DASHBOARD FUNCTIONALITY
+        
+        // Get exam details (AJAX)
+        Route::get('/api/exams/{id}/details', [ExamController::class, 'getExamDetails'])->name('exams.details');
+        
+        // Search teachers for collaboration
+        Route::get('/api/teachers/search', [ExamController::class, 'searchTeachers'])->name('teachers.search');
+        
+        // Add collaborators to exam
+        Route::post('/exams/{examId}/collaborators', [ExamController::class, 'addCollaborators'])->name('exams.collaborators.add');
+        
+        // Get classes by subject (for the create exam modal)
+        Route::get('/api/classes', [ExamController::class, 'getClasses'])->name('classes.get');
     });
 
 
