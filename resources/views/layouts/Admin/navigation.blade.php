@@ -55,6 +55,17 @@
     .sidebar.expanded .nav-label {
         display: inline;
     }
+
+
+    .main {
+        margin-left: 60px;
+        transition: margin-left 0.3s;
+        padding: 2rem;
+    }
+
+    .main.expanded {
+        margin-left: 220px;
+    }
 </style>
 
 <!-- Navbar -->
@@ -170,26 +181,26 @@
         <span class="nav-label">Home</span>
     </a>
 
-    <div class="nav-item">
-        <a href="{{ route('admin.exam.index') }}">
+    {{-- <div class="nav-item">
+        <a href="{{ route('admin..index') }}">
             <i class="bi bi-bar-chart-line nav-icon"></i>
             <span class="nav-label">Exam Statistics</span>
         </a>
-    </div>
+    </div> --}}
 
-    <div class="nav-item">
+    {{-- <div class="nav-item">
         <a href="{{ route('admin.manage-classes.index') }}">
             <i class="bi bi-book nav-icon"></i>
             <span class="nav-label">Manage Classes</span>
         </a>
-    </div>
+    </div> --}}
 
-    <div class="nav-item">
+    {{-- <div class="nav-item">
         <a href="{{ route('admin.subject.index') }}">
             <i class="bi bi-journal-text nav-icon"></i>
             <span class="nav-label">Manage Subject</span>
         </a>
-    </div>
+    </div> --}}
 
     <a href="{{ route('admin.users.index') }}" class="nav-item">
         <i class="bi bi-people nav-icon"></i>

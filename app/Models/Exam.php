@@ -35,14 +35,6 @@ class Exam extends Model
     ];
 
     /**
-     * Relationship with Subject
-     */
-    public function subject()
-    {
-        return $this->belongsTo(Subject::class, 'subject_id', 'subject_id');
-    }
-
-    /**
      * Relationship with Teacher (Creator)
      */
     public function user()
@@ -85,30 +77,6 @@ class Exam extends Model
     }
 
     /**
-     * Relationship with Exam Collaborations
-     */
-    public function collaborations()
-    {
-        return $this->hasMany(ExamCollaboration::class, 'exam_id', 'exam_id');
-    }
-
-    /**
-     * Relationship with Exam Assignments (Classes)
-     */
-    public function assignments()
-    {
-        return $this->hasMany(ExamAssignment::class, 'exam_id', 'exam_id');
-    }
-
-    /**
-     * Relationship with Exam Approvals
-     */
-    public function approvals()
-    {
-        return $this->hasMany(ExamApproval::class, 'exam_id', 'exam_id');
-    }
-
-    /**
      * Get formatted created date
      */
     public function getFormattedCreatedAtAttribute()
@@ -138,5 +106,65 @@ class Exam extends Model
     public function hasAccess($teacherId)
     {
         return $this->isCreator($teacherId) || $this->isCollaborator($teacherId);
+    }
+
+
+    /**
+     * Get the subject of this exam
+     */
+    public function subject()
+    {
+        return $this->belongsTo(Subject::class, 'subject_id', 'subject_id');
+    }
+
+    /**
+     * Get the admin who approved this exam
+     */
+    public function approvedBy()
+    {
+        return $this->belongsTo(UserAdmin::class, 'approved_by', 'user_id');
+    }
+
+    /**
+     * Get all approval records for this exam
+     */
+    public function approvals()
+    {
+        return $this->hasMany(ExamApproval::class, 'exam_id', 'exam_id');
+    }
+
+   
+
+    /**
+     * Get all collaborators for this exam
+     */
+    public function collaborations()
+    {
+        return $this->hasMany(ExamCollaboration::class, 'exam_id', 'exam_id');
+    }
+
+    /**
+     * Get exam assignments (classes this exam is assigned to)
+     */
+    public function assignments()
+    {
+        return $this->hasMany(ExamAssignment::class, 'exam_id', 'exam_id');
+    }
+
+    /**
+     * Get the latest approval status
+     */
+    public function getLatestApprovalAttribute()
+    {
+        return $this->approvals()->latest('created_at')->first();
+    }
+
+    /**
+     * Get approval status
+     */
+    public function getApprovalStatusAttribute()
+    {
+        $latestApproval = $this->latest_approval;
+        return $latestApproval ? $latestApproval->status : 'pending';
     }
 }

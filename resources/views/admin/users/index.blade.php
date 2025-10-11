@@ -289,7 +289,7 @@
             </div>
         @endif
 
-        <div class="main">
+        <div id="mainContent" class="main">
             <div class="users-container">
                 <div class="users-header">
                     <div class="users-title-section">

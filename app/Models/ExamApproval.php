@@ -25,6 +25,18 @@ class ExamApproval extends Model
     ];
 
     /**
+     * Boot method to set created_at automatically
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($model) {
+            $model->created_at = now();
+        });
+    }
+
+    /**
      * Relationship with Exam
      */
     public function exam()
@@ -33,7 +45,7 @@ class ExamApproval extends Model
     }
 
     /**
-     * Relationship with Approver (Admin)
+     * Relationship with Approver (User)
      */
     public function approver()
     {

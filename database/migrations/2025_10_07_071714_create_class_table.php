@@ -11,7 +11,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('class', function (Blueprint $table) {
-            $table->id('class_id'); // Primary Key
+            $table->id('class_id');
             $table->string('title', 100);
             $table->unsignedBigInteger('subject_id');
             $table->unsignedTinyInteger('year_level')->nullable(); // 1-4 restriction

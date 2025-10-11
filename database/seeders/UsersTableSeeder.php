@@ -26,6 +26,7 @@ class UsersTableSeeder extends Seeder
             'user_program_chair', 
             'user_student', 
             'teacher_assignments',
+            'class_enrolment',
             'class',
             'users'
         ];
@@ -60,67 +61,54 @@ class UsersTableSeeder extends Seeder
         $admin->roles()->attach($adminRole);
 
         // ============================================
-        // TEACHER ACCOUNT
+        // TEACHER ACCOUNTS
         // ============================================
-        $teacher = User::create([
-            'name' => 'Teacher 1',
-            'email' => 'teacher1@gmail.com',
-            'password' => Hash::make('1234'),
-        ]);
+        $teachers = [
+            [
+                'name' => 'Teacher 1',
+                'email' => 'teacher1@gmail.com',
+                'first_name' => 'Juan',
+                'last_name' => 'Dela Cruz',
+                'middle_name' => 'Santos',
+            ],
+            [
+                'name' => 'Teacher 2',
+                'email' => 'teacher2@gmail.com',
+                'first_name' => 'Maria',
+                'last_name' => 'Santos',
+                'middle_name' => 'Cruz',
+            ],
+            [
+                'name' => 'Teacher 3',
+                'email' => 'teacher3@gmail.com',
+                'first_name' => 'Jose',
+                'last_name' => 'Garcia',
+                'middle_name' => 'Reyes',
+            ],
+        ];
 
-        DB::table('user_teacher')->insert([
-            'user_id' => $teacher->id,
-            'first_name' => 'Juan',
-            'last_name' => 'Dela Cruz',
-            'middle_name' => 'Santos',
-            'email_address' => 'teacher1@gmail.com',
-            'username' => $teacher->name,
-            'password_hash' => Hash::make('1234'),
-            'status' => 'Active',
-        ]);
+        $teacherUsers = [];
+        foreach ($teachers as $teacherData) {
+            $teacher = User::create([
+                'name' => $teacherData['name'],
+                'email' => $teacherData['email'],
+                'password' => Hash::make('1234'),
+            ]);
 
-        $teacher->roles()->attach($instructorRole);
+            DB::table('user_teacher')->insert([
+                'user_id' => $teacher->id,
+                'first_name' => $teacherData['first_name'],
+                'last_name' => $teacherData['last_name'],
+                'middle_name' => $teacherData['middle_name'],
+                'email_address' => $teacherData['email'],
+                'username' => $teacherData['name'],
+                'password_hash' => Hash::make('1234'),
+                'status' => 'Active',
+            ]);
 
-        // ============================================
-        // ADDITIONAL TEACHER ACCOUNTS (for collaboration testing)
-        // ============================================
-        $teacher2 = User::create([
-            'name' => 'Teacher 2',
-            'email' => 'teacher2@gmail.com',
-            'password' => Hash::make('1234'),
-        ]);
-
-        DB::table('user_teacher')->insert([
-            'user_id' => $teacher2->id,
-            'first_name' => 'Maria',
-            'last_name' => 'Santos',
-            'middle_name' => 'Cruz',
-            'email_address' => 'teacher2@gmail.com',
-            'username' => $teacher2->name,
-            'password_hash' => Hash::make('1234'),
-            'status' => 'Active',
-        ]);
-
-        $teacher2->roles()->attach($instructorRole);
-
-        $teacher3 = User::create([
-            'name' => 'Teacher 3',
-            'email' => 'teacher3@gmail.com',
-            'password' => Hash::make('1234'),
-        ]);
-
-        DB::table('user_teacher')->insert([
-            'user_id' => $teacher3->id,
-            'first_name' => 'Jose',
-            'last_name' => 'Garcia',
-            'middle_name' => 'Reyes',
-            'email_address' => 'teacher3@gmail.com',
-            'username' => $teacher3->name,
-            'password_hash' => Hash::make('1234'),
-            'status' => 'Active',
-        ]);
-
-        $teacher3->roles()->attach($instructorRole);
+            $teacher->roles()->attach($instructorRole);
+            $teacherUsers[] = $teacher;
+        }
 
         // ============================================
         // PROGRAM CHAIR ACCOUNT
@@ -145,29 +133,44 @@ class UsersTableSeeder extends Seeder
         $chair->roles()->attach($programChairRole);
 
         // ============================================
-        // STUDENT ACCOUNT
+        // STUDENT ACCOUNTS
         // ============================================
-        $student = User::create([
-            'name' => 'Student One',
-            'email' => 'student1@gmail.com',
-            'password' => Hash::make('1234'),
-        ]);
+        $students = [
+            [
+                'name' => 'Student One',
+                'email' => 'student1@gmail.com',
+                'first_name' => 'Pedro',
+                'last_name' => 'Santos',
+                'middle_name' => 'Garcia',
+                'id_number' => 'STU2025-001',
+            ],
+        ];
 
-        DB::table('user_student')->insert([
-            'user_id' => $student->id,
-            'first_name' => 'Pedro',
-            'last_name' => 'Santos',
-            'middle_name' => 'Garcia',
-            'email_address' => 'student1@gmail.com',
-            'id_number' => 'STU2025-001',
-            'password_hash' => Hash::make('1234'),
-            'status' => 'Enrolled',
-        ]);
+        $studentUsers = [];
+        foreach ($students as $studentData) {
+            $student = User::create([
+                'name' => $studentData['name'],
+                'email' => $studentData['email'],
+                'password' => Hash::make('1234'),
+            ]);
 
-        $student->roles()->attach($studentRole);
+            DB::table('user_student')->insert([
+                'user_id' => $student->id,
+                'first_name' => $studentData['first_name'],
+                'last_name' => $studentData['last_name'],
+                'middle_name' => $studentData['middle_name'],
+                'email_address' => $studentData['email'],
+                'id_number' => $studentData['id_number'],
+                'password_hash' => Hash::make('1234'),
+                'status' => 'Enrolled',
+            ]);
+
+            $student->roles()->attach($studentRole);
+            $studentUsers[] = $student;
+        }
 
         // ============================================
-        // GET SUBJECTS (assuming they exist from SubjectsSeeder)
+        // GET OR CREATE SUBJECTS
         // ============================================
         $cs101 = Subject::where('subject_code', 'CS101')->first();
         $cs102 = Subject::where('subject_code', 'CS102')->first();
@@ -199,6 +202,7 @@ class UsersTableSeeder extends Seeder
         // CREATE CLASSES
         // ============================================
         $classes = [
+            // CS101 Classes (Programming Fundamentals) - Year 1, Semester 1
             [
                 'title' => 'Programming Fundamentals',
                 'subject_id' => $cs101->subject_id,
@@ -249,6 +253,7 @@ class UsersTableSeeder extends Seeder
                 'status' => 'Active',
                 'created_at' => now()
             ],
+            // CS102 Classes (Advanced Programming) - Year 2, Semester 1
             [
                 'title' => 'Advanced Programming',
                 'subject_id' => $cs102->subject_id,
@@ -269,6 +274,7 @@ class UsersTableSeeder extends Seeder
                 'status' => 'Active',
                 'created_at' => now()
             ],
+            // CS201 Class (Data Structures) - Year 2, Semester 2
             [
                 'title' => 'Data Structures',
                 'subject_id' => $cs201->subject_id,
@@ -278,7 +284,7 @@ class UsersTableSeeder extends Seeder
                 'school_year' => '2024-2025',
                 'status' => 'Active',
                 'created_at' => now()
-            ]
+            ],
         ];
 
         $classIds = [];
@@ -288,47 +294,46 @@ class UsersTableSeeder extends Seeder
         }
 
         // ============================================
-        // ASSIGN TEACHER TO CLASSES
+        // ASSIGN TEACHERS TO CLASSES
         // ============================================
         
-        // Assign Teacher 1 to CS101 classes (sections A, B, C, G, F)
-        foreach (array_slice($classIds, 0, 5) as $classId) {
+        // Teacher 1 (index 0): CS101 sections A, B, C, G, F (class indices 0-4)
+        for ($i = 0; $i < 5; $i++) {
             DB::table('teacher_assignments')->insert([
-                'class_id' => $classId,
-                'teacher_id' => $teacher->id,
+                'class_id' => $classIds[$i],
+                'teacher_id' => $teacherUsers[0]->id,
                 'created_at' => now(),
                 'updated_at' => now()
             ]);
         }
 
-        // Assign Teacher 1 to CS102 classes (sections A, B)
-        foreach (array_slice($classIds, 5, 2) as $classId) {
+        // Teacher 1 (index 0): CS102 sections A, B (class indices 5-6)
+        for ($i = 5; $i < 7; $i++) {
             DB::table('teacher_assignments')->insert([
-                'class_id' => $classId,
-                'teacher_id' => $teacher->id,
+                'class_id' => $classIds[$i],
+                'teacher_id' => $teacherUsers[0]->id,
                 'created_at' => now(),
                 'updated_at' => now()
             ]);
         }
 
-        // Assign Teacher 2 to CS102 Section B (for testing multiple teachers)
-        if (isset($classIds[6])) {
-            DB::table('teacher_assignments')->insert([
-                'class_id' => $classIds[6],
-                'teacher_id' => $teacher2->id,
-                'created_at' => now(),
-                'updated_at' => now()
-            ]);
-        }
+        // Teacher 2 (index 1): CS102 Section B (class index 6) - multiple teachers per class
+        DB::table('teacher_assignments')->insert([
+            'class_id' => $classIds[6],
+            'teacher_id' => $teacherUsers[1]->id,
+            'created_at' => now(),
+            'updated_at' => now()
+        ]);
 
-        // Assign Teacher 3 to CS201 Section A
-        if (isset($classIds[7])) {
-            DB::table('teacher_assignments')->insert([
-                'class_id' => $classIds[7],
-                'teacher_id' => $teacher3->id,
-                'created_at' => now(),
-                'updated_at' => now()
-            ]);
-        }
+        // Teacher 3 (index 2): CS201 Section A (class index 7)
+        DB::table('teacher_assignments')->insert([
+            'class_id' => $classIds[7],
+            'teacher_id' => $teacherUsers[2]->id,
+            'created_at' => now(),
+            'updated_at' => now()
+        ]);
+
+        $this->command->info('✓ Users seeded: 1 Admin, 3 Teachers, 1 Program Chair, 1 Student');
+        $this->command->info('✓ Classes seeded: 8 classes with teacher assignments');
     }
 }

@@ -329,9 +329,9 @@
                                 <p><strong>Term:</strong> Midterm</p>
                             </div>
                         </div>
-                        <button class="monitor-btn" onclick="window.location.href='{{ route('admin.exams.show', $exam->exam_id) }}'">
+                        <button class="monitor-btn" onclick="window.location.href='{{ route('programchair.manage-approval.index', $exam->exam_id) }}'">
                             <i class="bi bi-display"></i>
-                            Monitor
+                            View
                         </button>
                     </div>
                 @empty

@@ -83,53 +83,55 @@ Route::middleware('auth')->group(function () {
 
 // admin routes here 
 Route::
-        namespace('App\Http\Controllers\Admin')
-    ->prefix('admin')
-    ->name('admin.')
-    ->middleware('can:admin-access')
-    ->group(function () {
+        namespace('App\Http\Controllers\Admin')->prefix('admin')->name('admin.')->middleware('can:admin-access')->group(function () {
+            Route::get('/users', [UserController::class, 'index'])->name('users.index');
+            Route::post('/users', [UserController::class, 'store'])->name('users.store');
+            Route::get('/users/{userId}/edit', [UserController::class, 'edit'])->name('users.edit');
+            Route::put('/users/{userId}', [UserController::class, 'update'])->name('users.update');
+            Route::delete('/users/{userId}', [UserController::class, 'destroy'])->name('users.destroy');
+             Route::get('/users/template/{role}', [UserController::class, 'downloadTemplate'])->name('users.download-template'); 
+            Route::post('/users/import', [UserController::class, 'import'])->name('users.import');
+              Route::post('/users/import', [UserController::class, 'import'])->name('users.import');
 
-        Route::get('/exams', [ExamController::class, 'index'])->name('exams.index');
-        Route::get('/exams/{id}', [ExamController::class, 'show'])->name('exams.show');
+            Route::get('/programchair/{exam}', [MonitoringController::class, 'show'])->name('monitor.show');
+            
 
-        // Create/Edit Exam
-        Route::get('/exams/create/{examId?}', [ExamController::class, 'create'])->name('exams.create');
-        Route::post('/exams', [ExamController::class, 'store'])->name('exams.store');
-        Route::put('/exams/{id}', [ExamController::class, 'update'])->name('exams.update');
-        Route::post('/exams/{id}/duplicate', [ExamController::class, 'duplicate'])->name('exams.duplicate');
-
-        // Download Exam
-        Route::get('/exams/{id}/download', [ExamController::class, 'download'])->name('exams.download');
-
-        // Questions
-        Route::post('/exams/{examId}/questions', [ExamController::class, 'addQuestion'])->name('exams.questions.add');
-        Route::put('/exams/{examId}/questions/{itemId}', [ExamController::class, 'updateQuestion'])->name('exams.questions.update');
-        Route::delete('/exams/{examId}/questions/{itemId}', [ExamController::class, 'deleteQuestion'])->name('exams.questions.delete');
-        Route::post('/exams/{examId}/questions/{itemId}/duplicate', [ExamController::class, 'duplicateQuestion'])->name('exams.questions.duplicate');
-        Route::post('/exams/{examId}/questions/reorder', [ExamController::class, 'reorderQuestions'])->name('exams.questions.reorder');
-
-        // Sections
-        Route::put('/exams/{examId}/sections/{sectionId}', [ExamController::class, 'updateSection'])->name('exams.sections.update');
+        });
 
 
-    });
 
 
 Route::
         namespace('App\Http\Controllers\ProgramChair')->prefix('programchair')->name('programchair.')->middleware('can:programchair-access')->group(function () {
+            Route::prefix('manage-approval')->name('manage-approval.')->group(function () {
 
-            // add routes here for ProgramChair
-            Route::get('/manage-approval', [ManageApprovalController::class, 'index'])->name('manage-approval.index');
-            Route::get('/manage-approval/show', [ManageApprovalController::class, 'show'])->name('manage-approval.show');
-            Route::get('/exams/{id}', [MonitoringController::class, 'show'])->name('exams.show');
+                // List all exams for approval
+                Route::get('/programchair', [ManageApprovalController::class, 'index'])
+                    ->name('index');
+                Route::get('/programchair/{exam}', [ManageApprovalController::class, 'show'])
+                    ->name('show');
+
+                // Approve an exam - Using route model binding with {exam}
+                Route::post('/{exam}/approve', [ManageApprovalController::class, 'approve'])
+                    ->name('approve');
+
+                // Send exam for revision - Using route model binding with {exam}
+                Route::post('/programchair/{exam}/revise', [ManageApprovalController::class, 'revise'])
+                    ->name('revise');
+
+                // Rescind approval - Using route model binding with {exam}
+                Route::post('/programchair/{exam}/rescind', [ManageApprovalController::class, 'rescind'])
+                    ->name('rescind');
+            });
             Route::get('/exam-statistics', [ExamStatisticsController::class, 'index'])->name('exam-statistics.index');
 
         });
+
 // Instructor Routes
 // Add these routes to your existing instructor routes group
 
 Route::
-    namespace('App\Http\Controllers\Instructor')
+        namespace('App\Http\Controllers\Instructor')
     ->prefix('instructor')
     ->name('instructor.')
     ->middleware(['auth', 'can:instructor-access'])
@@ -153,18 +155,10 @@ Route::
 
         // Sections
         Route::put('/exams/{examId}/sections/{sectionId}', [ExamController::class, 'updateSection'])->name('exams.sections.update');
-
-        // NEW ROUTES FOR DASHBOARD FUNCTIONALITY
-        
-        // Get exam details (AJAX)
         Route::get('/api/exams/{id}/details', [ExamController::class, 'getExamDetails'])->name('exams.details');
-        
-        // Search teachers for collaboration
         Route::get('/api/teachers/search', [ExamController::class, 'searchTeachers'])->name('teachers.search');
-        
-        // Add collaborators to exam
         Route::post('/exams/{examId}/collaborators', [ExamController::class, 'addCollaborators'])->name('exams.collaborators.add');
-        
+
         // Get classes by subject (for the create exam modal)
         Route::get('/api/classes', [ExamController::class, 'getClasses'])->name('classes.get');
     });

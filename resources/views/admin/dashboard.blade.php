@@ -11,15 +11,7 @@
                 background-color: #f8f9fa; 
             }
             
-            .main { 
-                margin-left: 60px; 
-                transition: margin-left 0.3s; 
-                padding: 2rem; 
-            }
-            
-            .main.expanded { 
-                margin-left: 220px; 
-            }
+           
 
             /* Dashboard Header */
             .dashboard-header {
@@ -329,7 +321,7 @@
                                 <p><strong>Term:</strong> Midterm</p>
                             </div>
                         </div>
-                        <button class="monitor-btn" onclick="window.location.href='{{ route('admin.exams.show', $exam->exam_id) }}'">
+                        <button class="monitor-btn" onclick="window.location.href='{{ route('admin.monitor.show', $exam->exam_id) }}'">
                             <i class="bi bi-display"></i>
                             Monitor
                         </button>

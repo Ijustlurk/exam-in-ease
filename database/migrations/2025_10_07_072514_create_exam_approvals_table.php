@@ -21,7 +21,7 @@ return new class extends Migration
 
             // Optional foreign keys (uncomment if related tables exist)
             $table->foreign('exam_id')->references('exam_id')->on('exams')->onDelete('cascade');
-            $table->foreign('approver_id')->references('user_id')->on('user_admin')->onDelete('cascade');
+            $table->foreign('approver_id')->references('user_id')->on('user_program_chair')->onDelete('cascade');
         });
     }
 

@@ -41,7 +41,7 @@ return new class extends Migration {
             // Foreign key constraints (adjust table names as needed)
             $table->foreign('subject_id')->references('subject_id')->on('subjects')->onDelete('cascade');
             $table->foreign('teacher_id')->references('user_id')->on('user_teacher')->onDelete('cascade');
-            $table->foreign('approved_by')->references('user_id')->on('user_admin')->onDelete('set null');
+            $table->foreign('approved_by')->references('user_id')->on('user_program_chair')->onDelete('set null');
         });
     }
 
