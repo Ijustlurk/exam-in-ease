@@ -11,15 +11,20 @@ return new class extends Migration {
     public function up(): void
     {
         Schema::create('sections', function (Blueprint $table) {
-            $table->id('section_id'); // int(11) primary key auto_increment
-            $table->unsignedBigInteger('exam_id'); // foreign key to exams table
- //ADD COLUMN section_title VARCHAR(200) AFTER exam_id,
-// ADD COLUMN section_directions TEXT AFTER section_title,
-// ADD COLUMN section_order INT NOT NULL DEFAULT 1 AFTER section_directions;
-            $table->foreign('exam_id')->references('exam_id')->on('exams')->onDelete('cascade');
+            $table->id('section_id');
+            $table->unsignedBigInteger('exam_id');
+            $table->string('section_title', 200)->nullable();
+            $table->text('section_directions')->nullable();
+            $table->integer('section_order')->default(1);
+
+            $table->foreign('exam_id')
+                ->references('exam_id')
+                ->on('exams')
+                ->onDelete('cascade');
 
             $table->timestamps();
         });
+
     }
 
     /**

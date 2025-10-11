@@ -17,27 +17,17 @@ class DashboardController extends Controller
 
         // ADMIN DASHBOARD
         if ($userRole == "admin") {
-            // Count: Total Exams
             $totalExams = Exam::count();
-
-            // Count: Students
             $totalStudents = User::whereHas('roles', function ($query) {
                 $query->where('name', 'student');
             })->count();
-
-            // Count: Subjects
             $totalSubjects = Subject::count();
-
-            // Count: Active Users
             $totalActiveUsers = User::count();
-
-            // Fetch recent exams
             $recentExams = Exam::with('user', 'subject')
                 ->orderBy('created_at', 'desc')
                 ->limit(5)
                 ->get();
 
-            // Pass data to view
             $data = [
                 'totalExams' => $totalExams,
                 'totalStudents' => $totalStudents,
@@ -51,27 +41,17 @@ class DashboardController extends Controller
 
         // PROGRAM CHAIR DASHBOARD
         if ($userRole == "programchair") {
-            // Count: Total Exams
             $totalExams = Exam::count();
-
-            // Count: Students
             $totalStudents = User::whereHas('roles', function ($query) {
                 $query->where('name', 'student');
             })->count();
-
-            // Count: Subjects
             $totalSubjects = Subject::count();
-
-            // Count: Active Users
             $totalActiveUsers = User::count();
-
-            // Fetch recent exams
             $recentExams = Exam::with('user', 'subject')
                 ->orderBy('created_at', 'desc')
                 ->limit(5)
                 ->get();
 
-            // Pass data to view
             $data = [
                 'totalExams' => $totalExams,
                 'totalStudents' => $totalStudents,
@@ -91,7 +71,7 @@ class DashboardController extends Controller
             // Get exams created by OR collaborated on by the current teacher
             $exams = Exam::with(['user', 'subject'])
                 ->where(function($query) use ($teacherId) {
-                    $query->where('user_id', $teacherId)
+                    $query->where('teacher_id', $teacherId)
                           ->orWhereHas('collaborations', function($q) use ($teacherId) {
                               $q->where('teacher_id', $teacherId);
                           });
@@ -126,7 +106,6 @@ class DashboardController extends Controller
         }
 
         // DEFAULT: STUDENT OR OTHER ROLES
-        // You can add student dashboard logic here or redirect
         return redirect()->route('login')->with('error', 'Unauthorized access');
     }
 }

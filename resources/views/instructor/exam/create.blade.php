@@ -1,3 +1,5 @@
+{{-- resources/views/instructor/exams/create.blade.php --}}
+
 @extends('layouts.Instructor.app')
 
 @section('content')
@@ -84,6 +86,24 @@
         transition: all 0.3s;
     }
     .request-approval-btn:hover {
+        background: white;
+        color: #6ba5b3;
+    }
+    .back-to-dashboard-btn {
+        background: rgba(255,255,255,0.2);
+        border: 2px solid white;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 25px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .back-to-dashboard-btn:hover {
         background: white;
         color: #6ba5b3;
     }
@@ -371,7 +391,7 @@
         align-items: center;
         margin-bottom: 12px;
     }
-    .option-input-group input {
+    .option-input-group input[type="text"] {
         flex: 1;
     }
     .correct-checkbox {
@@ -407,9 +427,33 @@
     .btn-save-question:hover {
         background: #5a94a6;
     }
+
+    .no-questions-yet {
+        text-align: center;
+        padding: 60px 20px;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    }
+    .no-questions-yet i {
+        font-size: 3rem;
+        color: #d1d5db;
+        margin-bottom: 16px;
+    }
+    .no-questions-yet p {
+        color: #6b7280;
+        font-size: 1rem;
+    }
 </style>
 
 <div class="exam-builder-container">
+    @if(session('success'))
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            {{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    @endif
+
     <!-- Header -->
     <div class="exam-header">
         <div class="exam-header-content">
@@ -421,13 +465,15 @@
                            value="{{ $exam->exam_title }}" 
                            id="examTitle"
                            onchange="updateExamTitle()">
-                    <div class="exam-subtitle">Edit Exam.</div>
+                    <div class="exam-subtitle">{{ $exam->subject->subject_name ?? 'Edit Exam' }}</div>
                 </div>
             </div>
             <div class="header-actions">
-                <button class="header-icon-btn" title="Edit"><i class="bi bi-pencil-square"></i></button>
+                <a href="{{ route('instructor.exams.index') }}" class="back-to-dashboard-btn">
+                    <i class="bi bi-arrow-left"></i>
+                    <span>Back to Dashboard</span>
+                </a>
                 <button class="header-icon-btn" title="Settings"><i class="bi bi-gear"></i></button>
-                <button class="header-icon-btn" title="Download"><i class="bi bi-download"></i></button>
                 <button class="request-approval-btn">Request for Approval</button>
             </div>
         </div>
@@ -435,7 +481,7 @@
 
     <!-- Sections and Questions -->
     <div id="examContent">
-        @foreach($exam->sections as $section)
+        @forelse($exam->sections as $section)
         <!-- Section Card -->
         <div class="section-card" data-section-id="{{ $section->section_id }}">
             <div class="section-header">
@@ -447,17 +493,17 @@
             <input type="text" 
                    class="section-input" 
                    placeholder="(Write your exam title here or exam section title: eg. Part I)"
-                   value="{{ $section->section_title }}"
+                   value="{{ $section->section_title ?? '' }}"
                    onchange="updateSection({{ $section->section_id }}, 'section_title', this.value)">
             <input type="text" 
                    class="section-input" 
                    placeholder="You can put your directions here."
-                   value="{{ $section->section_directions }}"
+                   value="{{ $section->section_directions ?? '' }}"
                    onchange="updateSection({{ $section->section_id }}, 'section_directions', this.value)">
         </div>
 
         <!-- Question Cards -->
-        @foreach($section->items->sortBy('order') as $item)
+        @forelse($section->items->sortBy('order') as $item)
         <div class="question-card view-mode" 
              data-item-id="{{ $item->item_id }}"
              onclick="makeCardActive(this, event)">
@@ -543,20 +589,20 @@
                         title="Duplicate">
                     <i class="bi bi-files"></i>
                 </button>
-                <button class="float-action-btn" 
-                        onclick="event.stopPropagation(); reorderQuestion({{ $exam->exam_id }}, {{ $item->item_id }}, 'up')"
-                        title="Move Up">
-                    <i class="bi bi-arrow-up"></i>
-                </button>
-                <button class="float-action-btn" 
-                        onclick="event.stopPropagation(); reorderQuestion({{ $exam->exam_id }}, {{ $item->item_id }}, 'down')"
-                        title="Move Down">
-                    <i class="bi bi-arrow-down"></i>
-                </button>
             </div>
         </div>
-        @endforeach
-        @endforeach
+        @empty
+        <div class="no-questions-yet">
+            <i class="bi bi-question-circle"></i>
+            <p>No questions yet. Click "Add" below to create your first question!</p>
+        </div>
+        @endforelse
+        @empty
+        <div class="no-questions-yet">
+            <i class="bi bi-folder2-open"></i>
+            <p>No sections yet. Creating default section...</p>
+        </div>
+        @endforelse
     </div>
 
     <!-- Add Button -->
@@ -568,34 +614,33 @@
                 <i class="bi bi-caret-down"></i>
             </button>
             <div class="dropdown-menu-custom" id="addDropdown">
-                <button class="dropdown-item-custom" onclick="addNewSection()">
-                    <i class="bi bi-layout-text-sidebar"></i>
-                    <span>New Section</span>
-                </button>
-                <button class="dropdown-item-custom" onclick="openQuestionModal('mcq', {{ $exam->sections->first()->section_id ?? null }})">
-                    <i class="bi bi-question-circle"></i>
-                    <span>New MCQ</span>
-                </button>
-                <button class="dropdown-item-custom" onclick="openQuestionModal('torf', {{ $exam->sections->first()->section_id ?? null }})">
-                    <i class="bi bi-check2-circle"></i>
-                    <span>New True or False</span>
-                </button>
-                <button class="dropdown-item-custom" onclick="openQuestionModal('iden', {{ $exam->sections->first()->section_id ?? null }})">
-                    <i class="bi bi-pencil-square"></i>
-                    <span>New Identification</span>
-                </button>
-                <button class="dropdown-item-custom" onclick="openQuestionModal('enum', {{ $exam->sections->first()->section_id ?? null }})">
-                    <i class="bi bi-list-ol"></i>
-                    <span>New Enumeration</span>
-                </button>
-                <button class="dropdown-item-custom" onclick="openQuestionModal('essay', {{ $exam->sections->first()->section_id ?? null }})">
-                    <i class="bi bi-textarea-t"></i>
-                    <span>New Essay</span>
-                </button>
+                @if($exam->sections->count() > 0)
+                    <button class="dropdown-item-custom" onclick="openQuestionModal('mcq', {{ $exam->sections->first()->section_id }})">
+                        <i class="bi bi-question-circle"></i>
+                        <span>New MCQ</span>
+                    </button>
+                    <button class="dropdown-item-custom" onclick="openQuestionModal('torf', {{ $exam->sections->first()->section_id }})">
+                        <i class="bi bi-check2-circle"></i>
+                        <span>New True or False</span>
+                    </button>
+                    <button class="dropdown-item-custom" onclick="openQuestionModal('iden', {{ $exam->sections->first()->section_id }})">
+                        <i class="bi bi-pencil-square"></i>
+                        <span>New Identification</span>
+                    </button>
+                    <button class="dropdown-item-custom" onclick="openQuestionModal('enum', {{ $exam->sections->first()->section_id }})">
+                        <i class="bi bi-list-ol"></i>
+                        <span>New Enumeration</span>
+                    </button>
+                    <button class="dropdown-item-custom" onclick="openQuestionModal('essay', {{ $exam->sections->first()->section_id }})">
+                        <i class="bi bi-textarea-t"></i>
+                        <span>New Essay</span>
+                    </button>
+                @endif
             </div>
         </div>
     </div>
 </div>
-@include ('instructor.exam.question-model');
-<!-- Continue in next artifact due to length... -->
+
+@include('instructor.exam.question-modal')
+
 @endsection

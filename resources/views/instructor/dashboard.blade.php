@@ -3,7 +3,7 @@
 
 @section('content')
 <style>
-    /* Keep all your existing styles - they're perfect */
+    /* Keep all existing styles */
     body {
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
         background-color: #e8eef2;
@@ -317,7 +317,7 @@
         margin-bottom: 16px;
     }
 
-    /* Add Collaborator Modal Styles */
+    /* Collaborator Modal Styles */
     .collab-modal-header {
         background-color: #7ca5b8;
         color: white;
@@ -526,17 +526,13 @@
                                 </div>
                                 
                                 <div class="exam-footer">
-                                    @if($exam->user && $exam->user->profile_picture)
-                                        <img src="{{ asset('storage/' . $exam->user->profile_picture) }}" alt="Creator" class="exam-avatar">
-                                    @else
-                                        <div class="exam-avatar" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-size: 0.7rem; font-weight: 600;">
-                                            @if($exam->user)
-                                                {{ strtoupper(substr($exam->user->name, 0, 1)) }}
-                                            @else
-                                                ?
-                                            @endif
-                                        </div>
-                                    @endif
+                                    <div class="exam-avatar" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-size: 0.7rem; font-weight: 600;">
+                                        @if($exam->user)
+                                            {{ strtoupper(substr($exam->user->first_name, 0, 1)) }}
+                                        @else
+                                            ?
+                                        @endif
+                                    </div>
                                     <div class="exam-info">
                                         <div class="exam-title-text">
                                             {{ $exam->exam_title }}
@@ -592,19 +588,19 @@
                                 <button class="add-collab-btn" onclick="openAddCollaboratorModal({{ $selectedExam->exam_id }})">+ Add a collaborator</button>
                             </div>
                             <div class="collaborator-info">
-                                @if($selectedExam->user && $selectedExam->user->profile_picture)
-                                    <img src="{{ asset('storage/' . $selectedExam->user->profile_picture) }}" alt="Creator" class="creator-avatar-large" id="detail-avatar-img">
-                                @else
-                                    <div class="creator-avatar-large" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 0.875rem;" id="detail-avatar">
-                                        @if($selectedExam->user)
-                                            {{ strtoupper(substr($selectedExam->user->name, 0, 1)) }}{{ strtoupper(substr(explode(' ', $selectedExam->user->name)[1] ?? $selectedExam->user->name, 0, 1)) }}
-                                        @else
-                                            NA
-                                        @endif
-                                    </div>
-                                @endif
+                                <div class="creator-avatar-large" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 0.875rem;" id="detail-avatar">
+                                    @if($selectedExam->user)
+                                        {{ strtoupper(substr($selectedExam->user->first_name, 0, 1)) }}{{ strtoupper(substr($selectedExam->user->last_name, 0, 1)) }}
+                                    @else
+                                        NA
+                                    @endif
+                                </div>
                                 <div class="creator-name" id="detail-creator">
-                                    {{ $selectedExam->user->name ?? 'Unknown' }}
+                                    @if($selectedExam->user)
+                                        {{ $selectedExam->user->first_name }} {{ $selectedExam->user->last_name }}
+                                    @else
+                                        Unknown
+                                    @endif
                                 </div>
                             </div>
                         </div>
@@ -683,12 +679,12 @@
                     
                     <!-- Exam Title -->
                     <div class="mb-3">
-                        <input type="text" class="form-control" name="exam_title" placeholder="Exam Title" required style="border-radius: 8px; padding: 12px 16px; border: 1px solid #d1d5db; font-size: 0.95rem;">
+                        <input type="text" class="form-control" name="exam_title" placeholder="Computer Programming 1 Prelim" required style="border-radius: 8px; padding: 12px 16px; border: 1px solid #d1d5db; font-size: 0.95rem;">
                     </div>
 
                     <!-- Exam Description -->
                     <div class="mb-3">
-                        <textarea class="form-control" name="exam_desc" placeholder="Exam Description (optional)" rows="2" style="border-radius: 8px; padding: 12px 16px; border: 1px solid #d1d5db; font-size: 0.95rem;"></textarea>
+                        <input type="text" class="form-control" name="exam_desc" placeholder="Exam on programming" style="border-radius: 8px; padding: 12px 16px; border: 1px solid #d1d5db; font-size: 0.95rem;">
                     </div>
 
                     <!-- Settings Section -->
@@ -700,10 +696,32 @@
                             <div class="col-md-6 mb-3">
                                 <label style="font-size: 0.875rem; color: #374151; font-weight: 500; margin-bottom: 6px; display: block;">Subject</label>
                                 <select class="form-select" name="subject_id" id="subjectSelect" required onchange="loadClassesBySubject()" style="border-radius: 8px; padding: 10px 14px; border: 1px solid #d1d5db; font-size: 0.875rem;">
-                                    <option value="">Select Subject</option>
+                                    <option value="">Computer...</option>
                                     @foreach($subjects as $subject)
                                         <option value="{{ $subject->subject_id }}">{{ $subject->subject_name }}</option>
                                     @endforeach
+                                </select>
+                            </div>
+
+                            <!-- Class Assignment -->
+                            <div class="col-md-6 mb-3">
+                                <label style="font-size: 0.875rem; color: #374151; font-weight: 500; margin-bottom: 6px; display: block;">Class Assignment</label>
+                                <select class="form-select" name="class_ids[]" id="classSelect" multiple style="border-radius: 8px; padding: 10px 14px; border: 1px solid #d1d5db; font-size: 0.875rem; height: 100px;">
+                                    <option value="">1A, 1B, 1C, 1G, 1F</option>
+                                </select>
+                                <small class="text-muted" style="font-size: 0.75rem;">Hold Ctrl to select multiple</small>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <!-- Term (Optional - not in database but matches your UI) -->
+                            <div class="col-md-6 mb-3">
+                                <label style="font-size: 0.875rem; color: #374151; font-weight: 500; margin-bottom: 6px; display: block;">Term</label>
+                                <select class="form-select" name="term" style="border-radius: 8px; padding: 10px 14px; border: 1px solid #d1d5db; font-size: 0.875rem;">
+                                    <option value="">Preliminaries</option>
+                                    <option value="Preliminaries">Preliminaries</option>
+                                    <option value="Midterm">Midterm</option>
+                                    <option value="Finals">Finals</option>
                                 </select>
                             </div>
 
@@ -711,28 +729,23 @@
                             <div class="col-md-6 mb-3">
                                 <label style="font-size: 0.875rem; color: #374151; font-weight: 500; margin-bottom: 6px; display: block;">Duration</label>
                                 <div class="input-group" style="border-radius: 8px; overflow: hidden;">
-                                    <input type="number" class="form-control" name="duration" value="60" min="0" required style="border: 1px solid #d1d5db; font-size: 0.875rem; padding: 10px 14px;">
+                                    <input type="number" class="form-control" name="duration" value="0" min="0" required style="border: 1px solid #d1d5db; font-size: 0.875rem; padding: 10px 14px;">
                                     <span class="input-group-text" style="background-color: #f9fafb; border: 1px solid #d1d5db; border-left: none; color: #6b7280; font-size: 0.875rem;">mins</span>
                                 </div>
                             </div>
                         </div>
 
                         <div class="row">
-                            <!-- Class Assignment (Multiple Selection) -->
-                            <div class="col-md-12 mb-3">
-                                <label style="font-size: 0.875rem; color: #374151; font-weight: 500; margin-bottom: 6px; display: block;">Class Assignment (Optional)</label>
-                                <select class="form-select" name="class_ids[]" id="classSelect" multiple style="border-radius: 8px; padding: 10px 14px; border: 1px solid #d1d5db; font-size: 0.875rem; min-height: 100px;">
-                                    <option value="">Select subject first</option>
-                                </select>
-                                <small class="text-muted">Hold Ctrl/Cmd to select multiple classes</small>
+                            <!-- Schedule Start -->
+                            <div class="col-md-6 mb-3">
+                                <label style="font-size: 0.875rem; color: #374151; font-weight: 500; margin-bottom: 6px; display: block;">Schedule Start</label>
+                                <input type="datetime-local" class="form-control" name="schedule_start" required style="border-radius: 8px; padding: 10px 14px; border: 1px solid #d1d5db; font-size: 0.875rem;">
                             </div>
-                        </div>
 
-                        <div class="row">
-                            <!-- Schedule Date -->
-                            <div class="col-md-12 mb-3">
-                                <label style="font-size: 0.875rem; color: #374151; font-weight: 500; margin-bottom: 6px; display: block;">Schedule Date</label>
-                                <input type="datetime-local" class="form-control" name="schedule_date" required style="border-radius: 8px; padding: 10px 14px; border: 1px solid #d1d5db; font-size: 0.875rem;">
+                            <!-- Schedule End -->
+                            <div class="col-md-6 mb-3">
+                                <label style="font-size: 0.875rem; color: #374151; font-weight: 500; margin-bottom: 6px; display: block;">Schedule End</label>
+                                <input type="datetime-local" class="form-control" name="schedule_end" required style="border-radius: 8px; padding: 10px 14px; border: 1px solid #d1d5db; font-size: 0.875rem;">
                             </div>
                         </div>
                     </div>
@@ -769,7 +782,7 @@
 
                 <!-- Search Results -->
                 <div class="collab-search-results" id="collabSearchResults" style="display: none;">
-                    <!-- Results will be populated by JavaScript -->
+                    <!-- Results populated by JavaScript -->
                 </div>
 
                 <!-- Selected Collaborators -->
@@ -798,7 +811,6 @@
     let currentExamId = null;
 
     function openNewExamModal() {
-        // Reset form
         document.getElementById('newExamForm').reset();
         document.getElementById('classSelect').innerHTML = '<option value="">Select subject first</option>';
         
@@ -856,7 +868,6 @@
             return;
         }
         
-        // Debounce search
         clearTimeout(searchTimeout);
         searchTimeout = setTimeout(() => {
             fetch(`{{ route('instructor.teachers.search') }}?search=${encodeURIComponent(searchTerm)}&exam_id=${currentExamId}`)
@@ -895,7 +906,6 @@
             renderSelectedCollaborators();
             document.getElementById('addCollabSubmitBtn').disabled = false;
             
-            // Clear search
             document.getElementById('collabSearchInput').value = '';
             document.getElementById('collabSearchResults').style.display = 'none';
         }
@@ -956,11 +966,9 @@
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                // Close modal
                 const modal = bootstrap.Modal.getInstance(document.getElementById('addCollaboratorModal'));
                 modal.hide();
                 
-                // Show success message
                 const alertDiv = document.createElement('div');
                 alertDiv.className = 'alert alert-success alert-dismissible fade show';
                 alertDiv.innerHTML = `
@@ -972,10 +980,8 @@
                     document.querySelector('.search-bar')
                 );
                 
-                // Auto dismiss after 5 seconds
                 setTimeout(() => alertDiv.remove(), 5000);
                 
-                // Reset
                 selectedCollaborators = [];
                 submitBtn.disabled = false;
                 submitBtn.textContent = 'Add as Collaborator';
@@ -999,33 +1005,27 @@
         
         const menu = document.getElementById(menuId);
         
-        // Close all other menus
         document.querySelectorAll('.menu-dropdown').forEach(m => {
             if (m.id !== menuId) {
                 m.classList.remove('show');
             }
         });
         
-        // Toggle current menu
         menu.classList.toggle('show');
     }
 
     function loadExamDetails(examId, cardElement) {
-        // Remove active class from all cards
         document.querySelectorAll('.exam-card-wrapper').forEach(card => {
             card.classList.remove('active');
         });
         
-        // Add active class to clicked card
         cardElement.classList.add('active');
 
-        // Fetch exam details via AJAX
         fetch(`/instructor/api/exams/${examId}/details`)
             .then(response => response.json())
             .then(data => {
                 const exam = data.exam;
                 
-                // Update details panel
                 document.getElementById('detail-title').textContent = exam.exam_title;
                 document.getElementById('detail-avatar').textContent = data.creator_initials;
                 document.getElementById('detail-creator').textContent = data.creator_name;
@@ -1051,7 +1051,6 @@
             });
     }
 
-    // Close menus when clicking outside
     document.addEventListener('click', function(event) {
         if (!event.target.closest('.menu-dots') && !event.target.closest('.menu-dropdown')) {
             document.querySelectorAll('.menu-dropdown').forEach(m => {
@@ -1060,7 +1059,6 @@
         }
     });
 
-    // Prevent menu from closing when clicking inside it
     document.querySelectorAll('.menu-dropdown').forEach(dropdown => {
         dropdown.addEventListener('click', function(event) {
             event.stopPropagation();

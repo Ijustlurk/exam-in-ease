@@ -16,19 +16,21 @@ class Exam extends Model
         'exam_title',
         'exam_desc',
         'subject_id',
-        'schedule_date',
+        'teacher_id',
+        'approved_by',
+        'schedule_start',
+        'schedule_end',
         'duration',
         'total_points',
         'no_of_items',
-        'user_id',
         'status',
-        'approved_by',
         'approved_date',
         'revision_notes'
     ];
 
     protected $casts = [
-        'schedule_date' => 'datetime',
+        'schedule_start' => 'datetime',
+        'schedule_end' => 'datetime',
         'approved_date' => 'datetime',
     ];
 
@@ -41,11 +43,19 @@ class Exam extends Model
     }
 
     /**
-     * Relationship with User (Creator)
+     * Relationship with Teacher (Creator)
      */
     public function user()
     {
-        return $this->belongsTo(User::class, 'user_id', 'id');
+        return $this->belongsTo(UserTeacher::class, 'teacher_id', 'user_id');
+    }
+
+    /**
+     * Relationship with Teacher (alternative accessor)
+     */
+    public function teacher()
+    {
+        return $this->belongsTo(UserTeacher::class, 'teacher_id', 'user_id');
     }
 
     /**
@@ -109,24 +119,24 @@ class Exam extends Model
     /**
      * Check if a user is the creator of this exam
      */
-    public function isCreator($userId)
+    public function isCreator($teacherId)
     {
-        return $this->user_id == $userId;
+        return $this->teacher_id == $teacherId;
     }
 
     /**
      * Check if a user is a collaborator on this exam
      */
-    public function isCollaborator($userId)
+    public function isCollaborator($teacherId)
     {
-        return $this->collaborations()->where('teacher_id', $userId)->exists();
+        return $this->collaborations()->where('teacher_id', $teacherId)->exists();
     }
 
     /**
      * Check if a user has access to this exam (creator or collaborator)
      */
-    public function hasAccess($userId)
+    public function hasAccess($teacherId)
     {
-        return $this->isCreator($userId) || $this->isCollaborator($userId);
+        return $this->isCreator($teacherId) || $this->isCollaborator($teacherId);
     }
 }

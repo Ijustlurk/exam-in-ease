@@ -11,19 +11,28 @@ class Section extends Model
 
     protected $table = 'sections';
     protected $primaryKey = 'section_id';
-    public $incrementing = true;
-    protected $keyType = 'int';
-
+    
     protected $fillable = [
         'exam_id',
+        'section_title',
+        'section_directions',
+        'section_order'
     ];
 
-    public $timestamps = true; // change to false if you don’t want timestamps
-
-    // Relationships
+    /**
+     * Relationship with Exam
+     */
     public function exam()
     {
-        return $this->belongsTo(Exam::class, 'exam_id', 'id'); 
-        // use 'exam_id' if Exam PK = exam_id
+        return $this->belongsTo(Exam::class, 'exam_id', 'exam_id');
+    }
+
+    /**
+     * Relationship with Exam Items
+     */
+    public function items()
+    {
+        return $this->hasMany(ExamItem::class, 'exam_section_id', 'section_id')
+                    ->orderBy('order', 'asc');
     }
 }

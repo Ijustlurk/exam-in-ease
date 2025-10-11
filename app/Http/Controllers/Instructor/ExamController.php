@@ -20,12 +20,10 @@ class ExamController extends Controller
     public function index(Request $request)
     {
         $search = $request->get('search');
-        
-        // Get exams created by or collaborated on by the current teacher
         $teacherId = Auth::id();
         
         $exams = Exam::where(function($query) use ($teacherId) {
-                $query->where('user_id', $teacherId)
+                $query->where('teacher_id', $teacherId)
                       ->orWhereHas('collaborations', function($q) use ($teacherId) {
                           $q->where('teacher_id', $teacherId);
                       });
@@ -37,17 +35,14 @@ class ExamController extends Controller
             ->orderBy('updated_at', 'desc')
             ->get();
 
-        // Get the first exam for the details panel
         $selectedExam = $exams->first();
         
         if ($selectedExam) {
             $selectedExam->formatted_created_at = $selectedExam->created_at->format('F j, Y');
         }
 
-        // Get subjects for the teacher
         $subjects = Subject::all();
         
-        // Get classes assigned to this teacher
         $classes = ClassModel::whereHas('teacherAssignments', function($query) use ($teacherId) {
                 $query->where('teacher_id', $teacherId);
             })
@@ -55,52 +50,42 @@ class ExamController extends Controller
             ->with('subject')
             ->get();
 
-        return view('instructor.exams.dashboard', compact('exams', 'selectedExam', 'subjects', 'classes'));
+        return view('instructor.dashboard', compact('exams', 'selectedExam', 'subjects', 'classes'));
     }
 
-    public function show($id)
+    /**
+     * Show exam editor for creating/editing questions
+     */
+    public function create($examId)
     {
-        $exam = Exam::with(['user', 'subject', 'collaborations.teacher', 'examItems'])
-            ->findOrFail($id);
+        $exam = Exam::with(['sections.items' => function($query) {
+                $query->orderBy('order', 'asc');
+            }, 'subject'])
+            ->findOrFail($examId);
         
-        // Check if user has access to this exam
+        // Check access
         $teacherId = Auth::id();
-        $hasAccess = $exam->user_id == $teacherId || 
+        $hasAccess = $exam->teacher_id == $teacherId || 
                      $exam->collaborations->contains('teacher_id', $teacherId);
         
         if (!$hasAccess) {
             abort(403, 'Unauthorized access to this exam.');
         }
 
-        return view('instructor.exams.show', compact('exam'));
-    }
-
-    public function create($examId = null)
-    {
-        $exam = null;
-        if ($examId) {
-            $exam = Exam::with(['examItems', 'subject'])->findOrFail($examId);
+        // If no sections exist, create a default section
+        if ($exam->sections->count() === 0) {
+            Section::create([
+                'exam_id' => $exam->exam_id,
+                'section_title' => 'Part I',
+                'section_directions' => '',
+                'section_order' => 1
+            ]);
             
-            // Check access
-            $teacherId = Auth::id();
-            $hasAccess = $exam->user_id == $teacherId || 
-                         $exam->collaborations->contains('teacher_id', $teacherId);
-            
-            if (!$hasAccess) {
-                abort(403, 'Unauthorized access to this exam.');
-            }
+            // Reload exam with sections
+            $exam->load('sections.items');
         }
 
-        $subjects = Subject::all();
-        
-        $classes = ClassModel::whereHas('teacherAssignments', function($query) {
-                $query->where('teacher_id', Auth::id());
-            })
-            ->where('status', 'Active')
-            ->with('subject')
-            ->get();
-
-        return view('instructor.exams.create', compact('exam', 'subjects', 'classes'));
+        return view('instructor.exam.create', compact('exam'));
     }
 
     public function store(Request $request)
@@ -112,25 +97,25 @@ class ExamController extends Controller
             'class_ids' => 'nullable|array',
             'class_ids.*' => 'exists:class,class_id',
             'duration' => 'required|integer|min:0',
-            'schedule_date' => 'required|date',
+            'schedule_start' => 'required|date',
+            'schedule_end' => 'required|date|after:schedule_start',
         ]);
 
         DB::beginTransaction();
         try {
-            // Create the exam
             $exam = Exam::create([
                 'exam_title' => $validated['exam_title'],
                 'exam_desc' => $validated['exam_desc'],
                 'subject_id' => $validated['subject_id'],
-                'schedule_date' => $validated['schedule_date'],
+                'schedule_start' => $validated['schedule_start'],
+                'schedule_end' => $validated['schedule_end'],
                 'duration' => $validated['duration'],
                 'total_points' => 0,
                 'no_of_items' => 0,
-                'user_id' => Auth::id(),
+                'teacher_id' => Auth::id(),
                 'status' => 'draft'
             ]);
 
-            // Assign exam to classes if selected
             if (!empty($validated['class_ids'])) {
                 foreach ($validated['class_ids'] as $classId) {
                     ExamAssignment::create([
@@ -142,9 +127,10 @@ class ExamController extends Controller
 
             DB::commit();
 
+            // ✅ Redirect to exam editor to add questions
             return redirect()
                 ->route('instructor.exams.create', $exam->exam_id)
-                ->with('success', 'Exam created successfully!');
+                ->with('success', 'Exam "' . $exam->exam_title . '" created successfully! Now add your questions.');
 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -154,38 +140,48 @@ class ExamController extends Controller
         }
     }
 
+    public function show($id)
+    {
+        $exam = Exam::with(['user', 'subject', 'collaborations.teacher', 'examItems'])
+            ->findOrFail($id);
+        
+        $teacherId = Auth::id();
+        $hasAccess = $exam->teacher_id == $teacherId || 
+                     $exam->collaborations->contains('teacher_id', $teacherId);
+        
+        if (!$hasAccess) {
+            abort(403, 'Unauthorized access to this exam.');
+        }
+
+        return view('instructor.exams.show', compact('exam'));
+    }
+
     public function update(Request $request, $id)
     {
         $exam = Exam::findOrFail($id);
         
-        // Check if user has access
         $teacherId = Auth::id();
-        $hasAccess = $exam->user_id == $teacherId || 
+        $hasAccess = $exam->teacher_id == $teacherId || 
                      $exam->collaborations->contains('teacher_id', $teacherId);
         
         if (!$hasAccess) {
-            return back()->with('error', 'Unauthorized to edit this exam.');
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
         $validated = $request->validate([
-            'exam_title' => 'required|string|max:200',
+            'exam_title' => 'sometimes|required|string|max:200',
             'exam_desc' => 'nullable|string',
-            'subject_id' => 'required|exists:subjects,subject_id',
-            'duration' => 'required|integer|min:0',
-            'schedule_date' => 'required|date',
+            'subject_id' => 'sometimes|required|exists:subjects,subject_id',
+            'duration' => 'sometimes|required|integer|min:0',
+            'schedule_start' => 'sometimes|required|date',
+            'schedule_end' => 'sometimes|required|date|after:schedule_start',
         ]);
 
-        DB::beginTransaction();
         try {
             $exam->update($validated);
-
-            DB::commit();
-
-            return back()->with('success', 'Exam updated successfully!');
-
+            return response()->json(['success' => true, 'message' => 'Exam updated successfully']);
         } catch (\Exception $e) {
-            DB::rollBack();
-            return back()->with('error', 'Failed to update exam: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }
 
@@ -193,9 +189,8 @@ class ExamController extends Controller
     {
         $originalExam = Exam::with('examItems')->findOrFail($id);
         
-        // Check access
         $teacherId = Auth::id();
-        $hasAccess = $originalExam->user_id == $teacherId || 
+        $hasAccess = $originalExam->teacher_id == $teacherId || 
                      $originalExam->collaborations->contains('teacher_id', $teacherId);
         
         if (!$hasAccess) {
@@ -206,13 +201,12 @@ class ExamController extends Controller
         try {
             $newExam = $originalExam->replicate();
             $newExam->exam_title = $originalExam->exam_title . ' (Copy)';
-            $newExam->user_id = Auth::id();
+            $newExam->teacher_id = Auth::id();
             $newExam->status = 'draft';
             $newExam->approved_by = null;
             $newExam->approved_date = null;
             $newExam->save();
 
-            // Copy exam items
             foreach ($originalExam->examItems as $item) {
                 $newItem = $item->replicate();
                 $newItem->exam_id = $newExam->exam_id;
@@ -231,14 +225,14 @@ class ExamController extends Controller
         }
     }
 
-    // Question Management Methods
+    // AJAX Methods for Question Editor
+
     public function addQuestion(Request $request, $examId)
     {
         $exam = Exam::findOrFail($examId);
         
-        // Check access
         $teacherId = Auth::id();
-        $hasAccess = $exam->user_id == $teacherId || 
+        $hasAccess = $exam->teacher_id == $teacherId || 
                      $exam->collaborations->contains('teacher_id', $teacherId);
         
         if (!$hasAccess) {
@@ -246,33 +240,31 @@ class ExamController extends Controller
         }
 
         $validated = $request->validate([
+            'section_id' => 'required|exists:sections,section_id',
             'question' => 'required|string',
             'item_type' => 'required|in:mcq,torf,enum,iden,essay',
             'points_awarded' => 'required|integer|min:1',
-            'options' => 'nullable|array',
+            'options' => 'nullable|string',
             'answer' => 'nullable|string',
             'expected_answer' => 'nullable|string',
-            'exam_section_id' => 'nullable|exists:sections,section_id'
         ]);
 
         DB::beginTransaction();
         try {
-            // Get the next order number
             $maxOrder = ExamItem::where('exam_id', $examId)->max('order') ?? 0;
 
             $item = ExamItem::create([
                 'exam_id' => $examId,
-                'exam_section_id' => $validated['exam_section_id'] ?? null,
+                'exam_section_id' => $validated['section_id'],
                 'question' => $validated['question'],
                 'item_type' => $validated['item_type'],
                 'points_awarded' => $validated['points_awarded'],
-                'options' => isset($validated['options']) ? json_encode($validated['options']) : null,
+                'options' => $validated['options'] ?? null,
                 'answer' => $validated['answer'] ?? null,
                 'expected_answer' => $validated['expected_answer'] ?? null,
                 'order' => $maxOrder + 1
             ]);
 
-            // Update exam totals
             $exam->increment('no_of_items');
             $exam->increment('total_points', $validated['points_awarded']);
 
@@ -297,9 +289,8 @@ class ExamController extends Controller
         $exam = Exam::findOrFail($examId);
         $item = ExamItem::where('exam_id', $examId)->where('item_id', $itemId)->firstOrFail();
         
-        // Check access
         $teacherId = Auth::id();
-        $hasAccess = $exam->user_id == $teacherId || 
+        $hasAccess = $exam->teacher_id == $teacherId || 
                      $exam->collaborations->contains('teacher_id', $teacherId);
         
         if (!$hasAccess) {
@@ -310,7 +301,7 @@ class ExamController extends Controller
             'question' => 'required|string',
             'item_type' => 'required|in:mcq,torf,enum,iden,essay',
             'points_awarded' => 'required|integer|min:1',
-            'options' => 'nullable|array',
+            'options' => 'nullable|string',
             'answer' => 'nullable|string',
             'expected_answer' => 'nullable|string'
         ]);
@@ -319,16 +310,8 @@ class ExamController extends Controller
         try {
             $oldPoints = $item->points_awarded;
             
-            $item->update([
-                'question' => $validated['question'],
-                'item_type' => $validated['item_type'],
-                'points_awarded' => $validated['points_awarded'],
-                'options' => isset($validated['options']) ? json_encode($validated['options']) : null,
-                'answer' => $validated['answer'] ?? null,
-                'expected_answer' => $validated['expected_answer'] ?? null
-            ]);
+            $item->update($validated);
 
-            // Update exam total points
             $pointsDiff = $validated['points_awarded'] - $oldPoints;
             $exam->increment('total_points', $pointsDiff);
 
@@ -353,9 +336,8 @@ class ExamController extends Controller
         $exam = Exam::findOrFail($examId);
         $item = ExamItem::where('exam_id', $examId)->where('item_id', $itemId)->firstOrFail();
         
-        // Check access
         $teacherId = Auth::id();
-        $hasAccess = $exam->user_id == $teacherId || 
+        $hasAccess = $exam->teacher_id == $teacherId || 
                      $exam->collaborations->contains('teacher_id', $teacherId);
         
         if (!$hasAccess) {
@@ -367,7 +349,6 @@ class ExamController extends Controller
             $points = $item->points_awarded;
             $item->delete();
 
-            // Update exam totals
             $exam->decrement('no_of_items');
             $exam->decrement('total_points', $points);
 
@@ -391,9 +372,8 @@ class ExamController extends Controller
         $exam = Exam::findOrFail($examId);
         $item = ExamItem::where('exam_id', $examId)->where('item_id', $itemId)->firstOrFail();
         
-        // Check access
         $teacherId = Auth::id();
-        $hasAccess = $exam->user_id == $teacherId || 
+        $hasAccess = $exam->teacher_id == $teacherId || 
                      $exam->collaborations->contains('teacher_id', $teacherId);
         
         if (!$hasAccess) {
@@ -408,7 +388,6 @@ class ExamController extends Controller
             $newItem->order = $maxOrder + 1;
             $newItem->save();
 
-            // Update exam totals
             $exam->increment('no_of_items');
             $exam->increment('total_points', $item->points_awarded);
 
@@ -428,68 +407,21 @@ class ExamController extends Controller
         }
     }
 
-    public function reorderQuestions(Request $request, $examId)
-    {
-        $exam = Exam::findOrFail($examId);
-        
-        // Check access
-        $teacherId = Auth::id();
-        $hasAccess = $exam->user_id == $teacherId || 
-                     $exam->collaborations->contains('teacher_id', $teacherId);
-        
-        if (!$hasAccess) {
-            return response()->json(['error' => 'Unauthorized'], 403);
-        }
-
-        $validated = $request->validate([
-            'orders' => 'required|array',
-            'orders.*.item_id' => 'required|exists:exam_items,item_id',
-            'orders.*.order' => 'required|integer|min:1'
-        ]);
-
-        DB::beginTransaction();
-        try {
-            foreach ($validated['orders'] as $orderData) {
-                ExamItem::where('item_id', $orderData['item_id'])
-                    ->where('exam_id', $examId)
-                    ->update(['order' => $orderData['order']]);
-            }
-
-            DB::commit();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Questions reordered successfully'
-            ]);
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return response()->json([
-                'error' => 'Failed to reorder questions: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
     public function updateSection(Request $request, $examId, $sectionId)
     {
         $exam = Exam::findOrFail($examId);
         $section = Section::where('exam_id', $examId)->where('section_id', $sectionId)->firstOrFail();
         
-        // Check access
         $teacherId = Auth::id();
-        $hasAccess = $exam->user_id == $teacherId || 
+        $hasAccess = $exam->teacher_id == $teacherId || 
                      $exam->collaborations->contains('teacher_id', $teacherId);
         
         if (!$hasAccess) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
-        $validated = $request->validate([
-            'title' => 'required|string|max:255'
-        ]);
-
         try {
-            $section->update($validated);
+            $section->update($request->all());
 
             return response()->json([
                 'success' => true,
@@ -504,23 +436,20 @@ class ExamController extends Controller
         }
     }
 
-    // NEW METHODS FOR DASHBOARD
-
     public function getExamDetails($id)
     {
         $exam = Exam::with(['user', 'subject', 'collaborations.teacher'])
             ->findOrFail($id);
         
-        // Check access
         $teacherId = Auth::id();
-        $hasAccess = $exam->user_id == $teacherId || 
+        $hasAccess = $exam->teacher_id == $teacherId || 
                      $exam->collaborations->contains('teacher_id', $teacherId);
         
         if (!$hasAccess) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
-        $creatorName = $exam->user ? $exam->user->name : 'Unknown';
+        $creatorName = $exam->user ? ($exam->user->first_name . ' ' . $exam->user->last_name) : 'Unknown';
         $creatorInitials = $this->getInitials($creatorName);
         
         return response()->json([
@@ -547,7 +476,6 @@ class ExamController extends Controller
         $examId = $request->get('exam_id');
         $currentUserId = Auth::id();
         
-        // Get teachers who are not already collaborators and not the exam creator
         $existingCollaborators = [];
         if ($examId) {
             $existingCollaborators = ExamCollaboration::where('exam_id', $examId)
@@ -569,7 +497,7 @@ class ExamController extends Controller
                     'id' => $teacher->user_id,
                     'name' => $teacher->first_name . ' ' . $teacher->last_name,
                     'email' => $teacher->email_address,
-                    'avatar' => null // Add profile picture logic if available
+                    'avatar' => null
                 ];
             });
 
@@ -585,15 +513,13 @@ class ExamController extends Controller
 
         $exam = Exam::findOrFail($examId);
         
-        // Check if user is the exam creator
-        if ($exam->user_id != Auth::id()) {
+        if ($exam->teacher_id != Auth::id()) {
             return response()->json(['error' => 'Only the exam creator can add collaborators'], 403);
         }
 
         DB::beginTransaction();
         try {
             foreach ($validated['collaborators'] as $teacherId) {
-                // Check if already a collaborator
                 $exists = ExamCollaboration::where('exam_id', $examId)
                     ->where('teacher_id', $teacherId)
                     ->exists();

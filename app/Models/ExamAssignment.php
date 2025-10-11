@@ -9,20 +9,37 @@ class ExamAssignment extends Model
 {
     use HasFactory;
 
-    // app/Models/ExamAssignment.php
-    // ...
+    protected $table = 'exam_assignments';
     protected $primaryKey = 'assignment_id';
-    public $timestamps = false; // Based on your schema
+    public $timestamps = false;
+    
+    // ✅ ADD THIS - This was missing!
+    protected $fillable = [
+        'class_id',
+        'exam_id'
+    ];
 
+    /**
+     * Relationship with Exam
+     */
     public function exam()
     {
         return $this->belongsTo(Exam::class, 'exam_id', 'exam_id');
     }
 
-    // Relationship para kunin ang lahat ng students na kumukuha ng exam na ito
+    /**
+     * Relationship with Class
+     */
+    public function classModel()
+    {
+        return $this->belongsTo(ClassModel::class, 'class_id', 'class_id');
+    }
+
+    /**
+     * Relationship to get all students taking this exam
+     */
     public function attempts()
     {
         return $this->hasMany(ExamAttempt::class, 'exam_assignment_id', 'assignment_id');
     }
-
 }

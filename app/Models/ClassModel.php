@@ -27,19 +27,34 @@ class ClassModel extends Model
         'created_at' => 'datetime',
     ];
 
-    // Relationship with Subject
+    /**
+     * Relationship with Subject
+     */
     public function subject()
     {
         return $this->belongsTo(Subject::class, 'subject_id', 'subject_id');
     }
 
-    // Relationship with Teacher Assignments
+    /**
+     * Relationship with Teacher Assignments
+     */
     public function teacherAssignments()
     {
         return $this->hasMany(TeacherAssignment::class, 'class_id', 'class_id');
     }
 
-    // Get primary teacher (first assigned teacher)
+    /**
+     * Relationship with Exam Assignments
+     * ✅ ADD THIS - For linking classes to exams
+     */
+    public function examAssignments()
+    {
+        return $this->hasMany(ExamAssignment::class, 'class_id', 'class_id');
+    }
+
+    /**
+     * Get primary teacher (first assigned teacher)
+     */
     public function teacher()
     {
         return $this->hasOneThrough(
@@ -52,7 +67,9 @@ class ClassModel extends Model
         );
     }
 
-    // Relationship with Students through class_enrolment
+    /**
+     * Relationship with Students through class_enrolment
+     */
     public function students()
     {
         return $this->belongsToMany(
@@ -65,19 +82,34 @@ class ClassModel extends Model
         )->wherePivot('status', 'Active');
     }
 
-    // Get student count
+    /**
+     * Get student count
+     */
     public function getStudentCountAttribute()
     {
         return $this->students()->count();
     }
 
-    // Scope for active classes
+    /**
+     * Get display name for class
+     * ✅ ADD THIS - For dropdown display
+     */
+    public function getDisplayNameAttribute()
+    {
+        return ($this->year_level ?? '') . $this->section . ' - ' . $this->title;
+    }
+
+    /**
+     * Scope for active classes
+     */
     public function scopeActive($query)
     {
         return $query->where('status', 'Active');
     }
 
-    // Scope for archived classes
+    /**
+     * Scope for archived classes
+     */
     public function scopeArchived($query)
     {
         return $query->where('status', 'Archived');
