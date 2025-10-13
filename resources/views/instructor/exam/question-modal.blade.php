@@ -1,10 +1,12 @@
+{{-- resources/views/instructor/exam/question-modal.blade.php --}}
+
 <!-- MCQ Modal -->
 <div class="modal fade" id="mcqModal" tabindex="-1">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content" style="border-radius: 12px; border: none;">
             <div class="modal-header-custom">
                 <h5 class="modal-title-custom">
-                    <i class="bi bi-question-circle"></i>
+                    <i class="bi bi-ui-radios"></i>
                     <span>Multiple Choice Question</span>
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
@@ -22,19 +24,19 @@
                         <label class="form-label-custom">Options</label>
                         <div class="option-input-group">
                             <input type="text" class="form-control-custom" placeholder="Option A" name="options[]" required>
-                            <input type="checkbox" class="correct-checkbox" name="correct[]" value="0">
+                            <input type="checkbox" class="correct-checkbox" name="correct[]" value="0" title="Mark as correct">
                         </div>
                         <div class="option-input-group">
                             <input type="text" class="form-control-custom" placeholder="Option B" name="options[]" required>
-                            <input type="checkbox" class="correct-checkbox" name="correct[]" value="1">
+                            <input type="checkbox" class="correct-checkbox" name="correct[]" value="1" title="Mark as correct">
                         </div>
                         <div class="option-input-group">
                             <input type="text" class="form-control-custom" placeholder="Option C" name="options[]" required>
-                            <input type="checkbox" class="correct-checkbox" name="correct[]" value="2">
+                            <input type="checkbox" class="correct-checkbox" name="correct[]" value="2" title="Mark as correct">
                         </div>
                         <div class="option-input-group">
                             <input type="text" class="form-control-custom" placeholder="Option D" name="options[]" required>
-                            <input type="checkbox" class="correct-checkbox" name="correct[]" value="3">
+                            <input type="checkbox" class="correct-checkbox" name="correct[]" value="3" title="Mark as correct">
                         </div>
                     </div>
 
@@ -43,11 +45,12 @@
                     </button>
 
                     <div class="mb-4 mt-4">
-                        <label class="form-label-custom">Points per correct answer</label>
+                        <label class="form-label-custom">Points</label>
                         <input type="number" class="form-control-custom" name="points_awarded" value="1" min="1" required style="width: 120px;">
                     </div>
 
-                    <div class="d-flex justify-content-end">
+                    <div class="d-flex justify-content-end gap-2">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="border-radius: 8px;">Cancel</button>
                         <button type="submit" class="btn-save-question">Save Question</button>
                     </div>
                 </form>
@@ -62,7 +65,7 @@
         <div class="modal-content" style="border-radius: 12px; border: none;">
             <div class="modal-header-custom">
                 <h5 class="modal-title-custom">
-                    <i class="bi bi-check2-circle"></i>
+                    <i class="bi bi-toggle-on"></i>
                     <span>True or False</span>
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
@@ -78,16 +81,18 @@
 
                     <div class="mb-4">
                         <label class="form-label-custom">Correct Answer</label>
-                        <div class="option-input-group">
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="correct_answer" id="true_option" value="true" required>
-                                <label class="form-check-label" for="true_option">True</label>
+                        <div style="display: flex; flex-direction: column; gap: 12px;">
+                            <div class="form-check" style="padding-left: 0;">
+                                <label style="display: flex; align-items: center; gap: 12px; cursor: pointer; padding: 12px; background: #f9fafb; border-radius: 8px;">
+                                    <input class="form-check-input" type="radio" name="correct_answer" id="true_option" value="true" required style="margin: 0; width: 20px; height: 20px;">
+                                    <span style="font-size: 0.95rem; color: #374151;">True</span>
+                                </label>
                             </div>
-                        </div>
-                        <div class="option-input-group">
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="correct_answer" id="false_option" value="false">
-                                <label class="form-check-label" for="false_option">False</label>
+                            <div class="form-check" style="padding-left: 0;">
+                                <label style="display: flex; align-items: center; gap: 12px; cursor: pointer; padding: 12px; background: #f9fafb; border-radius: 8px;">
+                                    <input class="form-check-input" type="radio" name="correct_answer" id="false_option" value="false" style="margin: 0; width: 20px; height: 20px;">
+                                    <span style="font-size: 0.95rem; color: #374151;">False</span>
+                                </label>
                             </div>
                         </div>
                     </div>
@@ -97,7 +102,8 @@
                         <input type="number" class="form-control-custom" name="points_awarded" value="1" min="1" required style="width: 120px;">
                     </div>
 
-                    <div class="d-flex justify-content-end">
+                    <div class="d-flex justify-content-end gap-2">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="border-radius: 8px;">Cancel</button>
                         <button type="submit" class="btn-save-question">Save Question</button>
                     </div>
                 </form>
@@ -136,7 +142,8 @@
                         <input type="number" class="form-control-custom" name="points_awarded" value="1" min="1" required style="width: 120px;">
                     </div>
 
-                    <div class="d-flex justify-content-end">
+                    <div class="d-flex justify-content-end gap-2">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="border-radius: 8px;">Cancel</button>
                         <button type="submit" class="btn-save-question">Save Question</button>
                     </div>
                 </form>
@@ -159,21 +166,33 @@
             <div class="modal-body" style="padding: 24px;">
                 <form id="enumForm">
                     <input type="hidden" id="enum_section_id" name="section_id">
+                    <input type="hidden" id="enum_type" name="enum_type" value="ordered">
                     
-                    <div class="mb-4">
-                        <label class="form-label-custom">Question</label>
-                        <textarea class="form-control-custom" name="question" rows="3" placeholder="ex: Lists the steps for the water cycle" required></textarea>
+                    <div class="mb-4" style="display: flex; justify-content: space-between; align-items: flex-start; gap: 16px;">
+                        <div style="flex: 1;">
+                            <label class="form-label-custom">Question</label>
+                            <textarea class="form-control-custom" name="question" rows="3" placeholder="ex: Lists the steps for the water cycle" required></textarea>
+                        </div>
+                        <div style="min-width: 240px;">
+                            <label class="form-label-custom">Type</label>
+                            <select class="form-control-custom" id="enumTypeSelect" onchange="toggleEnumType()" style="cursor: pointer;">
+                                <option value="ordered">Ordered Enumeration</option>
+                                <option value="unordered">Unordered Enumeration</option>
+                            </select>
+                        </div>
                     </div>
 
                     <div class="mb-4" id="enum_answers">
-                        <label class="form-label-custom">Expected Answers (in order)</label>
+                        <label class="form-label-custom" id="enumAnswersLabel">Expected Answers (in order)</label>
                         <div class="option-input-group">
-                            <span style="font-weight: 600; margin-right: 8px;">1.</span>
+                            <span class="enum-number" style="font-weight: 600; margin-right: 8px; min-width: 24px;">1.</span>
                             <input type="text" class="form-control-custom" placeholder="Answer 1" name="answers[]" required>
+                            <span class="enum-drag-handle" style="display: none; color: #9ca3af; font-size: 1rem; cursor: move; margin-left: 8px;"><i class="bi bi-grip-vertical"></i></span>
                         </div>
                         <div class="option-input-group">
-                            <span style="font-weight: 600; margin-right: 8px;">2.</span>
+                            <span class="enum-number" style="font-weight: 600; margin-right: 8px; min-width: 24px;">2.</span>
                             <input type="text" class="form-control-custom" placeholder="Answer 2" name="answers[]" required>
+                            <span class="enum-drag-handle" style="display: none; color: #9ca3af; font-size: 1rem; cursor: move; margin-left: 8px;"><i class="bi bi-grip-vertical"></i></span>
                         </div>
                     </div>
 
@@ -182,11 +201,12 @@
                     </button>
 
                     <div class="mb-4 mt-4">
-                        <label class="form-label-custom">Points per correct answer</label>
+                        <label class="form-label-custom" id="enumPointsLabel">Points:</label>
                         <input type="number" class="form-control-custom" name="points_awarded" value="1" min="1" required style="width: 120px;">
                     </div>
 
-                    <div class="d-flex justify-content-end">
+                    <div class="d-flex justify-content-end gap-2">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="border-radius: 8px;">Cancel</button>
                         <button type="submit" class="btn-save-question">Save Question</button>
                     </div>
                 </form>
@@ -216,11 +236,12 @@
                     </div>
 
                     <div class="mb-4">
-                        <label class="form-label-custom">Points per correct answer</label>
+                        <label class="form-label-custom">Points</label>
                         <input type="number" class="form-control-custom" name="points_awarded" value="10" min="1" required style="width: 120px;">
                     </div>
 
-                    <div class="d-flex justify-content-end">
+                    <div class="d-flex justify-content-end gap-2">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="border-radius: 8px;">Cancel</button>
                         <button type="submit" class="btn-save-question">Save Question</button>
                     </div>
                 </form>
@@ -230,20 +251,7 @@
 </div>
 
 <script>
-const examId = {{ $exam->exam_id }};
 let currentSectionId = null;
-
-// Toggle Add Dropdown
-function toggleAddDropdown() {
-    document.getElementById('addDropdown').classList.toggle('show');
-}
-
-// Close dropdown when clicking outside
-document.addEventListener('click', function(e) {
-    if (!e.target.closest('.add-dropdown')) {
-        document.getElementById('addDropdown').classList.remove('show');
-    }
-});
 
 // Open Question Modal
 function openQuestionModal(type, sectionId) {
@@ -251,6 +259,17 @@ function openQuestionModal(type, sectionId) {
     
     // Set section ID in forms
     document.getElementById(type + '_section_id').value = sectionId;
+    
+    // Reset form
+    document.getElementById(type + 'Form').reset();
+    document.getElementById(type + '_section_id').value = sectionId;
+    
+    // Reset enumeration type if it's enum modal
+    if (type === 'enum') {
+        document.getElementById('enumTypeSelect').value = 'ordered';
+        document.getElementById('enum_type').value = 'ordered';
+        toggleEnumType();
+    }
     
     // Open appropriate modal
     const modal = new bootstrap.Modal(document.getElementById(type + 'Modal'));
@@ -277,6 +296,11 @@ document.getElementById('mcqForm').addEventListener('submit', function(e) {
     document.querySelectorAll('#mcqForm .correct-checkbox:checked').forEach(cb => {
         correctAnswers.push(parseInt(cb.value));
     });
+    
+    if (correctAnswers.length === 0) {
+        alert('Please mark at least one option as correct');
+        return;
+    }
     
     const data = {
         section_id: formData.get('section_id'),
@@ -332,11 +356,13 @@ document.getElementById('enumForm').addEventListener('submit', function(e) {
     
     const formData = new FormData(this);
     const answers = formData.getAll('answers[]');
+    const enumType = document.getElementById('enumTypeSelect').value;
     
     const data = {
         section_id: formData.get('section_id'),
         question: formData.get('question'),
         item_type: 'enum',
+        enum_type: enumType,
         answer: JSON.stringify(answers),
         points_awarded: formData.get('points_awarded')
     };
@@ -373,10 +399,22 @@ function saveQuestion(data) {
     .then(response => response.json())
     .then(result => {
         if (result.success) {
+            // Close modal
+            const activeModal = document.querySelector('.modal.show');
+            if (activeModal) {
+                const modal = bootstrap.Modal.getInstance(activeModal);
+                modal.hide();
+            }
+            
+            // Show success message and reload
             location.reload();
         } else {
-            alert('Error saving question');
+            alert('Error saving question: ' + (result.message || 'Unknown error'));
         }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to save question. Please try again.');
     });
 }
 
@@ -390,7 +428,7 @@ function addMCQOption() {
     div.className = 'option-input-group';
     div.innerHTML = `
         <input type="text" class="form-control-custom" placeholder="Option ${letter}" name="options[]" required>
-        <input type="checkbox" class="correct-checkbox" name="correct[]" value="${optionCount}">
+        <input type="checkbox" class="correct-checkbox" name="correct[]" value="${optionCount}" title="Mark as correct">
     `;
     container.appendChild(div);
 }
@@ -399,105 +437,51 @@ function addMCQOption() {
 function addEnumAnswer() {
     const container = document.getElementById('enum_answers');
     const answerCount = container.querySelectorAll('.option-input-group').length + 1;
+    const enumType = document.getElementById('enumTypeSelect').value;
     
     const div = document.createElement('div');
     div.className = 'option-input-group';
-    div.innerHTML = `
-        <span style="font-weight: 600; margin-right: 8px;">${answerCount}.</span>
-        <input type="text" class="form-control-custom" placeholder="Answer ${answerCount}" name="answers[]" required>
-    `;
+    
+    if (enumType === 'ordered') {
+        div.innerHTML = `
+            <span class="enum-number" style="font-weight: 600; margin-right: 8px; min-width: 24px;">${answerCount}.</span>
+            <input type="text" class="form-control-custom" placeholder="Answer ${answerCount}" name="answers[]" required>
+            <span class="enum-drag-handle" style="display: none; color: #9ca3af; font-size: 1rem; cursor: move; margin-left: 8px;"><i class="bi bi-grip-vertical"></i></span>
+        `;
+    } else {
+        div.innerHTML = `
+            <span class="enum-number" style="display: none; font-weight: 600; margin-right: 8px; min-width: 24px;">${answerCount}.</span>
+            <input type="text" class="form-control-custom" placeholder="Answer ${answerCount}" name="answers[]" required>
+            <span class="enum-drag-handle" style="display: inline-block; color: #9ca3af; font-size: 1rem; cursor: move; margin-left: 8px;"><i class="bi bi-grip-vertical"></i></span>
+        `;
+    }
+    
     container.appendChild(div);
 }
 
-// Make Card Active
-function makeCardActive(card, event) {
-    if (card.classList.contains('view-mode')) {
-        document.querySelectorAll('.question-card').forEach(c => c.classList.remove('active'));
-        card.classList.add('active');
-    }
-}
-
-// Update Exam Title
-function updateExamTitle() {
-    const title = document.getElementById('examTitle').value;
+// Toggle Enumeration Type
+function toggleEnumType() {
+    const enumType = document.getElementById('enumTypeSelect').value;
+    const numbers = document.querySelectorAll('.enum-number');
+    const dragHandles = document.querySelectorAll('.enum-drag-handle');
+    const answersLabel = document.getElementById('enumAnswersLabel');
+    const pointsLabel = document.getElementById('enumPointsLabel');
     
-    fetch(`/instructor/exams/${examId}`, {
-        method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}'
-        },
-        body: JSON.stringify({ exam_title: title })
-    })
-    .then(response => response.json())
-    .then(result => {
-        if (!result.success) {
-            alert('Error updating exam title');
-        }
-    });
-}
-
-// Update Section
-function updateSection(sectionId, field, value) {
-    fetch(`/instructor/exams/${examId}/sections/${sectionId}`, {
-        method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}'
-        },
-        body: JSON.stringify({ [field]: value })
-    });
-}
-
-// Duplicate Question
-function duplicateQuestion(examId, itemId) {
-    fetch(`/instructor/exams/${examId}/questions/${itemId}/duplicate`, {
-        method: 'POST',
-        headers: {
-            'X-CSRF-TOKEN': '{{ csrf_token() }}'
-        }
-    })
-    .then(response => response.json())
-    .then(result => {
-        if (result.success) {
-            location.reload();
-        }
-    });
-}
-
-// Delete Question
-function deleteQuestion(examId, itemId) {
-    if (confirm('Are you sure you want to delete this question?')) {
-        fetch(`/instructor/exams/${examId}/questions/${itemId}`, {
-            method: 'DELETE',
-            headers: {
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
-            }
-        })
-        .then(response => response.json())
-        .then(result => {
-            if (result.success) {
-                location.reload();
-            }
-        });
+    // Update hidden field
+    document.getElementById('enum_type').value = enumType;
+    
+    if (enumType === 'ordered') {
+        // Show numbers, hide drag handles
+        numbers.forEach(num => num.style.display = 'inline-block');
+        dragHandles.forEach(handle => handle.style.display = 'none');
+        answersLabel.textContent = 'Expected Answers (in order)';
+        pointsLabel.textContent = 'Points:';
+    } else {
+        // Hide numbers, show drag handles
+        numbers.forEach(num => num.style.display = 'none');
+        dragHandles.forEach(handle => handle.style.display = 'inline-block');
+        answersLabel.textContent = 'Expected Answers';
+        pointsLabel.textContent = 'Point per correct answer:';
     }
-}
-
-// Reorder Question
-function reorderQuestion(examId, itemId, direction) {
-    fetch(`/instructor/exams/${examId}/questions/reorder`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}'
-        },
-        body: JSON.stringify({ item_id: itemId, direction: direction })
-    })
-    .then(response => response.json())
-    .then(result => {
-        if (result.success) {
-            location.reload();
-        }
-    });
 }
 </script>

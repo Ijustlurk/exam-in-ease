@@ -4,13 +4,14 @@ use App\Http\Controllers\Admin\ManageClassesController;
 use App\Http\Controllers\Admin\ManageSubjectController;
 use App\Http\Controllers\Admin\MonitoringController;
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\ProgramChair\ExamStatisticsController;
+use App\Http\Controllers\Instructor\ExamStatisticsController;
 use App\Http\Controllers\ProgramChair\ManageApprovalController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Instructor\ExamController;
 use App\Http\Controllers\Admin\ExamController as AdminExamController;
+use App\Http\Controllers\ProgramChair\ExamStatisticsController as ProgramChairExamStatisticsController; 
 use App\Http\Controllers\DashboardController;
 
 
@@ -89,20 +90,17 @@ Route::
             Route::get('/users/{userId}/edit', [UserController::class, 'edit'])->name('users.edit');
             Route::put('/users/{userId}', [UserController::class, 'update'])->name('users.update');
             Route::delete('/users/{userId}', [UserController::class, 'destroy'])->name('users.destroy');
-             Route::get('/users/template/{role}', [UserController::class, 'downloadTemplate'])->name('users.download-template'); 
+            Route::get('/users/template/{role}', [UserController::class, 'downloadTemplate'])->name('users.download-template'); 
             Route::post('/users/import', [UserController::class, 'import'])->name('users.import');
-              Route::post('/users/import', [UserController::class, 'import'])->name('users.import');
-
+            Route::post('/users/import', [UserController::class, 'import'])->name('users.import');
             Route::get('/programchair/{exam}', [MonitoringController::class, 'show'])->name('monitor.show');
             
-
         });
 
 
 
 
-Route::
-        namespace('App\Http\Controllers\ProgramChair')->prefix('programchair')->name('programchair.')->middleware('can:programchair-access')->group(function () {
+Route::namespace('App\Http\Controllers\ProgramChair')->prefix('programchair')->name('programchair.')->middleware('can:programchair-access')->group(function () {
             Route::prefix('manage-approval')->name('manage-approval.')->group(function () {
 
                 // List all exams for approval
@@ -110,20 +108,14 @@ Route::
                     ->name('index');
                 Route::get('/programchair/{exam}', [ManageApprovalController::class, 'show'])
                     ->name('show');
-
-                // Approve an exam - Using route model binding with {exam}
                 Route::post('/{exam}/approve', [ManageApprovalController::class, 'approve'])
                     ->name('approve');
-
-                // Send exam for revision - Using route model binding with {exam}
                 Route::post('/programchair/{exam}/revise', [ManageApprovalController::class, 'revise'])
                     ->name('revise');
-
-                // Rescind approval - Using route model binding with {exam}
                 Route::post('/programchair/{exam}/rescind', [ManageApprovalController::class, 'rescind'])
                     ->name('rescind');
             });
-            Route::get('/exam-statistics', [ExamStatisticsController::class, 'index'])->name('exam-statistics.index');
+            Route::get('/exam-statistics', [ProgramChairExamStatisticsController::class, 'index'])->name('exam-statistics.index');
 
         });
 
@@ -161,6 +153,10 @@ Route::
 
         // Get classes by subject (for the create exam modal)
         Route::get('/api/classes', [ExamController::class, 'getClasses'])->name('classes.get');
+
+        Route::get('instructor/exams-statistics', [ExamStatisticsController::class, 'index'])->name('exam-statistics.index');
+        Route::get('instructor/exams-statistics/show', [ExamStatisticsController::class, 'show'])->name('exam-statistics.show');
+
     });
 
 

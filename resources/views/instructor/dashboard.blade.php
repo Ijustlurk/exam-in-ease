@@ -3,7 +3,6 @@
 
 @section('content')
 <style>
-    /* Keep all existing styles */
     body {
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
         background-color: #e8eef2;
@@ -53,11 +52,22 @@
         height: 200px;
         display: flex;
         flex-direction: column;
+        user-select: none;
     }
     .exam-card-wrapper:hover {
         box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         transform: translateY(-2px);
         border-color: #cbd5e1;
+    }
+    .exam-card-wrapper:hover::after {
+        content: 'Double-click to edit';
+        position: absolute;
+        bottom: 8px;
+        right: 12px;
+        font-size: 0.65rem;
+        color: #9ca3af;
+        font-style: italic;
+        opacity: 0.8;
     }
     .exam-card-wrapper.active {
         border-color: #7dd3fc;
@@ -200,40 +210,60 @@
         font-weight: 600;
     }
     .add-collab-btn {
-        padding: 4px 12px;
-        border: 1px solid #d1d5db;
-        border-radius: 6px;
+        padding: 6px 16px;
+        border: 1px solid #212529;
+        border-radius: 20px;
         background-color: white;
-        font-size: 0.75rem;
+        font-size: 0.8rem;
         cursor: pointer;
         transition: all 0.2s;
-        color: #374151;
-    }
-    .add-collab-btn:hover {
-        background-color: #f9fafb;
-        border-color: #9ca3af;
-    }
-    .collaborator-info {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-    .creator-avatar-large {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        object-fit: cover;
-        flex-shrink: 0;
-    }
-    .creator-name {
-        font-size: 0.875rem;
         color: #212529;
         font-weight: 500;
     }
-    .detail-section-title {
-        font-size: 0.75rem;
+    .add-collab-btn:hover {
+        background-color: #212529;
+        color: white;
+    }
+    .collaborator-display {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    .collaborator-avatars {
+        display: flex;
+        align-items: center;
+        gap: 0;
+    }
+    .collab-avatar-circle {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 2px solid white;
+        margin-left: -10px;
+        background: #374151;
+        color: white;
         font-weight: 600;
-        color: #374151;
+        font-size: 0.875rem;
+        position: relative;
+    }
+    .collab-avatar-circle:first-child {
+        margin-left: 0;
+    }
+    .collab-avatar-circle i {
+        font-size: 1.2rem;
+    }
+    .collaborator-text {
+        font-size: 0.875rem;
+        color: #212529;
+        font-weight: 400;
+    }
+    .detail-section-title {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #212529;
         margin-bottom: 16px;
         margin-top: 20px;
     }
@@ -243,7 +273,7 @@
     .detail-label {
         font-size: 0.75rem;
         font-weight: 600;
-        color: #374151;
+        color: #212529;
         margin-bottom: 4px;
     }
     .detail-value {
@@ -515,7 +545,8 @@
                         <div class="col-lg-4 col-md-6 col-sm-6 mb-3">
                             <div class="exam-card-wrapper {{ $loop->first ? 'active' : '' }}" 
                                  data-exam-id="{{ $exam->exam_id }}" 
-                                 onclick="loadExamDetails({{ $exam->exam_id }}, this)">
+                                 onclick="handleCardClick({{ $exam->exam_id }}, this)"
+                                 ondblclick="openExamEditor({{ $exam->exam_id }})">
                                 
                                 <div class="menu-dots" onclick="event.stopPropagation(); toggleCardMenu(event, 'menu{{ $exam->exam_id }}')">
                                     <i class="bi bi-three-dots-vertical"></i>
@@ -526,29 +557,28 @@
                                 </div>
                                 
                                 <div class="exam-footer">
-                                    <div class="exam-avatar" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-size: 0.7rem; font-weight: 600;">
-                                        @if($exam->user)
-                                            {{ strtoupper(substr($exam->user->first_name, 0, 1)) }}
-                                        @else
-                                            ?
-                                        @endif
-                                    </div>
                                     <div class="exam-info">
                                         <div class="exam-title-text">
                                             {{ $exam->exam_title }}
                                         </div>
                                         <div class="exam-date-text">
-                                            Last edited {{ $exam->updated_at->diffForHumans() }}
+                                            Last opened {{ $exam->updated_at->diffForHumans() }}
                                         </div>
                                     </div>
                                 </div>
                                 
                                 <div class="menu-dropdown" id="menu{{ $exam->exam_id }}" onclick="event.stopPropagation();">
-                                    <a href="{{ route('instructor.exams.show', $exam->exam_id) }}" target="_blank" class="menu-item text-decoration-none">
+                                    <a href="{{ route('instructor.exams.create', $exam->exam_id) }}" target="_blank" class="menu-item text-decoration-none">
                                         <i class="bi bi-box-arrow-up-right"></i> Open in new tab
                                     </a>
+                                    <div class="menu-item" onclick="downloadExam({{ $exam->exam_id }})">
+                                        <i class="bi bi-download"></i> Download
+                                    </div>
                                     <div class="menu-item" onclick="openAddCollaboratorModal({{ $exam->exam_id }})">
                                         <i class="bi bi-person-plus"></i> Add Collaborator
+                                    </div>
+                                    <div class="menu-item" onclick="renameExam({{ $exam->exam_id }}, '{{ $exam->exam_title }}')">
+                                        <i class="bi bi-pencil"></i> Rename
                                     </div>
                                     <form action="{{ route('instructor.exams.duplicate', $exam->exam_id) }}" method="POST" class="m-0">
                                         @csrf
@@ -584,23 +614,17 @@
 
                         <div class="collaborator-section">
                             <div class="collaborator-header">
-                                <div class="collaborator-label">Creator</div>
-                                <button class="add-collab-btn" onclick="openAddCollaboratorModal({{ $selectedExam->exam_id }})">+ Add a collaborator</button>
+                                <div class="collaborator-label">Collaborator</div>
+                                <button class="add-collab-btn" onclick="openAddCollaboratorModal({{ $selectedExam->exam_id }})">Add a collaborator</button>
                             </div>
-                            <div class="collaborator-info">
-                                <div class="creator-avatar-large" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 0.875rem;" id="detail-avatar">
-                                    @if($selectedExam->user)
-                                        {{ strtoupper(substr($selectedExam->user->first_name, 0, 1)) }}{{ strtoupper(substr($selectedExam->user->last_name, 0, 1)) }}
-                                    @else
-                                        NA
-                                    @endif
+                            <div class="collaborator-display" id="collaborator-display">
+                                <div class="collaborator-avatars" id="collaborator-avatars">
+                                    <div class="collab-avatar-circle">
+                                        <i class="bi bi-person-fill"></i>
+                                    </div>
                                 </div>
-                                <div class="creator-name" id="detail-creator">
-                                    @if($selectedExam->user)
-                                        {{ $selectedExam->user->first_name }} {{ $selectedExam->user->last_name }}
-                                    @else
-                                        Unknown
-                                    @endif
+                                <div class="collaborator-text" id="collaborator-text">
+                                    Only you
                                 </div>
                             </div>
                         </div>
@@ -638,9 +662,9 @@
                         </div>
 
                         <div class="detail-row">
-                            <div class="detail-label">Description</div>
+                            <div class="detail-label">Revision Notes</div>
                             <div class="detail-value" id="detail-notes">
-                                {{ $selectedExam->exam_desc ?? 'None' }}
+                                {{ $selectedExam->revision_notes ?? 'N/A' }}
                             </div>
                         </div>
                     </div>
@@ -677,22 +701,18 @@
                 <form action="{{ route('instructor.exams.store') }}" method="POST" id="newExamForm">
                     @csrf
                     
-                    <!-- Exam Title -->
                     <div class="mb-3">
                         <input type="text" class="form-control" name="exam_title" placeholder="Computer Programming 1 Prelim" required style="border-radius: 8px; padding: 12px 16px; border: 1px solid #d1d5db; font-size: 0.95rem;">
                     </div>
 
-                    <!-- Exam Description -->
                     <div class="mb-3">
                         <input type="text" class="form-control" name="exam_desc" placeholder="Exam on programming" style="border-radius: 8px; padding: 12px 16px; border: 1px solid #d1d5db; font-size: 0.95rem;">
                     </div>
 
-                    <!-- Settings Section -->
                     <div class="mb-3">
                         <label style="font-size: 0.75rem; color: #6b7280; font-weight: 600; margin-bottom: 12px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px; display: block;">Settings</label>
                         
                         <div class="row">
-                            <!-- Subject -->
                             <div class="col-md-6 mb-3">
                                 <label style="font-size: 0.875rem; color: #374151; font-weight: 500; margin-bottom: 6px; display: block;">Subject</label>
                                 <select class="form-select" name="subject_id" id="subjectSelect" required onchange="loadClassesBySubject()" style="border-radius: 8px; padding: 10px 14px; border: 1px solid #d1d5db; font-size: 0.875rem;">
@@ -703,7 +723,6 @@
                                 </select>
                             </div>
 
-                            <!-- Class Assignment -->
                             <div class="col-md-6 mb-3">
                                 <label style="font-size: 0.875rem; color: #374151; font-weight: 500; margin-bottom: 6px; display: block;">Class Assignment</label>
                                 <select class="form-select" name="class_ids[]" id="classSelect" multiple style="border-radius: 8px; padding: 10px 14px; border: 1px solid #d1d5db; font-size: 0.875rem; height: 100px;">
@@ -714,7 +733,6 @@
                         </div>
 
                         <div class="row">
-                            <!-- Term (Optional - not in database but matches your UI) -->
                             <div class="col-md-6 mb-3">
                                 <label style="font-size: 0.875rem; color: #374151; font-weight: 500; margin-bottom: 6px; display: block;">Term</label>
                                 <select class="form-select" name="term" style="border-radius: 8px; padding: 10px 14px; border: 1px solid #d1d5db; font-size: 0.875rem;">
@@ -725,7 +743,6 @@
                                 </select>
                             </div>
 
-                            <!-- Duration -->
                             <div class="col-md-6 mb-3">
                                 <label style="font-size: 0.875rem; color: #374151; font-weight: 500; margin-bottom: 6px; display: block;">Duration</label>
                                 <div class="input-group" style="border-radius: 8px; overflow: hidden;">
@@ -736,13 +753,11 @@
                         </div>
 
                         <div class="row">
-                            <!-- Schedule Start -->
                             <div class="col-md-6 mb-3">
                                 <label style="font-size: 0.875rem; color: #374151; font-weight: 500; margin-bottom: 6px; display: block;">Schedule Start</label>
                                 <input type="datetime-local" class="form-control" name="schedule_start" required style="border-radius: 8px; padding: 10px 14px; border: 1px solid #d1d5db; font-size: 0.875rem;">
                             </div>
 
-                            <!-- Schedule End -->
                             <div class="col-md-6 mb-3">
                                 <label style="font-size: 0.875rem; color: #374151; font-weight: 500; margin-bottom: 6px; display: block;">Schedule End</label>
                                 <input type="datetime-local" class="form-control" name="schedule_end" required style="border-radius: 8px; padding: 10px 14px; border: 1px solid #d1d5db; font-size: 0.875rem;">
@@ -750,7 +765,6 @@
                         </div>
                     </div>
 
-                    <!-- Create Button -->
                     <div class="d-flex justify-content-end">
                         <button type="submit" class="btn" style="background-color: #5f8a9a; color: white; border-radius: 8px; padding: 10px 28px; font-size: 0.95rem; font-weight: 500; border: none;">
                             Create New Exam
@@ -774,30 +788,49 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body" style="padding: 24px;">
-                <!-- Search Bar -->
                 <div class="collab-search-bar">
                     <i class="bi bi-search" style="color: #9ca3af;"></i>
                     <input type="text" id="collabSearchInput" placeholder="Search for teachers" oninput="searchCollaborators()">
                 </div>
 
-                <!-- Search Results -->
                 <div class="collab-search-results" id="collabSearchResults" style="display: none;">
-                    <!-- Results populated by JavaScript -->
                 </div>
 
-                <!-- Selected Collaborators -->
                 <div class="selected-collabs-section" id="selectedCollabsSection">
                     <div id="selectedCollabsList">
-                        <!-- Selected collaborators will appear here -->
                     </div>
                 </div>
 
-                <!-- Add Button -->
                 <div class="d-flex justify-content-end">
                     <button type="button" class="add-collab-submit-btn" id="addCollabSubmitBtn" disabled onclick="submitCollaborators()">
                         Add as Collaborator
                     </button>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Rename Modal -->
+<div class="modal fade" id="renameExamModal" tabindex="-1" aria-labelledby="renameExamModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius: 12px; border: none;">
+            <div class="modal-header" style="background-color: #5f8a9a; color: white; border-radius: 12px 12px 0 0;">
+                <h5 class="modal-title" id="renameExamModalLabel">Rename Exam</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" style="padding: 24px;">
+                <form id="renameExamForm">
+                    <input type="hidden" id="renameExamId">
+                    <div class="mb-3">
+                        <label style="font-size: 0.875rem; color: #374151; font-weight: 500; margin-bottom: 6px;">New Exam Title</label>
+                        <input type="text" class="form-control" id="renameExamTitle" required style="border-radius: 8px; padding: 12px 16px;">
+                    </div>
+                    <div class="d-flex justify-content-end gap-2">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="border-radius: 8px;">Cancel</button>
+                        <button type="submit" class="btn" style="background-color: #5f8a9a; color: white; border-radius: 8px;">Rename</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -809,6 +842,31 @@
 <script>
     let selectedCollaborators = [];
     let currentExamId = null;
+    let clickTimer = null;
+    let preventSingleClick = false;
+
+    // Handle single click vs double click on exam cards
+    function handleCardClick(examId, cardElement) {
+        clearTimeout(clickTimer);
+        if (preventSingleClick) {
+            preventSingleClick = false;
+            return;
+        }
+        
+        clickTimer = setTimeout(() => {
+            if (!preventSingleClick) {
+                loadExamDetails(examId, cardElement);
+            }
+        }, 250);
+    }
+
+    // Open exam editor/builder on double click
+    function openExamEditor(examId) {
+        preventSingleClick = true;
+        clearTimeout(clickTimer);
+        // Redirect to exam edit/builder page
+        window.location.href = `/instructor/exams/create/${examId}`;
+    }
 
     function openNewExamModal() {
         document.getElementById('newExamForm').reset();
@@ -982,6 +1040,9 @@
                 
                 setTimeout(() => alertDiv.remove(), 5000);
                 
+                // Reload exam details to show new collaborators
+                loadExamDetails(currentExamId, document.querySelector(`[data-exam-id="${currentExamId}"]`));
+                
                 selectedCollaborators = [];
                 submitBtn.disabled = false;
                 submitBtn.textContent = 'Add as Collaborator';
@@ -1027,8 +1088,6 @@
                 const exam = data.exam;
                 
                 document.getElementById('detail-title').textContent = exam.exam_title;
-                document.getElementById('detail-avatar').textContent = data.creator_initials;
-                document.getElementById('detail-creator').textContent = data.creator_name;
                 document.getElementById('detail-subject').textContent = data.subject_name;
                 document.getElementById('detail-created').textContent = data.formatted_created_at;
                 
@@ -1044,12 +1103,111 @@
                 if (document.getElementById('detail-notes')) {
                     document.getElementById('detail-notes').textContent = exam.exam_desc || 'None';
                 }
+                
+                // Update collaborator display
+                updateCollaboratorDisplay(data.collaborators || [], data.creator_name);
             })
             .catch(error => {
                 console.error('Error loading exam details:', error);
                 alert('Failed to load exam details');
             });
     }
+
+    function updateCollaboratorDisplay(collaborators, creatorName) {
+        const avatarsContainer = document.getElementById('collaborator-avatars');
+        const textContainer = document.getElementById('collaborator-text');
+        
+        // Clear existing avatars
+        avatarsContainer.innerHTML = '';
+        
+        // Add creator avatar (you)
+        const youAvatar = document.createElement('div');
+        youAvatar.className = 'collab-avatar-circle';
+        youAvatar.innerHTML = '<i class="bi bi-person-fill"></i>';
+        avatarsContainer.appendChild(youAvatar);
+        
+        // Add collaborator avatars
+        collaborators.forEach((collab, index) => {
+            if (index < 2) { // Show max 3 avatars including creator
+                const avatar = document.createElement('div');
+                avatar.className = 'collab-avatar-circle';
+                avatar.innerHTML = '<i class="bi bi-person-fill"></i>';
+                avatarsContainer.appendChild(avatar);
+            }
+        });
+        
+        // Update text
+        if (collaborators.length === 0) {
+            textContainer.textContent = 'Only you';
+        } else if (collaborators.length === 1) {
+            textContainer.textContent = 'You and 1 other';
+        } else {
+            textContainer.textContent = `You and ${collaborators.length} others`;
+        }
+    }
+
+    function downloadExam(examId) {
+        // Implement download functionality
+        alert('Download functionality for exam ' + examId);
+    }
+
+    function renameExam(examId, currentTitle) {
+        document.getElementById('renameExamId').value = examId;
+        document.getElementById('renameExamTitle').value = currentTitle;
+        
+        const modal = new bootstrap.Modal(document.getElementById('renameExamModal'));
+        modal.show();
+    }
+
+    document.getElementById('renameExamForm')?.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const examId = document.getElementById('renameExamId').value;
+        const newTitle = document.getElementById('renameExamTitle').value;
+        
+        // Send rename request to server
+        fetch(`/instructor/exams/${examId}/rename`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: JSON.stringify({ exam_title: newTitle })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const modal = bootstrap.Modal.getInstance(document.getElementById('renameExamModal'));
+                modal.hide();
+                
+                // Update the card title and detail title
+                const card = document.querySelector(`[data-exam-id="${examId}"]`);
+                if (card) {
+                    card.querySelector('.exam-title-text').textContent = newTitle;
+                }
+                document.getElementById('detail-title').textContent = newTitle;
+                
+                // Show success message
+                const alertDiv = document.createElement('div');
+                alertDiv.className = 'alert alert-success alert-dismissible fade show';
+                alertDiv.innerHTML = `
+                    Exam renamed successfully!
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+                document.querySelector('.exam-content .container-fluid').insertBefore(
+                    alertDiv,
+                    document.querySelector('.search-bar')
+                );
+                setTimeout(() => alertDiv.remove(), 5000);
+            } else {
+                alert('Error renaming exam');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Failed to rename exam');
+        });
+    });
 
     document.addEventListener('click', function(event) {
         if (!event.target.closest('.menu-dots') && !event.target.closest('.menu-dropdown')) {
