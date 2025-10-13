@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Instructor\ExamController;
 use App\Http\Controllers\Admin\ExamController as AdminExamController;
-use App\Http\Controllers\ProgramChair\ExamStatisticsController as ProgramChairExamStatisticsController; 
+use App\Http\Controllers\ProgramChair\ExamStatisticsController as ProgramChairExamStatisticsController;
 use App\Http\Controllers\DashboardController;
 
 
@@ -90,17 +90,43 @@ Route::
             Route::get('/users/{userId}/edit', [UserController::class, 'edit'])->name('users.edit');
             Route::put('/users/{userId}', [UserController::class, 'update'])->name('users.update');
             Route::delete('/users/{userId}', [UserController::class, 'destroy'])->name('users.destroy');
-            Route::get('/users/template/{role}', [UserController::class, 'downloadTemplate'])->name('users.download-template'); 
+            Route::get('/users/template/{role}', [UserController::class, 'downloadTemplate'])->name('users.download-template');
             Route::post('/users/import', [UserController::class, 'import'])->name('users.import');
             Route::post('/users/import', [UserController::class, 'import'])->name('users.import');
             Route::get('/programchair/{exam}', [MonitoringController::class, 'show'])->name('monitor.show');
-            
+
+
+            Route::controller(ManageClassesController::class)->group(function () {
+                // Basic CRUD
+                Route::get('/manage-classes', 'index')->name('manage-classes.index');
+                Route::post('/manage-classes', 'store')->name('manage-classes.store');
+                Route::get('/manage-classes/{id}', 'show')->name('manage-classes.show');
+                Route::put('/manage-classes/{id}', 'update')->name('manage-classes.update');
+                Route::delete('/manage-classes/{id}', 'destroy')->name('manage-classes.destroy');
+
+                // Archive/Unarchive
+                Route::post('/manage-classes/{id}/archive', 'archive')->name('manage-classes.archive');
+                Route::post('/manage-classes/{id}/unarchive', 'unarchive')->name('manage-classes.unarchive');
+
+                // Student Management
+                Route::get('/manage-classes/{id}/students', 'manageStudents')->name('manage-classes.students');
+                Route::get('/manage-classes/{id}/available-students', 'getAvailableStudents')->name('manage-classes.available-students');
+                Route::get('/manage-classes/{id}/class-members', 'getClassMembers')->name('manage-classes.class-members');
+                Route::post('/manage-classes/{id}/add-students', 'addStudents')->name('manage-classes.add-students');
+                Route::delete('/manage-classes/{classId}/remove-student/{studentId}', 'removeStudent')->name('manage-classes.remove-student');
+
+                // Copy Students
+                Route::get('/manage-classes/{id}/other-classes', 'getOtherClasses')->name('manage-classes.other-classes');
+                Route::post('/manage-classes/{id}/copy-students/{sourceClassId}', 'copyStudentsFromClass')->name('manage-classes.copy-students');
+            });
+
         });
 
 
 
 
-Route::namespace('App\Http\Controllers\ProgramChair')->prefix('programchair')->name('programchair.')->middleware('can:programchair-access')->group(function () {
+Route::
+        namespace('App\Http\Controllers\ProgramChair')->prefix('programchair')->name('programchair.')->middleware('can:programchair-access')->group(function () {
             Route::prefix('manage-approval')->name('manage-approval.')->group(function () {
 
                 // List all exams for approval

@@ -114,4 +114,11 @@ class ClassModel extends Model
     {
         return $query->where('status', 'Archived');
     }
+
+
+    // Add this to your existing ClassModel model
+    public function enrolments()
+    {
+        return $this->hasMany(ClassEnrolment::class, 'class_id', 'class_id');
+    }
 }

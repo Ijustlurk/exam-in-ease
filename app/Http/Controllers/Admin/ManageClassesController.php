@@ -7,7 +7,9 @@ use Illuminate\Http\Request;
 use App\Models\ClassModel;
 use App\Models\Subject;
 use App\Models\UserTeacher;
+use App\Models\UserStudent;
 use App\Models\TeacherAssignment;
+use App\Models\ClassEnrolment;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
@@ -24,18 +26,18 @@ class ManageClassesController extends Controller
         if ($request->has('show_archived') && $request->show_archived == 'true') {
             // Show all including archived
         } else {
-            $query->active();
+            $query->where('status', 'Active');
         }
 
         // Search functionality
         if ($request->has('search') && $request->search != '') {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('title', 'like', "%{$search}%")
-                  ->orWhere('section', 'like', "%{$search}%")
-                  ->orWhereHas('subject', function($subQuery) use ($search) {
-                      $subQuery->where('subject_name', 'like', "%{$search}%");
-                  });
+                    ->orWhere('section', 'like', "%{$search}%")
+                    ->orWhereHas('subject', function ($subQuery) use ($search) {
+                        $subQuery->where('subject_name', 'like', "%{$search}%");
+                    });
             });
         }
 
@@ -43,7 +45,7 @@ class ManageClassesController extends Controller
 
         // Get subjects and teachers for modal
         $subjects = Subject::orderBy('subject_name')->get();
-        $teachers = UserTeacher::active()->orderBy('first_name')->get();
+        $teachers = UserTeacher::where('status', 'Active')->orderBy('first_name')->get();
 
         return view('admin.manage-classes.index', compact('classes', 'subjects', 'teachers'));
     }
@@ -117,7 +119,13 @@ class ManageClassesController extends Controller
 
         return response()->json([
             'success' => true,
-            'class' => $class
+            'class' => [
+                'class_id' => $class->class_id,
+                'title' => $class->title,
+                'subject' => $class->subject,
+                'teacher' => $class->teacher,
+                'students_count' => $class->students->count()
+            ]
         ]);
     }
 
@@ -147,7 +155,7 @@ class ManageClassesController extends Controller
             DB::beginTransaction();
 
             $class = ClassModel::findOrFail($id);
-            
+
             $class->update([
                 'title' => $request->title,
                 'subject_id' => $request->subject_id,
@@ -240,6 +248,434 @@ class ManageClassesController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to unarchive class: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Manage students page (optional, if you want a dedicated page)
+     */
+    public function manageStudents(string $id)
+    {
+        $class = ClassModel::with(['subject', 'teacher', 'students'])
+            ->findOrFail($id);
+
+        return view('admin.manage-classes.students', compact('class'));
+    }
+
+
+    /**
+     * Add students to class
+     */
+    public function addStudents(Request $request, $id)
+    {
+        $validator = Validator::make($request->all(), [
+            'student_ids' => 'required|array',
+            'student_ids.*' => 'exists:user_student,user_id'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            $class = ClassModel::findOrFail($id);
+
+            foreach ($request->student_ids as $studentId) {
+                // Check if already enrolled
+                $existing = ClassEnrolment::where('class_id', $id)
+                    ->where('student_id', $studentId)
+                    ->first();
+
+                if ($existing) {
+                    // Update status if archived
+                    $existing->update(['status' => 'Active']);
+                } else {
+                    // Create new enrollment
+                    ClassEnrolment::create([
+                        'class_id' => $id,
+                        'student_id' => $studentId,
+                        'status' => 'Active'
+                    ]);
+                }
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Students added successfully'
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to add students: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Remove student from class
+     */
+    public function removeStudent($classId, $studentId)
+    {
+        try {
+            $enrolment = ClassEnrolment::where('class_id', $classId)
+                ->where('student_id', $studentId)
+                ->firstOrFail();
+
+            $enrolment->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Student removed successfully'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to remove student: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+
+    /**
+     * Copy students from another class
+     */
+    public function copyStudentsFromClass($id, $sourceClassId)
+    {
+        try {
+            \Log::info("==========================================");
+            \Log::info("COPY STUDENTS FROM CLASS - START");
+            \Log::info("Target Class ID: {$id}");
+            \Log::info("Source Class ID: {$sourceClassId}");
+
+            DB::beginTransaction();
+
+            // Verify both classes exist
+            $targetClass = ClassModel::findOrFail($id);
+            $sourceClass = ClassModel::findOrFail($sourceClassId);
+
+            \Log::info("Target Class: {$targetClass->title}");
+            \Log::info("Source Class: {$sourceClass->title}");
+
+            // Try multiple methods to get students
+
+            // Method 1: Direct DB query (most reliable)
+            $sourceStudentsRaw = DB::select(
+                "SELECT student_id FROM class_enrolment WHERE class_id = ? AND status = 'Active'",
+                [$sourceClassId]
+            );
+
+            \Log::info("Method 1 (Raw SQL) - Found: " . count($sourceStudentsRaw) . " students");
+            \Log::info("Raw data: " . json_encode($sourceStudentsRaw));
+
+            // Method 2: Using Query Builder
+            $sourceStudentsBuilder = DB::table('class_enrolment')
+                ->where('class_id', $sourceClassId)
+                ->where('status', 'Active')
+                ->pluck('student_id')
+                ->toArray();
+
+            \Log::info("Method 2 (Query Builder) - Found: " . count($sourceStudentsBuilder) . " students");
+            \Log::info("Builder data: " . json_encode($sourceStudentsBuilder));
+
+            // Method 3: Using Eloquent Model
+            $sourceStudentsEloquent = ClassEnrolment::where('class_id', $sourceClassId)
+                ->where('status', 'Active')
+                ->pluck('student_id')
+                ->toArray();
+
+            \Log::info("Method 3 (Eloquent) - Found: " . count($sourceStudentsEloquent) . " students");
+            \Log::info("Eloquent data: " . json_encode($sourceStudentsEloquent));
+
+            // Use the method that returned results
+            $sourceStudents = !empty($sourceStudentsRaw)
+                ? array_map(function ($obj) {
+                    return $obj->student_id;
+                }, $sourceStudentsRaw)
+                : (!empty($sourceStudentsBuilder) ? $sourceStudentsBuilder : $sourceStudentsEloquent);
+
+            \Log::info("Final source students array: " . json_encode($sourceStudents));
+            \Log::info("Total students to process: " . count($sourceStudents));
+
+            if (empty($sourceStudents)) {
+                \Log::warning("No students found in source class");
+
+                // Check if there are ANY records in class_enrolment for this class
+                $anyRecords = DB::table('class_enrolment')
+                    ->where('class_id', $sourceClassId)
+                    ->count();
+
+                \Log::info("Total records in class_enrolment for source class (any status): " . $anyRecords);
+
+                // Check what statuses exist
+                $statuses = DB::table('class_enrolment')
+                    ->where('class_id', $sourceClassId)
+                    ->select('status', DB::raw('COUNT(*) as count'))
+                    ->groupBy('status')
+                    ->get();
+
+                \Log::info("Status breakdown: " . json_encode($statuses));
+
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No students found in the source class',
+                    'debug_info' => [
+                        'total_records' => $anyRecords,
+                        'status_breakdown' => $statuses
+                    ]
+                ]);
+            }
+
+            $addedCount = 0;
+            $skippedCount = 0;
+            $errors = [];
+
+            foreach ($sourceStudents as $studentId) {
+                \Log::info("Processing student ID: {$studentId}");
+
+                try {
+                    // Check if already enrolled
+                    $existing = DB::table('class_enrolment')
+                        ->where('class_id', $id)
+                        ->where('student_id', $studentId)
+                        ->first();
+
+                    if (!$existing) {
+                        // Insert new enrollment
+                        DB::table('class_enrolment')->insert([
+                            'class_id' => $id,
+                            'student_id' => $studentId,
+                            'status' => 'Active'
+                        ]);
+                        $addedCount++;
+                        \Log::info("Added student {$studentId}");
+                    } elseif ($existing->status == 'Archived') {
+                        // Update to Active
+                        DB::table('class_enrolment')
+                            ->where('class_id', $id)
+                            ->where('student_id', $studentId)
+                            ->update(['status' => 'Active']);
+                        $addedCount++;
+                        \Log::info("Reactivated student {$studentId}");
+                    } else {
+                        $skippedCount++;
+                        \Log::info("Skipped student {$studentId} - already enrolled and active");
+                    }
+                } catch (\Exception $e) {
+                    $errors[] = "Error processing student {$studentId}: " . $e->getMessage();
+                    \Log::error("Error processing student {$studentId}: " . $e->getMessage());
+                }
+            }
+
+            DB::commit();
+
+            \Log::info("COPY COMPLETED");
+            \Log::info("Added: {$addedCount}");
+            \Log::info("Skipped: {$skippedCount}");
+            \Log::info("Errors: " . count($errors));
+            \Log::info("==========================================");
+
+            $message = $addedCount > 0
+                ? "{$addedCount} student(s) copied successfully"
+                : "All students are already enrolled in this class";
+
+            if ($skippedCount > 0 && $addedCount > 0) {
+                $message .= " ({$skippedCount} already enrolled)";
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+                'stats' => [
+                    'added' => $addedCount,
+                    'skipped' => $skippedCount,
+                    'total_processed' => count($sourceStudents),
+                    'errors' => $errors
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error("COPY FAILED: " . $e->getMessage());
+            \Log::error("Stack trace: " . $e->getTraceAsString());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to copy students: ' . $e->getMessage(),
+                'trace' => config('app.debug') ? $e->getTraceAsString() : null
+            ], 500);
+        }
+    }
+
+
+    /**
+     * Get available students (not enrolled in the class)
+     */
+    public function getAvailableStudents($id)
+    {
+        try {
+            $class = ClassModel::findOrFail($id);
+
+            // Get enrolled student IDs
+            $enrolledStudentIds = ClassEnrolment::where('class_id', $id)
+                ->where('status', 'Active')
+                ->pluck('student_id')
+                ->toArray();
+
+            // Get available students
+            $query = UserStudent::where('status', 'Enrolled');
+
+            if (!empty($enrolledStudentIds)) {
+                $query->whereNotIn('user_id', $enrolledStudentIds);
+            }
+
+            $availableStudents = $query
+                ->orderBy('last_name')
+                ->orderBy('first_name')
+                ->get()
+                ->map(function ($student) {
+                    return [
+                        'user_id' => $student->user_id,
+                        'name' => $student->last_name . ', ' . $student->first_name,
+                        'id_number' => $student->id_number
+                    ];
+                });
+
+            return response()->json([
+                'success' => true,
+                'students' => $availableStudents
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error in getAvailableStudents: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error fetching students: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get class members (enrolled students)
+     */
+    public function getClassMembers($id)
+    {
+        try {
+            \Log::info("=== Getting Class Members for Class ID: {$id} ===");
+
+            $class = ClassModel::findOrFail($id);
+            \Log::info("Class found: " . $class->title);
+
+            // Check raw enrolments
+            $rawEnrolments = ClassEnrolment::where('class_id', $id)
+                ->where('status', 'Active')
+                ->get();
+
+            \Log::info("Raw enrolments count: " . $rawEnrolments->count());
+            \Log::info("Raw enrolments: " . json_encode($rawEnrolments->toArray()));
+
+            // FIX: Specify which table the status column belongs to
+            $members = ClassEnrolment::where('class_enrolment.class_id', $id)
+                ->where('class_enrolment.status', 'Active')  // ← Specify table name
+                ->join('user_student', 'class_enrolment.student_id', '=', 'user_student.user_id')
+                ->where('user_student.status', 'Enrolled')  // ← Also filter enrolled students
+                ->select(
+                    'user_student.user_id',
+                    'user_student.first_name',
+                    'user_student.last_name',
+                    'user_student.id_number'
+                )
+                ->orderBy('user_student.last_name')
+                ->orderBy('user_student.first_name')
+                ->get();
+
+            \Log::info("Members found: " . $members->count());
+
+            $membersData = $members->map(function ($student) {
+                return [
+                    'user_id' => $student->user_id,
+                    'name' => $student->last_name . ', ' . $student->first_name,
+                    'id_number' => $student->id_number
+                ];
+            });
+
+            \Log::info("Formatted members data: " . json_encode($membersData));
+
+            return response()->json([
+                'success' => true,
+                'members' => $membersData,
+                'count' => $membersData->count()
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error("Error in getClassMembers: " . $e->getMessage());
+            \Log::error("Stack trace: " . $e->getTraceAsString());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error fetching class members: ' . $e->getMessage(),
+                'trace' => config('app.debug') ? $e->getTraceAsString() : null
+            ], 500);
+        }
+    }
+    /**
+     * Get other classes for copying students
+     */
+    public function getOtherClasses($id)
+    {
+        try {
+            $currentClass = ClassModel::findOrFail($id);
+
+            $otherClasses = ClassModel::where('class_id', '!=', $id)
+                ->where('status', 'Active')
+                ->with(['subject'])
+                ->withCount('students')
+                ->orderBy('title')
+                ->get()
+                ->map(function ($class) {
+                    // Get teacher name
+                    $teacherAssignment = TeacherAssignment::where('class_id', $class->class_id)->first();
+                    $teacherName = 'No Teacher';
+
+                    if ($teacherAssignment) {
+                        $teacher = UserTeacher::find($teacherAssignment->teacher_id);
+                        if ($teacher) {
+                            $teacherName = $teacher->first_name . ' ' . $teacher->last_name;
+                        }
+                    }
+
+                    return [
+                        'class_id' => $class->class_id,
+                        'name' => $class->title,
+                        'teacher' => $teacherName,
+                        'subject' => $class->subject->subject_name,
+                        'student_count' => $class->students_count
+                    ];
+                });
+
+            return response()->json([
+                'success' => true,
+                'classes' => $otherClasses
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error in getOtherClasses: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error fetching classes: ' . $e->getMessage()
             ], 500);
         }
     }

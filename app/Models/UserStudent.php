@@ -57,4 +57,10 @@ class UserStudent extends Model
     {
         return $query->where('status', 'Enrolled');
     }
+
+    // Add this to your existing UserStudent model
+    public function enrolments()
+    {
+        return $this->hasMany(ClassEnrolment::class, 'student_id', 'user_id');
+    }
 }

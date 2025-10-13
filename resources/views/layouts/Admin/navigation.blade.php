@@ -188,12 +188,12 @@
         </a>
     </div> --}}
 
-    {{-- <div class="nav-item">
+    <div class="nav-item">
         <a href="{{ route('admin.manage-classes.index') }}">
             <i class="bi bi-book nav-icon"></i>
             <span class="nav-label">Manage Classes</span>
         </a>
-    </div> --}}
+    </div>
 
     {{-- <div class="nav-item">
         <a href="{{ route('admin.subject.index') }}">
