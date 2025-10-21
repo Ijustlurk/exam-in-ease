@@ -94,8 +94,8 @@ class ExamController extends Controller
             'exam_title' => 'required|string|max:200',
             'exam_desc' => 'nullable|string',
             'subject_id' => 'required|exists:subjects,subject_id',
-            'class_ids' => 'nullable|array',
-            'class_ids.*' => 'exists:class,class_id',
+            'classes' => 'required|array|min:1',
+            'classes.*' => 'exists:class,class_id',
             'duration' => 'required|integer|min:0',
             'schedule_start' => 'required|date',
             'schedule_end' => 'required|date|after:schedule_start',
@@ -116,14 +116,20 @@ class ExamController extends Controller
                 'status' => 'draft'
             ]);
 
-            if (!empty($validated['class_ids'])) {
-                foreach ($validated['class_ids'] as $classId) {
-                    ExamAssignment::create([
-                        'class_id' => $classId,
-                        'exam_id' => $exam->exam_id
-                    ]);
-                }
+            // Create exam assignments for selected classes
+            foreach ($validated['classes'] as $classId) {
+                ExamAssignment::create([
+                    'class_id' => $classId,
+                    'exam_id' => $exam->exam_id
+                ]);
             }
+
+            // Create exam collaboration entry for the creator/author
+            ExamCollaboration::create([
+                'exam_id' => $exam->exam_id,
+                'teacher_id' => Auth::id(),
+                'role' => 'owner'
+            ]);
 
             DB::commit();
 
@@ -158,30 +164,94 @@ class ExamController extends Controller
 
     public function update(Request $request, $id)
     {
-        $exam = Exam::findOrFail($id);
-        
-        $teacherId = Auth::id();
-        $hasAccess = $exam->teacher_id == $teacherId || 
-                     $exam->collaborations->contains('teacher_id', $teacherId);
-        
-        if (!$hasAccess) {
-            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
-        }
-
-        $validated = $request->validate([
-            'exam_title' => 'sometimes|required|string|max:200',
-            'exam_desc' => 'nullable|string',
-            'subject_id' => 'sometimes|required|exists:subjects,subject_id',
-            'duration' => 'sometimes|required|integer|min:0',
-            'schedule_start' => 'sometimes|required|date',
-            'schedule_end' => 'sometimes|required|date|after:schedule_start',
-        ]);
-
         try {
-            $exam->update($validated);
-            return response()->json(['success' => true, 'message' => 'Exam updated successfully']);
+            $exam = Exam::findOrFail($id);
+            
+            $teacherId = Auth::id();
+            $hasAccess = $exam->teacher_id == $teacherId || 
+                         $exam->collaborations->contains('teacher_id', $teacherId);
+            
+            if (!$hasAccess) {
+                return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+            }
+
+            // Log incoming request for debugging
+            \Log::info('Update Exam Request', [
+                'exam_id' => $id,
+                'request_data' => $request->all()
+            ]);
+
+            $validated = $request->validate([
+                'exam_title' => 'sometimes|required|string|max:200',
+                'exam_desc' => 'nullable|string',
+                'subject_id' => 'sometimes|required|exists:subjects,subject_id',
+                'term' => 'nullable|string',
+                'duration' => 'sometimes|required|integer|min:0',
+                'schedule_start' => 'sometimes|required|date',
+                'schedule_end' => 'sometimes|required|date|after:schedule_start',
+                'selected_classes' => 'nullable|string', // Comma-separated class IDs
+                'status' => 'sometimes|required|in:draft,for approval,approved,ongoing,archived',
+            ]);
+
+            DB::beginTransaction();
+            
+            // Update exam fields
+            $updateData = array_filter($validated, function($key) {
+                return $key !== 'selected_classes';
+            }, ARRAY_FILTER_USE_KEY);
+            
+            \Log::info('Update Data', ['data' => $updateData]);
+            
+            $exam->update($updateData);
+
+            // Update class assignments if provided
+            if (isset($validated['selected_classes']) && !empty($validated['selected_classes'])) {
+                $classIds = explode(',', $validated['selected_classes']);
+                $classIds = array_filter($classIds); // Remove empty values
+                
+                \Log::info('Updating class assignments', ['class_ids' => $classIds]);
+                
+                // Delete existing assignments
+                ExamAssignment::where('exam_id', $exam->exam_id)->delete();
+                
+                // Create new assignments
+                foreach ($classIds as $classId) {
+                    ExamAssignment::create([
+                        'exam_id' => $exam->exam_id,
+                        'class_id' => trim($classId)
+                    ]);
+                }
+            }
+
+            DB::commit();
+            
+            \Log::info('Exam updated successfully', ['exam_id' => $id]);
+            
+            return response()->json([
+                'success' => true, 
+                'message' => 'Exam updated successfully',
+                'exam' => $exam->fresh()
+            ]);
+            
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            DB::rollBack();
+            \Log::error('Validation Error', ['errors' => $e->errors()]);
+            return response()->json([
+                'success' => false, 
+                'message' => 'Validation failed',
+                'errors' => $e->errors()
+            ], 422);
         } catch (\Exception $e) {
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+            DB::rollBack();
+            \Log::error('Update Exam Error', [
+                'exam_id' => $id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json([
+                'success' => false, 
+                'message' => 'Failed to update exam: ' . $e->getMessage()
+            ], 500);
         }
     }
 
@@ -247,6 +317,7 @@ class ExamController extends Controller
             'options' => 'nullable|string',
             'answer' => 'nullable|string',
             'expected_answer' => 'nullable|string',
+            'enum_type' => 'nullable|in:ordered,unordered'
         ]);
 
         DB::beginTransaction();
@@ -262,6 +333,7 @@ class ExamController extends Controller
                 'options' => $validated['options'] ?? null,
                 'answer' => $validated['answer'] ?? null,
                 'expected_answer' => $validated['expected_answer'] ?? null,
+                'enum_type' => $validated['enum_type'] ?? null,
                 'order' => $maxOrder + 1
             ]);
 
@@ -284,6 +356,25 @@ class ExamController extends Controller
         }
     }
 
+    public function getQuestion($examId, $itemId)
+    {
+        $exam = Exam::findOrFail($examId);
+        $item = ExamItem::where('exam_id', $examId)->where('item_id', $itemId)->firstOrFail();
+        
+        $teacherId = Auth::id();
+        $hasAccess = $exam->teacher_id == $teacherId || 
+                     $exam->collaborations->contains('teacher_id', $teacherId);
+        
+        if (!$hasAccess) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        return response()->json([
+            'success' => true,
+            'item' => $item
+        ]);
+    }
+
     public function updateQuestion(Request $request, $examId, $itemId)
     {
         $exam = Exam::findOrFail($examId);
@@ -303,7 +394,8 @@ class ExamController extends Controller
             'points_awarded' => 'required|integer|min:1',
             'options' => 'nullable|string',
             'answer' => 'nullable|string',
-            'expected_answer' => 'nullable|string'
+            'expected_answer' => 'nullable|string',
+            'enum_type' => 'nullable|in:ordered,unordered'
         ]);
 
         DB::beginTransaction();
@@ -407,6 +499,94 @@ class ExamController extends Controller
         }
     }
 
+    public function reorderQuestions(Request $request, $examId)
+    {
+        \Log::info('Reorder Questions called', [
+            'exam_id' => $examId,
+            'item_id' => $request->item_id,
+            'direction' => $request->direction
+        ]);
+        
+        $exam = Exam::findOrFail($examId);
+        
+        $teacherId = Auth::id();
+        $hasAccess = $exam->teacher_id == $teacherId || 
+                     $exam->collaborations->contains('teacher_id', $teacherId);
+        
+        if (!$hasAccess) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        try {
+            $itemId = $request->item_id;
+            $direction = $request->direction; // 'up' or 'down'
+            
+            $item = ExamItem::findOrFail($itemId);
+            
+            \Log::info('Found item', ['item_id' => $item->item_id, 'exam_section_id' => $item->exam_section_id, 'current_order' => $item->order]);
+            
+            // Get all items in the same section ordered by 'order'
+            $items = ExamItem::where('exam_section_id', $item->exam_section_id)
+                ->orderBy('order')
+                ->get();
+            
+            \Log::info('Items in section', ['count' => $items->count(), 'orders' => $items->pluck('order')->toArray()]);
+            
+            $currentIndex = $items->search(function($i) use ($itemId) {
+                return $i->item_id == $itemId;
+            });
+            
+            \Log::info('Current index', ['index' => $currentIndex]);
+            
+            if ($currentIndex === false) {
+                return response()->json(['error' => 'Item not found'], 404);
+            }
+            
+            // Determine the swap index
+            if ($direction === 'up' && $currentIndex > 0) {
+                $swapIndex = $currentIndex - 1;
+            } elseif ($direction === 'down' && $currentIndex < $items->count() - 1) {
+                $swapIndex = $currentIndex + 1;
+            } else {
+                // Already at the boundary
+                \Log::info('Item at boundary', ['direction' => $direction, 'index' => $currentIndex]);
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Item is already at the boundary'
+                ]);
+            }
+            
+            // Swap the order values
+            $currentItem = $items[$currentIndex];
+            $swapItem = $items[$swapIndex];
+            
+            \Log::info('Swapping items', [
+                'current' => ['id' => $currentItem->item_id, 'old_order' => $currentItem->order],
+                'swap' => ['id' => $swapItem->item_id, 'old_order' => $swapItem->order]
+            ]);
+            
+            $tempOrder = $currentItem->order;
+            $currentItem->order = $swapItem->order;
+            $swapItem->order = $tempOrder;
+            
+            $currentItem->save();
+            $swapItem->save();
+            
+            \Log::info('Items swapped successfully');
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Question reordered successfully'
+            ]);
+            
+        } catch (\Exception $e) {
+            \Log::error('Reorder error', ['message' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            return response()->json([
+                'error' => 'Failed to reorder question: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
     public function updateSection(Request $request, $examId, $sectionId)
     {
         $exam = Exam::findOrFail($examId);
@@ -438,7 +618,7 @@ class ExamController extends Controller
 
     public function getExamDetails($id)
     {
-        $exam = Exam::with(['user', 'subject', 'collaborations.teacher'])
+        $exam = Exam::with(['user', 'subject', 'collaborations.teacher', 'examAssignments'])
             ->findOrFail($id);
         
         $teacherId = Auth::id();
@@ -452,6 +632,9 @@ class ExamController extends Controller
         $creatorName = $exam->user ? ($exam->user->first_name . ' ' . $exam->user->last_name) : 'Unknown';
         $creatorInitials = $this->getInitials($creatorName);
         
+        // Get assigned class IDs
+        $classAssignments = $exam->examAssignments->pluck('class_id')->toArray();
+        
         return response()->json([
             'exam' => $exam,
             'creator_name' => $creatorName,
@@ -459,6 +642,7 @@ class ExamController extends Controller
             'subject_name' => $exam->subject ? $exam->subject->subject_name : 'N/A',
             'formatted_created_at' => $exam->created_at->format('F j, Y'),
             'formatted_updated_at' => $exam->updated_at->format('F j, Y'),
+            'class_assignments' => $classAssignments,
             'collaborators' => $exam->collaborations->map(function($collab) {
                 return [
                     'id' => $collab->teacher_id,
@@ -548,10 +732,81 @@ class ExamController extends Controller
         }
     }
 
+    public function removeCollaborator($examId, $teacherId)
+    {
+        $exam = Exam::findOrFail($examId);
+        
+        // Check if current user is the owner
+        $currentUserId = Auth::id();
+        if ($exam->teacher_id != $currentUserId) {
+            return response()->json(['error' => 'Only the exam owner can remove collaborators'], 403);
+        }
+
+        // Check if exam is draft
+        if ($exam->status !== 'draft') {
+            return response()->json(['error' => 'Collaborators can only be removed from draft exams'], 403);
+        }
+
+        try {
+            $deleted = ExamCollaboration::where('exam_id', $examId)
+                ->where('teacher_id', $teacherId)
+                ->where('role', '!=', 'owner') // Prevent removing the owner
+                ->delete();
+
+            if ($deleted) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Collaborator removed successfully'
+                ]);
+            } else {
+                return response()->json([
+                    'error' => 'Collaborator not found or cannot be removed'
+                ], 404);
+            }
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Failed to remove collaborator: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function getCollaborators($examId)
+    {
+        $exam = Exam::with('collaborations.teacher')->findOrFail($examId);
+        
+        $teacherId = Auth::id();
+        $hasAccess = $exam->teacher_id == $teacherId || 
+                     $exam->collaborations->contains('teacher_id', $teacherId);
+        
+        if (!$hasAccess) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $collaborators = $exam->collaborations->map(function($collab) {
+            return [
+                'id' => $collab->teacher_id,
+                'name' => $collab->teacher->first_name . ' ' . $collab->teacher->last_name,
+                'email' => $collab->teacher->email_address,
+                'role' => $collab->role
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'collaborators' => $collaborators,
+            'is_owner' => $exam->teacher_id == $teacherId
+        ]);
+    }
+
     public function getClasses(Request $request)
     {
         $subjectId = $request->get('subject_id');
         $teacherId = Auth::id();
+        
+        \Log::info('getClasses called', [
+            'subject_id' => $subjectId,
+            'teacher_id' => $teacherId
+        ]);
         
         $classes = ClassModel::where('subject_id', $subjectId)
             ->where('status', 'Active')
@@ -569,6 +824,8 @@ class ExamController extends Controller
                 ];
             });
 
+        \Log::info('Classes found', ['count' => $classes->count(), 'classes' => $classes]);
+
         return response()->json($classes);
     }
 
@@ -579,5 +836,59 @@ class ExamController extends Controller
             return strtoupper(substr($words[0], 0, 1) . substr($words[1], 0, 1));
         }
         return strtoupper(substr($name, 0, 2));
+    }
+
+    /**
+     * Delete an exam and its related data
+     */
+    public function destroy($examId)
+    {
+        $exam = Exam::findOrFail($examId);
+        
+        // Check if user has permission to delete this exam
+        $teacherId = Auth::id();
+        $hasAccess = $exam->teacher_id == $teacherId || 
+                     $exam->collaborations->contains('teacher_id', $teacherId);
+        
+        if (!$hasAccess) {
+            return response()->json([
+                'success' => false, 
+                'error' => 'Unauthorized to delete this exam'
+            ], 403);
+        }
+
+        // Only allow deletion of draft exams
+        if ($exam->status !== 'draft') {
+            return response()->json([
+                'success' => false,
+                'error' => 'Only draft exams can be deleted'
+            ], 400);
+        }
+
+        DB::beginTransaction();
+        try {
+            // Delete related records first
+            ExamItem::where('exam_id', $examId)->delete();
+            Section::where('exam_id', $examId)->delete();
+            ExamCollaboration::where('exam_id', $examId)->delete();
+            ExamAssignment::where('exam_id', $examId)->delete();
+            
+            // Finally delete the exam
+            $exam->delete();
+
+            DB::commit();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Exam deleted successfully'
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'error' => 'Failed to delete exam: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }

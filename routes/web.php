@@ -9,6 +9,7 @@ use App\Http\Controllers\ProgramChair\ManageApprovalController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\ExamStatisticsController as AdminExamStatisticsController;
 use App\Http\Controllers\Instructor\ExamController;
 use App\Http\Controllers\Admin\ExamController as AdminExamController;
 use App\Http\Controllers\ProgramChair\ExamStatisticsController as ProgramChairExamStatisticsController;
@@ -93,7 +94,10 @@ Route::
             Route::get('/users/template/{role}', [UserController::class, 'downloadTemplate'])->name('users.download-template');
             Route::post('/users/import', [UserController::class, 'import'])->name('users.import');
             Route::post('/users/import', [UserController::class, 'import'])->name('users.import');
-            Route::get('/programchair/{exam}', [MonitoringController::class, 'show'])->name('monitor.show');
+            Route::post('/users/{id}/reset-password', [UserController::class, 'resetPassword'])
+                ->name('users.reset-password');
+
+            Route::get('admin/{exam}', [MonitoringController::class, 'show'])->name('monitor.show');
 
 
             Route::controller(ManageClassesController::class)->group(function () {
@@ -120,6 +124,30 @@ Route::
                 Route::post('/manage-classes/{id}/copy-students/{sourceClassId}', 'copyStudentsFromClass')->name('manage-classes.copy-students');
             });
 
+            Route::get('/manage-subject', [ManageSubjectController::class, 'index'])
+                ->name('manage-subject.index');
+            Route::post('/manage-subject', [ManageSubjectController::class, 'store'])
+                ->name('manage-subject.store');
+            Route::get('/manage-subject/{id}', [ManageSubjectController::class, 'show'])
+                ->name('manage-subject.show');
+            Route::put('/manage-subject/{id}', [ManageSubjectController::class, 'update'])
+                ->name('manage-subject.update');
+            Route::delete('/manage-subject/{id}', [ManageSubjectController::class, 'destroy'])
+                ->name('manage-subject.destroy');
+
+  
+
+            Route::get('/exam-statistics', [AdminExamStatisticsController::class, 'index'])
+                ->name('exam-statistics.index');
+            Route::get('/exam-statistics/{id}/show', [AdminExamStatisticsController::class, 'show'])
+                ->name('exam-statistics.show');
+            Route::get('/exam-statistics/{id}/stats', [AdminExamStatisticsController::class, 'stats'])
+                ->name('exam-statistics.stats');
+            Route::post('/exam-statistics/{id}/approve', [AdminExamStatisticsController::class, 'approve'])
+                ->name('exam-statistics.approve');
+
+
+
         });
 
 
@@ -143,6 +171,7 @@ Route::
             });
             Route::get('/exam-statistics', [ProgramChairExamStatisticsController::class, 'index'])->name('exam-statistics.index');
 
+
         });
 
 // Instructor Routes
@@ -156,6 +185,7 @@ Route::
     ->group(function () {
         // Exam Dashboard
         Route::get('/exams', [ExamController::class, 'index'])->name('exams.index');
+        Route::delete('/exams/{examId}', [ExamController::class, 'destroy'])->name('exams.destroy');
         Route::get('/exams/{id}', [ExamController::class, 'show'])->name('exams.show');
 
         // Create/Edit Exam
@@ -165,6 +195,7 @@ Route::
         Route::post('/exams/{id}/duplicate', [ExamController::class, 'duplicate'])->name('exams.duplicate');
 
         // Questions
+        Route::get('/exams/{examId}/questions/{itemId}', [ExamController::class, 'getQuestion'])->name('exams.questions.get');
         Route::post('/exams/{examId}/questions', [ExamController::class, 'addQuestion'])->name('exams.questions.add');
         Route::put('/exams/{examId}/questions/{itemId}', [ExamController::class, 'updateQuestion'])->name('exams.questions.update');
         Route::delete('/exams/{examId}/questions/{itemId}', [ExamController::class, 'deleteQuestion'])->name('exams.questions.delete');
@@ -176,6 +207,8 @@ Route::
         Route::get('/api/exams/{id}/details', [ExamController::class, 'getExamDetails'])->name('exams.details');
         Route::get('/api/teachers/search', [ExamController::class, 'searchTeachers'])->name('teachers.search');
         Route::post('/exams/{examId}/collaborators', [ExamController::class, 'addCollaborators'])->name('exams.collaborators.add');
+        Route::delete('/exams/{examId}/collaborators/{teacherId}', [ExamController::class, 'removeCollaborator'])->name('exams.collaborators.remove');
+        Route::get('/exams/{examId}/collaborators', [ExamController::class, 'getCollaborators'])->name('exams.collaborators.get');
 
         // Get classes by subject (for the create exam modal)
         Route::get('/api/classes', [ExamController::class, 'getClasses'])->name('classes.get');

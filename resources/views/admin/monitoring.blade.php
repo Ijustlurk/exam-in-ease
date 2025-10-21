@@ -8,7 +8,6 @@
                 margin-left: 60px;
                 transition: margin-left 0.3s;
                 padding: 2rem; 
-                background-color: #e8f0f5;
             }
 
             /* Student Monitoring Card */

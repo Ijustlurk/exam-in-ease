@@ -3,7 +3,6 @@
 @section('content')
     <style>
         .classes-container {
-            background-color: #e8f1f5;
             min-height: 100vh;
             padding: 30px;
         }

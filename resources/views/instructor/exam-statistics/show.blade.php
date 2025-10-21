@@ -1,640 +1,305 @@
-@extends('layouts.Instructor.app')
+@extends('layouts.Admin.app') {{-- Assume this is your main admin layout --}}
 
 @section('content')
-<style>
-    body {
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-        background-color: #e8eef2;
-    }
-    
-    .exam-results-container {
-        background-color: #e8eef2;
-        min-height: 100vh;
-    }
-    
-    .exam-header-bar {
-        background: linear-gradient(135deg, #6b9aac 0%, #7ca5b8 100%);
-        padding: 16px 32px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    
-    .exam-title-header {
-        color: white;
-        font-size: 1.5rem;
-        font-weight: 600;
-        margin: 0;
-    }
-    
-    .header-controls {
-        display: flex;
-        gap: 12px;
-        align-items: center;
-    }
-    
-    .download-btn {
-        background-color: white;
-        color: #374151;
-        border: none;
-        padding: 8px 20px;
-        border-radius: 8px;
-        font-size: 0.9rem;
-        font-weight: 500;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        transition: all 0.2s;
-    }
-    
-    .download-btn:hover {
-        background-color: #f9fafb;
-        transform: translateY(-1px);
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    
-    .class-select {
-        background-color: white;
-        border: 1px solid #d1d5db;
-        border-radius: 8px;
-        padding: 8px 36px 8px 16px;
-        font-size: 0.9rem;
-        color: #374151;
-        cursor: pointer;
-        appearance: none;
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23374151'%3E%3Cpath d='M6 9L1 4h10z'/%3E%3C/svg%3E");
-        background-repeat: no-repeat;
-        background-position: right 12px center;
-        min-width: 180px;
-    }
-    
-    .tabs-container {
-        background-color: white;
-        border-bottom: 2px solid #e5e7eb;
-    }
-    
-    .nav-tabs {
-        border: none;
-        display: flex;
-        justify-content: center;
-        gap: 0;
-    }
-    
-    .nav-tabs .nav-link {
-        border: none;
-        border-bottom: 3px solid transparent;
-        color: #6b7280;
-        font-size: 1rem;
-        font-weight: 500;
-        padding: 16px 48px;
-        background: transparent;
-        transition: all 0.2s;
-    }
-    
-    .nav-tabs .nav-link:hover {
-        border-color: transparent;
-        color: #374151;
-    }
-    
-    .nav-tabs .nav-link.active {
-        color: #212529;
-        background: transparent;
-        border-bottom: 3px solid #6b9aac;
-        font-weight: 600;
-    }
-    
-    .tab-content {
-        background-color: #e8eef2;
-        padding: 32px;
-        min-height: 70vh;
-    }
-    
-    /* Individual Tab Styles */
-    .student-navigation {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        gap: 24px;
-        margin-bottom: 24px;
-    }
-    
-    .student-nav-btn {
-        background: transparent;
-        border: none;
-        color: #6b7280;
-        font-size: 1.5rem;
-        cursor: pointer;
-        padding: 4px 12px;
-        transition: color 0.2s;
-    }
-    
-    .student-nav-btn:hover {
-        color: #374151;
-    }
-    
-    .student-name {
-        font-size: 1.1rem;
-        font-style: italic;
-        color: #212529;
-        font-weight: 500;
-    }
-    
-    .score-summary {
-        text-align: center;
-        font-size: 1.1rem;
-        font-weight: 600;
-        color: #212529;
-        margin-bottom: 32px;
-    }
-    
-    .section-card, .question-card {
-        background-color: white;
-        border: 1px solid #e5e7eb;
-        border-radius: 12px;
-        padding: 24px;
-        margin-bottom: 20px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-    }
-    
-    .section-title {
-        font-size: 1.1rem;
-        font-weight: 700;
-        color: #212529;
-        margin-bottom: 8px;
-    }
-    
-    .section-description {
-        font-size: 0.95rem;
-        color: #6b7280;
-        margin: 0;
-    }
-    
-    .question-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        margin-bottom: 20px;
-    }
-    
-    .question-title {
-        font-size: 1rem;
-        font-weight: 600;
-        color: #212529;
-    }
-    
-    .question-type {
-        font-size: 0.85rem;
-        color: #9ca3af;
-        font-style: italic;
-    }
-    
-    .choice-option {
-        border: 2px solid #d1d5db;
-        border-radius: 50px;
-        padding: 12px 20px;
-        margin-bottom: 12px;
-        font-size: 0.95rem;
-        color: #212529;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        transition: all 0.2s;
-    }
-    
-    .choice-option.correct {
-        background-color: #22c55e;
-        color: white;
-        border-color: #22c55e;
-        font-weight: 500;
-    }
-    
-    .choice-option.incorrect {
-        background-color: #ef4444;
-        color: white;
-        border-color: #ef4444;
-        font-weight: 500;
-    }
-    
-    .student-answer-indicator {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 0.85rem;
-        font-style: italic;
-        color: white;
-    }
-    
-    .student-answer-indicator i {
-        font-size: 1rem;
-    }
-    
-    .question-points {
-        text-align: right;
-        font-size: 0.9rem;
-        color: #6b7280;
-        font-style: italic;
-        margin-top: 12px;
-    }
-    
-    /* Questions Tab Styles */
-    .part-header {
-        font-size: 1.1rem;
-        font-weight: 700;
-        color: #212529;
-        margin-bottom: 8px;
-    }
-    
-    .part-directions {
-        font-size: 0.95rem;
-        color: #6b7280;
-    }
-    
-    .response-count {
-        font-size: 0.9rem;
-        color: #6b7280;
-        font-style: italic;
-    }
-    
-    .choice-with-stats {
-        border: 2px solid #d1d5db;
-        border-radius: 50px;
-        padding: 12px 20px;
-        margin-bottom: 12px;
-        font-size: 0.95rem;
-        color: #212529;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-    
-    .choice-with-stats.correct {
-        background-color: #22c55e;
-        color: white;
-        border-color: #22c55e;
-        font-weight: 500;
-    }
-    
-    .response-stat {
-        font-style: italic;
-        color: inherit;
-    }
-    
-    .question-analysis {
-        margin-top: 16px;
-        padding-top: 16px;
-        border-top: 1px solid #e5e7eb;
-        font-size: 0.95rem;
-        color: #374151;
-    }
-    
-    .correct-percentage {
-        font-weight: 600;
-    }
-    
-    /* Summary Tab Styles */
-    .summary-section {
-        margin-bottom: 32px;
-    }
-    
-    .summary-title {
-        font-size: 1.3rem;
-        font-weight: 700;
-        color: #212529;
-        margin-bottom: 24px;
-    }
-    
-    .chart-placeholder {
-        background-color: white;
-        border: 1px solid #e5e7eb;
-        border-radius: 12px;
-        padding: 48px;
-        text-align: center;
-        color: #9ca3af;
-        min-height: 400px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-</style>
-
-<div class="exam-results-container">
-    <!-- Header Bar -->
-    <div class="exam-header-bar">
-        <h1 class="exam-title-header">Exam No. 1</h1>
-        <div class="header-controls">
-            <button class="download-btn" id="downloadBtn" style="display: none;">
-                <i class="bi bi-download"></i>
-                Download Results
-            </button>
-            <select class="class-select">
-                <option>Select Class</option>
-                <option>1A - Computer Programming</option>
-                <option>1B - Computer Programming</option>
-                <option>1C - Computer Programming</option>
-            </select>
-        </div>
-    </div>
-    
-    <!-- Tabs Navigation -->
-    <div class="tabs-container">
-        <ul class="nav nav-tabs" id="examTabs" role="tablist">
-            <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="summary-tab" data-bs-toggle="tab" data-bs-target="#summary" type="button" role="tab">
-                    Summary
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="questions-tab" data-bs-toggle="tab" data-bs-target="#questions" type="button" role="tab">
-                    Questions
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="individual-tab" data-bs-toggle="tab" data-bs-target="#individual" type="button" role="tab">
-                    Individual
-                </button>
-            </li>
-        </ul>
-    </div>
-    
-    <!-- Tab Content -->
-    <div class="tab-content">
-        <!-- Summary Tab -->
-        <div class="tab-pane fade show active" id="summary" role="tabpanel">
-            <div class="summary-section">
-                <h2 class="summary-title">1. Scores Distribution</h2>
-                <div class="chart-placeholder">
-                    <div>
-                        <i class="bi bi-bar-chart" style="font-size: 3rem; margin-bottom: 16px; display: block;"></i>
-                        <p>Chart visualization will be displayed here</p>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <style>
+        /* Container and Main Layout Styles (Adjust based on your sidebar) */
+        .main-content {
+            padding: 2rem;
+            margin-left: 60px; /* Adjust if needed to fit sidebar */
+        }
         
-        <!-- Questions Tab -->
-        <div class="tab-pane fade" id="questions" role="tabpanel">
-            <div class="section-card">
-                <h3 class="part-header">Part 1.</h3>
-                <p class="part-directions">Directions for Part I</p>
-            </div>
-            
-            <!-- Question 1 -->
-            <div class="question-card">
-                <div class="question-header">
-                    <div>
-                        <h4 class="question-title">Question 1. This is the question asked?</h4>
-                    </div>
-                    <div class="response-count">242 responses</div>
-                </div>
-                
-                <div class="choice-with-stats correct">
-                    <span>A. This is the one of the choices that is correct.</span>
-                    <span class="response-stat">194 responses</span>
-                </div>
-                
-                <div class="choice-with-stats">
-                    <span>B. This is the one of the choices that is wrong.</span>
-                    <span class="response-stat">12 responses</span>
-                </div>
-                
-                <div class="choice-with-stats">
-                    <span>C. This is the one of the choices that is wrong.</span>
-                    <span class="response-stat">20 responses</span>
-                </div>
-                
-                <div class="choice-with-stats">
-                    <span>D. This is the one of the choices that is wrong.</span>
-                    <span class="response-stat">18 responses</span>
-                </div>
-                
-                <div class="question-analysis">
-                    <span class="correct-percentage">88% (194)</span> got the correct answer <strong>(A)</strong>. Students found it easy.
-                </div>
-            </div>
-            
-            <!-- Question 2 -->
-            <div class="question-card">
-                <div class="question-header">
-                    <div>
-                        <h4 class="question-title">Question 2. This is the question asked?</h4>
-                    </div>
-                    <div class="response-count">242 responses</div>
-                </div>
-                
-                <div class="choice-with-stats correct">
-                    <span>A. This is the one of the choices that is correct.</span>
-                    <span class="response-stat">194 responses</span>
-                </div>
-                
-                <div class="choice-with-stats">
-                    <span>B. This is the one of the choices that is wrong.</span>
-                    <span class="response-stat">12 responses</span>
-                </div>
-                
-                <div class="choice-with-stats">
-                    <span>C. This is the one of the choices that is wrong.</span>
-                    <span class="response-stat">20 responses</span>
-                </div>
-                
-                <div class="choice-with-stats">
-                    <span>D. This is the one of the choices that is wrong.</span>
-                    <span class="response-stat">18 responses</span>
-                </div>
-                
-                <div class="question-analysis">
-                    <span class="correct-percentage">88% (194)</span> got the correct answer <strong>(A)</strong>. Students found it easy.
-                </div>
-            </div>
-            
-            <!-- Question 3 -->
-            <div class="question-card">
-                <div class="question-header">
-                    <div>
-                        <h4 class="question-title">Question 3. This is the question asked?</h4>
-                    </div>
-                    <div class="response-count">242 responses</div>
-                </div>
-                
-                <div class="choice-with-stats correct">
-                    <span>A. This is the one of the choices that is correct.</span>
-                    <span class="response-stat">194 responses</span>
-                </div>
-                
-                <div class="choice-with-stats">
-                    <span>B. This is the one of the choices that is wrong.</span>
-                    <span class="response-stat">12 responses</span>
-                </div>
-                
-                <div class="choice-with-stats">
-                    <span>C. This is the one of the choices that is wrong.</span>
-                    <span class="response-stat">20 responses</span>
-                </div>
-                
-                <div class="choice-with-stats">
-                    <span>D. This is the one of the choices that is wrong.</span>
-                    <span class="response-stat">18 responses</span>
-                </div>
-                
-                <div class="question-analysis">
-                    <span class="correct-percentage">88% (194)</span> got the correct answer <strong>(A)</strong>. Students found it easy.
-                </div>
-            </div>
-        </div>
+        /* Main Dashboard Container (White Card) */
+        .approval-dashboard-container {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            padding: 1.5rem;
+            min-height: 80vh; /* Para magkaroon ng space sa baba */
+        }
+
+        /* Header Section: Title and Search Bar */
+        .header-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            gap: 20px;
+        }
+        .header-section h2 {
+            margin: 0;
+            font-weight: 600;
+            color: #333;
+            font-size: 1.5rem; /* Adjusted to look closer to the image */
+        }
+        .search-bar {
+            display: flex;
+            flex-grow: 1; 
+            max-width: 400px; 
+            border: 1px solid #ced4da;
+            border-radius: 0.25rem;
+            overflow: hidden; 
+        }
+        .search-bar input {
+            border: none;
+            padding: 0.5rem 1rem;
+            flex-grow: 1;
+            outline: none;
+            font-size: 1rem;
+        }
+        .search-bar button {
+            background-color: #f8f9fa;
+            border: none;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            color: #495057;
+        }
+
+        /* Table Structure and Head */
+        .exams-table-container {
+            border: 1px solid #e0e0e0; /* Border around the entire table area in the image */
+            border-radius: 4px;
+            overflow: hidden; /* Important for border-radius */
+        }
+        .exams-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .exams-table thead {
+            background-color: #f8f9fa; /* Light gray header background */
+        }
+        .exams-table th,
+        .exams-table td {
+            padding: 10px 15px; /* Adjust padding to match image density */
+            border-bottom: 1px solid #e0e0e0;
+            vertical-align: middle;
+            font-size: 0.95rem;
+        }
+        .exams-table th {
+            color: #495057;
+            text-align: left;
+            font-weight: 600;
+        }
         
-        <!-- Individual Tab -->
-        <div class="tab-pane fade" id="individual" role="tabpanel">
-            <!-- Student Navigation -->
-            <div class="student-navigation">
-                <button class="student-nav-btn">
-                    <i class="bi bi-chevron-left"></i>
-                </button>
-                <div class="student-name">Aglugub, Elian Benjamin</div>
-                <button class="student-nav-btn">
-                    <i class="bi bi-chevron-right"></i>
-                </button>
+        /* Table Rows */
+        .exams-table tbody tr:last-child td {
+            border-bottom: none; /* Remove border from the last row */
+        }
+
+        /* Column Styles */
+        /* Exam Name Column */
+        .exam-info .title {
+            font-weight: 500;
+            color: #333;
+        }
+        .exam-info .author {
+            font-size: 0.8em;
+            color: #6c757d;
+            margin-top: 2px;
+        }
+
+        /* Approval Status Badges/Spans */
+        .status-badge {
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.85em;
+            font-weight: 600;
+            display: inline-block;
+        }
+        /* Matching the image colors */
+        .status-pending { background-color: #fff3cd; color: #856404; border: 1px solid #ffc821; } /* Yellow/Orange (Lighter background, darker text) */
+        .status-approved { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; } /* Green */
+        
+        /* Actions Column */
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        .action-buttons button, 
+        .action-buttons a {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+            text-decoration: none; /* Remove underline from <a> */
+            font-size: 0.95rem;
+            color: #6c757d; /* Default icon color */
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .action-buttons .text-success { color: #28a745; }
+        .action-buttons .text-danger { color: #dc3545; }
+        .action-buttons .text-info { color: #17a2b8; }
+        
+        /* Pagination Area */
+        .pagination-area {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+        }
+        .pagination-controls {
+            display: flex;
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            gap: 5px;
+        }
+        .page-link-custom {
+            display: block;
+            padding: 6px 12px;
+            border: 1px solid #dee2e6;
+            color: #007bff;
+            text-decoration: none;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+        .page-item-active .page-link-custom {
+            background-color: #007bff;
+            color: #fff;
+            border-color: #007bff;
+        }
+        .page-link-nav {
+            color: #333;
+            font-weight: 500;
+        }
+        .page-link-nav:hover {
+            text-decoration: underline;
+        }
+
+    </style>
+
+    <div class="main-content">
+        <div class="approval-dashboard-container">
+            <div class="header-section">
+                <h2>Exams for Approval</h2>
+                <div class="search-bar">
+                    <input type="text" placeholder="Search for exams" value="" readonly>
+                    <button type="button"><i class="bi bi-search"></i></button>
+                </div>
             </div>
-            
-            <!-- Score Summary -->
-            <div class="score-summary">
-                2 pts. out of 3 pts. | Time Taken: 5:00 minutes
+
+            <div class="exams-table-container">
+                <table class="exams-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 5%;"><input type="checkbox"></th>
+                            <th style="width: 35%;">EXAM NAME <i class="bi bi-caret-down-fill ms-1"></i></th>
+                            <th style="width: 20%;">SUBJECT <i class="bi bi-caret-down-fill ms-1"></i></th>
+                            <th style="width: 20%;">APPROVAL STATUS <i class="bi bi-caret-down-fill ms-1"></i></th>
+                            <th style="width: 20%;">ACTIONS</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{-- Static Row 1: Pending --}}
+                        <tr>
+                            <td><input type="checkbox"></td>
+                            <td>
+                                <div class="exam-info">
+                                    <div class="title">Midterm Computer Programming</div>
+                                    <div class="author">Author Name, 1 other</div>
+                                </div>
+                            </td>
+                            <td>Computer Programming 1</td>
+                            <td>
+                                <span class="status-badge status-pending">Pending</span>
+                            </td>
+                            <td>
+                                <div class="action-buttons">
+                                    <button class="text-success" title="Approve"><i class="bi bi-check2-circle"></i> Approve</button>
+                                    <button class="text-danger" title="Revise"><i class="bi bi-x"></i> Revise</button>
+                                    <a href="#" title="View" style="color: #6c757d;"><i class="bi bi-eye"></i> View</a>
+                                </div>
+                            </td>
+                        </tr>
+                        
+                        {{-- Static Row 2: Pending --}}
+                        <tr>
+                            <td><input type="checkbox"></td>
+                            <td>
+                                <div class="exam-info">
+                                    <div class="title">Midterm Discrete Structures</div>
+                                    <div class="author">Author Name, 2 others</div>
+                                </div>
+                            </td>
+                            <td>Discrete Structures</td>
+                            <td>
+                                <span class="status-badge status-pending">Pending</span>
+                            </td>
+                            <td>
+                                <div class="action-buttons">
+                                    <button class="text-success" title="Approve"><i class="bi bi-check2-circle"></i> Approve</button>
+                                    <button class="text-danger" title="Revise"><i class="bi bi-x"></i> Revise</button>
+                                    <a href="#" title="View" style="color: #6c757d;"><i class="bi bi-eye"></i> View</a>
+                                </div>
+                            </td>
+                        </tr>
+
+                        {{-- Static Row 3: Approved --}}
+                        <tr>
+                            <td><input type="checkbox"></td>
+                            <td>
+                                <div class="exam-info">
+                                    <div class="title">Midterm System Administration</div>
+                                    <div class="author">Author Name, 1 other</div>
+                                </div>
+                            </td>
+                            <td>System Administration and Management</td>
+                            <td>
+                                <span class="status-badge status-approved">Approved</span>
+                            </td>
+                            <td>
+                                <div class="action-buttons">
+                                    <button title="Rescind" style="color: #6c757d;"><i class="bi bi-arrow-counterclockwise"></i> Rescind</button>
+                                    <button title="Edit Settings" style="color: #6c757d;"><i class="bi bi-pencil-square"></i> Edit Settings</button>
+                                    <a href="#" title="View" style="color: #6c757d;"><i class="bi bi-eye"></i> View</a>
+                                </div>
+                            </td>
+                        </tr>
+                        
+                        {{-- Static Placeholder Row (Optional, remove if only showing exact image content) --}}
+                        {{-- <tr>
+                            <td><input type="checkbox"></td>
+                            <td>
+                                <div class="exam-info">
+                                    <div class="title">Finals Data Structures</div>
+                                    <div class="author">Author Name</div>
+                                </div>
+                            </td>
+                            <td>Data Structures and Algorithms</td>
+                            <td>
+                                <span class="status-badge status-pending">Pending</span>
+                            </td>
+                            <td>
+                                <div class="action-buttons">
+                                    <button class="text-success" title="Approve"><i class="bi bi-check2-circle"></i> Approve</button>
+                                    <button class="text-danger" title="Revise"><i class="bi bi-x"></i> Revise</button>
+                                    <a href="#" title="View" style="color: #6c757d;"><i class="bi bi-eye"></i> View</a>
+                                </div>
+                            </td>
+                        </tr> --}}
+                        
+                    </tbody>
+                </table>
             </div>
-            
-            <!-- Section Info -->
-            <div class="section-card">
-                <h3 class="section-title">Section 1</h3>
-                <p class="section-description">This is what this exam is about.</p>
+
+            {{-- Pagination Control --}}
+            <div class="pagination-area">
+                <span style="color: #6c757d; font-size: 0.9rem;">Prev</span>
+                <ul class="pagination-controls">
+                    <li class="page-item page-item-active"><a class="page-link-custom" href="#">1</a></li>
+                    <li class="page-item"><a class="page-link-custom" href="#">2</a></li>
+                    <li class="page-item"><a class="page-link-custom" href="#">3</a></li>
+                    <li class="page-item"><a class="page-link-custom" href="#">4</a></li>
+                    <li class="page-item"><a class="page-link-custom" href="#">5</a></li>
+                </ul>
+                <span style="color: #6c757d; font-size: 0.9rem;">Next</span>
             </div>
-            
-            <!-- Question 1 -->
-            <div class="question-card">
-                <div class="question-header">
-                    <h4 class="question-title">Question 1. This is the question asked?</h4>
-                    <span class="question-type">MCQ</span>
-                </div>
-                
-                <div class="choice-option correct">
-                    <span>A. This is the one of the choices that is correct.</span>
-                    <span class="student-answer-indicator">
-                        Student's answer
-                        <i class="bi bi-check-lg"></i>
-                    </span>
-                </div>
-                
-                <div class="choice-option">
-                    <span>B. This is the one of the choices that is wrong.</span>
-                </div>
-                
-                <div class="choice-option">
-                    <span>C. This is the one of the choices that is wrong.</span>
-                </div>
-                
-                <div class="choice-option">
-                    <span>D. This is the one of the choices that is wrong.</span>
-                </div>
-                
-                <div class="question-points">1 pt.</div>
-            </div>
-            
-            <!-- Question 2 -->
-            <div class="question-card">
-                <div class="question-header">
-                    <h4 class="question-title">Question 2. This is the question asked?</h4>
-                    <span class="question-type">MCQ</span>
-                </div>
-                
-                <div class="choice-option">
-                    <span>A. This is the one of the choices that is correct.</span>
-                </div>
-                
-                <div class="choice-option">
-                    <span>B. This is the one of the choices that is wrong.</span>
-                </div>
-                
-                <div class="choice-option incorrect">
-                    <span>C. This is the one of the choices that is wrong.</span>
-                    <span class="student-answer-indicator">
-                        Student's answer
-                        <i class="bi bi-x-lg"></i>
-                    </span>
-                </div>
-                
-                <div class="choice-option">
-                    <span>D. This is the one of the choices that is wrong.</span>
-                </div>
-                
-                <div class="question-points">0 pt.</div>
-            </div>
-            
-            <!-- Question 3 -->
-            <div class="question-card">
-                <div class="question-header">
-                    <h4 class="question-title">Question 3. This is the question asked?</h4>
-                    <span class="question-type">MCQ</span>
-                </div>
-                
-                <div class="choice-option correct">
-                    <span>A. This is the one of the choices that is correct.</span>
-                    <span class="student-answer-indicator">
-                        Student's answer
-                        <i class="bi bi-check-lg"></i>
-                    </span>
-                </div>
-                
-                <div class="choice-option">
-                    <span>B. This is the one of the choices that is wrong.</span>
-                </div>
-                
-                <div class="choice-option">
-                    <span>C. This is the one of the choices that is wrong.</span>
-                </div>
-                
-                <div class="choice-option">
-                    <span>D. This is the one of the choices that is wrong.</span>
-                </div>
-                
-                <div class="question-points">1 pt.</div>
-            </div>
+
         </div>
     </div>
-</div>
-
+    
+    {{-- Note: You need to ensure you have Bootstrap Icons loaded in your app.blade.php for the bi-* classes to work. --}}
+    
 @endsection
-
-@push('scripts')
-<script>
-    // Show download button only on Questions tab
-    document.getElementById('questions-tab').addEventListener('click', function() {
-        document.getElementById('downloadBtn').style.display = 'flex';
-    });
-    
-    document.getElementById('summary-tab').addEventListener('click', function() {
-        document.getElementById('downloadBtn').style.display = 'none';
-    });
-    
-    document.getElementById('individual-tab').addEventListener('click', function() {
-        document.getElementById('downloadBtn').style.display = 'none';
-    });
-    
-    // Student navigation (placeholder functionality)
-    const students = [
-        'Aglugub, Elian Benjamin',
-        'Cruz, Maria Santos',
-        'Reyes, Juan dela Cruz'
-    ];
-    
-    let currentStudentIndex = 0;
-    
-    document.querySelectorAll('.student-nav-btn').forEach((btn, index) => {
-        btn.addEventListener('click', function() {
-            if (index === 0) { // Previous
-                currentStudentIndex = (currentStudentIndex - 1 + students.length) % students.length;
-            } else { // Next
-                currentStudentIndex = (currentStudentIndex + 1) % students.length;
-            }
-            document.querySelector('.student-name').textContent = students[currentStudentIndex];
-        });
-    });
-</script>
-@endpush

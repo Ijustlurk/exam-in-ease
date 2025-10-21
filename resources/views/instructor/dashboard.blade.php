@@ -9,7 +9,6 @@
     }
     .exam-content {
         padding: 24px;
-        background-color: #e8eef2;
         min-height: 100vh;
     }
     .search-bar {
@@ -58,9 +57,10 @@
         box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         transform: translateY(-2px);
         border-color: #cbd5e1;
+        z-index: 1;
     }
     .exam-card-wrapper:hover::after {
-        content: 'Double-click to edit';
+        content: 'Double-click to open editor';
         position: absolute;
         bottom: 8px;
         right: 12px;
@@ -73,6 +73,10 @@
         border-color: #7dd3fc;
         box-shadow: 0 4px 12px rgba(125,211,252,0.3);
         background-color: #f0f9ff;
+        z-index: 1;
+    }
+    .exam-card-wrapper.menu-open {
+        z-index: 10000;
     }
     .exam-icon-wrapper {
         font-size: 3rem;
@@ -141,7 +145,7 @@
         box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         min-width: 180px;
         display: none;
-        z-index: 200;
+        z-index: 9999;
         overflow: hidden;
     }
     .menu-dropdown.show {
@@ -292,6 +296,10 @@
         background-color: #fef3c7;
         color: #92400e;
     }
+    .status-for-approval {
+        background-color: #fef08a;
+        color: #854d0e;
+    }
     .status-approved {
         background-color: #d1fae5;
         color: #065f46;
@@ -308,24 +316,24 @@
         position: fixed;
         bottom: 32px;
         right: 32px;
-        width: 56px;
-        height: 56px;
-        background-color: #a5d8e8;
-        border-radius: 50%;
+        width: 80px;
+        height: 80px;
+        background-color: #2c748aff;
+        border-radius: 80%;
         display: flex;
         align-items: center;
         justify-content: center;
         font-size: 1.75rem;
         color: white;
         cursor: pointer;
-        box-shadow: 0 4px 12px rgba(165,216,232,0.4);
+        box-shadow: 0 4px 12px rgba(14, 64, 80, 0.4);
         transition: all 0.3s ease;
         z-index: 50;
     }
     .add-button:hover {
         background-color: #7ec8dd;
         transform: scale(1.08);
-        box-shadow: 0 6px 16px rgba(165,216,232,0.5);
+        box-shadow: 0 6px 16px rgba(14, 64, 80, 0.8);
     }
     .no-exams {
         text-align: center;
@@ -493,6 +501,173 @@
         cursor: not-allowed;
     }
 
+    /* Class Dropdown Styles */
+    .class-dropdown {
+        position: relative;
+    }
+
+    .class-dropdown-list {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: white;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 1000;
+        max-height: 300px;
+        margin-top: 4px;
+    }
+
+    .class-search {
+        padding: 8px;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .class-search input {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #d1d5db;
+        border-radius: 4px;
+        font-size: 0.875rem;
+    }
+
+    .class-list {
+        max-height: 250px;
+        overflow-y: auto;
+        padding: 8px;
+    }
+
+    .class-item {
+        display: flex;
+        align-items: center;
+        padding: 8px;
+        cursor: pointer;
+        border-radius: 4px;
+    }
+
+    .class-item:hover {
+        background-color: #f3f4f6;
+    }
+
+    .class-item input[type="checkbox"] {
+        margin-right: 8px;
+    }
+
+    .selected-classes-counter {
+        display: inline-block;
+        background: #e5e7eb;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        margin-left: 6px;
+    }
+
+    /* Manage Collaborators Styles */
+    .existing-collab-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 14px;
+        background-color: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        margin-bottom: 10px;
+    }
+    .existing-collab-info {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex: 1;
+    }
+    .existing-collab-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+    .existing-collab-details {
+        flex: 1;
+    }
+    .existing-collab-name {
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: #212529;
+        margin-bottom: 2px;
+    }
+    .existing-collab-email {
+        font-size: 0.8rem;
+        color: #6b7280;
+    }
+    .existing-collab-role {
+        font-size: 0.75rem;
+        padding: 3px 8px;
+        border-radius: 4px;
+        background-color: #e0f2fe;
+        color: #0369a1;
+        margin-right: 8px;
+    }
+    .existing-collab-role.owner {
+        background-color: #fef3c7;
+        color: #92400e;
+    }
+    .remove-existing-collab-btn {
+        background: none;
+        border: 1px solid #dc3545;
+        color: #dc3545;
+        cursor: pointer;
+        padding: 6px 12px;
+        font-size: 0.8rem;
+        border-radius: 6px;
+        transition: all 0.2s;
+    }
+    .remove-existing-collab-btn:hover {
+        background-color: #dc3545;
+        color: white;
+    }
+    .remove-existing-collab-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+    .manage-collabs-tabs {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 16px;
+        border-bottom: 2px solid #e5e7eb;
+    }
+    .manage-tab {
+        padding: 10px 20px;
+        background: none;
+        border: none;
+        border-bottom: 2px solid transparent;
+        margin-bottom: -2px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: #6b7280;
+        transition: all 0.2s;
+    }
+    .manage-tab.active {
+        color: #7ca5b8;
+        border-bottom-color: #7ca5b8;
+    }
+    .manage-tab:hover {
+        color: #5f8a9a;
+    }
+    .tab-content {
+        display: none;
+    }
+    .tab-content.active {
+        display: block;
+    }
+
     @media (max-width: 768px) {
         .exam-content {
             padding: 16px;
@@ -512,7 +687,7 @@
     }
 </style>
 
-<div class="exam-content">
+<div id="mainContent" class="main exam-content">
     <div class="container-fluid">
         @if(session('success'))
             <div class="alert alert-success alert-dismissible fade show" role="alert">
@@ -533,16 +708,16 @@
             <i class="bi bi-search" style="color: #9ca3af;"></i>
             <input type="text" name="search" placeholder="Search for exams" value="{{ request('search') }}">
         </form>
-
+         <!-- Main Content Row -->
         <div class="row">
             <!-- Left Section - Exam Cards -->
-            <div class="col-lg-7 col-md-6 mb-4">
+            <div class="col-lg-8 col-md-7 mb-4">
                 <div class="recents-label">Recents</div>
                 
                 @if($exams->count() > 0)
                     <div class="row">
                         @foreach($exams as $exam)
-                        <div class="col-lg-4 col-md-6 col-sm-6 mb-3">
+                        <div class="col-lg-3 col-md-4 col-sm-6 mb-3">
                             <div class="exam-card-wrapper {{ $loop->first ? 'active' : '' }}" 
                                  data-exam-id="{{ $exam->exam_id }}" 
                                  onclick="handleCardClick({{ $exam->exam_id }}, this)"
@@ -566,26 +741,38 @@
                                         </div>
                                     </div>
                                 </div>
-                                
+                                <!-- Card Menu Dropdown -->
                                 <div class="menu-dropdown" id="menu{{ $exam->exam_id }}" onclick="event.stopPropagation();">
-                                    <a href="{{ route('instructor.exams.create', $exam->exam_id) }}" target="_blank" class="menu-item text-decoration-none">
+                                    <a href="{{ route('instructor.exams.create', $exam->exam_id) }}" target="_blank" class="menu-item text-decoration-none" onclick="closeAllMenus()">
                                         <i class="bi bi-box-arrow-up-right"></i> Open in new tab
                                     </a>
-                                    <div class="menu-item" onclick="downloadExam({{ $exam->exam_id }})">
+                                    <div class="menu-item" onclick="downloadExam({{ $exam->exam_id }}); closeAllMenus();">
                                         <i class="bi bi-download"></i> Download
                                     </div>
-                                    <div class="menu-item" onclick="openAddCollaboratorModal({{ $exam->exam_id }})">
+                                    @if($exam->status === 'draft')
+                                    <div class="menu-item" onclick="openAddCollaboratorModal({{ $exam->exam_id }}); closeAllMenus();">
                                         <i class="bi bi-person-plus"></i> Add Collaborator
                                     </div>
-                                    <div class="menu-item" onclick="renameExam({{ $exam->exam_id }}, '{{ $exam->exam_title }}')">
-                                        <i class="bi bi-pencil"></i> Rename
+                                    @endif
+                                    @if($exam->status !== 'for approval' && $exam->status !== 'approved')
+                                    <div class="menu-item" onclick="editExam({{ $exam->exam_id }}); closeAllMenus();">
+                                        <i class="bi bi-pencil"></i> Edit Exam Details
                                     </div>
-                                    <form action="{{ route('instructor.exams.duplicate', $exam->exam_id) }}" method="POST" class="m-0">
+                                    @endif
+                                    @if($exam->status === 'draft')
+                                    <form action="{{ route('instructor.exams.duplicate', $exam->exam_id) }}" method="POST" class="m-0" onsubmit="closeAllMenus()">
                                         @csrf
                                         <button type="submit" class="menu-item">
                                             <i class="bi bi-files"></i> Create a Copy
                                         </button>
                                     </form>
+                                    @endif
+                                    @if($exam->status === 'draft')
+                                    <div class="menu-item text-danger" onclick="deleteExam({{ $exam->exam_id }}, '{{ $exam->exam_title }}'); closeAllMenus();" 
+                                         style="border-top: 1px solid #e5e7eb;">
+                                        <i class="bi bi-trash"></i> Delete
+                                    </div>
+                                    @endif
                                 </div>
                             </div>
                         </div>
@@ -600,7 +787,7 @@
             </div>
 
             <!-- Right Section - Details Panel -->
-            <div class="col-lg-5 col-md-6" id="exam-details-panel">
+            <div class="col-lg-4 col-md-5" id="exam-details-panel" >
                 @if($selectedExam)
                     <div class="details-panel">
                         <div class="detail-header">
@@ -615,7 +802,11 @@
                         <div class="collaborator-section">
                             <div class="collaborator-header">
                                 <div class="collaborator-label">Collaborator</div>
-                                <button class="add-collab-btn" onclick="openAddCollaboratorModal({{ $selectedExam->exam_id }})">Add a collaborator</button>
+                                @if($selectedExam->status === 'draft')
+                                <button class="add-collab-btn" onclick="openAddCollaboratorModal({{ $selectedExam->exam_id }})">
+                                    <i class="bi bi-people"></i> Manage Collaborators
+                                </button>
+                                @endif
                             </div>
                             <div class="collaborator-display" id="collaborator-display">
                                 <div class="collaborator-avatars" id="collaborator-avatars">
@@ -655,8 +846,8 @@
                         <div class="detail-row">
                             <div class="detail-label">Status</div>
                             <div class="detail-value">
-                                <span class="status-badge status-{{ $selectedExam->status }}" id="detail-status">
-                                    {{ ucfirst($selectedExam->status) }}
+                                <span class="status-badge status-{{ str_replace(' ', '-', $selectedExam->status) }}" id="detail-status">
+                                    {{ ucwords($selectedExam->status) }}
                                 </span>
                             </div>
                         </div>
@@ -702,13 +893,13 @@
                     @csrf
                     
                     <div class="mb-3">
-                        <input type="text" class="form-control" name="exam_title" placeholder="Computer Programming 1 Prelim" required style="border-radius: 8px; padding: 12px 16px; border: 1px solid #d1d5db; font-size: 0.95rem;">
+                        <input type="text" class="form-control" name="exam_title" placeholder="Exam Title" required style="border-radius: 8px; padding: 12px 16px; border: 1px solid #d1d5db; font-size: 0.95rem;">
                     </div>
 
                     <div class="mb-3">
-                        <input type="text" class="form-control" name="exam_desc" placeholder="Exam on programming" style="border-radius: 8px; padding: 12px 16px; border: 1px solid #d1d5db; font-size: 0.95rem;">
+                        <input type="text" class="form-control" name="exam_desc" placeholder="Exam Description" style="border-radius: 8px; padding: 12px 16px; border: 1px solid #d1d5db; font-size: 0.95rem;">
                     </div>
-
+                    <!--Select Subject Drop Down-->
                     <div class="mb-3">
                         <label style="font-size: 0.75rem; color: #6b7280; font-weight: 600; margin-bottom: 12px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px; display: block;">Settings</label>
                         
@@ -716,27 +907,40 @@
                             <div class="col-md-6 mb-3">
                                 <label style="font-size: 0.875rem; color: #374151; font-weight: 500; margin-bottom: 6px; display: block;">Subject</label>
                                 <select class="form-select" name="subject_id" id="subjectSelect" required onchange="loadClassesBySubject()" style="border-radius: 8px; padding: 10px 14px; border: 1px solid #d1d5db; font-size: 0.875rem;">
-                                    <option value="">Computer...</option>
-                                    @foreach($subjects as $subject)
+                                <option value="" disabled selected>Select Subject</option>
+                                @foreach($subjects as $subject)
                                         <option value="{{ $subject->subject_id }}">{{ $subject->subject_name }}</option>
                                     @endforeach
                                 </select>
                             </div>
+                            <!--Select Class Drop Down-->
 
                             <div class="col-md-6 mb-3">
                                 <label style="font-size: 0.875rem; color: #374151; font-weight: 500; margin-bottom: 6px; display: block;">Class Assignment</label>
-                                <select class="form-select" name="class_ids[]" id="classSelect" multiple style="border-radius: 8px; padding: 10px 14px; border: 1px solid #d1d5db; font-size: 0.875rem; height: 100px;">
-                                    <option value="">1A, 1B, 1C, 1G, 1F</option>
-                                </select>
-                                <small class="text-muted" style="font-size: 0.75rem;">Hold Ctrl to select multiple</small>
+                                <div class="class-dropdown">
+                                    <button type="button" class="form-select" onclick="toggleClassDropdown(event)" style="border-radius: 8px; padding: 12px 16px; border: 1px solid #d1d5db; font-size: 0.95rem; text-align: left; width: 100%;">
+                                        <span id="selectedClassesText">Select Classes</span>
+                                        <span class="selected-classes-counter" id="selectedClassesCounter" style="display: none;"></span>
+                                        
+                                    </button>
+                                    <div id="classDropdownList" class="class-dropdown-list" style="display: none;">
+                                        <div class="class-search">
+                                            <input type="text" id="classSearchInput" placeholder="Search classes..." onkeyup="filterClasses(this)">
+                                        </div>
+                                        <div class="class-list" id="classCheckboxList">
+                                            <div class="p-3 text-muted">Select subject first</div>
+                                        </div>
+                                    </div>
+                                    <input type="hidden" name="selected_classes" id="selectedClassesInput" value="">
+                                </div>
                             </div>
                         </div>
-
+                        <!--Select Term Drop Down-->
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label style="font-size: 0.875rem; color: #374151; font-weight: 500; margin-bottom: 6px; display: block;">Term</label>
                                 <select class="form-select" name="term" style="border-radius: 8px; padding: 10px 14px; border: 1px solid #d1d5db; font-size: 0.875rem;">
-                                    <option value="">Preliminaries</option>
+                                    <option value="" disabled selected>Select Term</option>
                                     <option value="Preliminaries">Preliminaries</option>
                                     <option value="Midterm">Midterm</option>
                                     <option value="Finals">Finals</option>
@@ -755,12 +959,16 @@
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label style="font-size: 0.875rem; color: #374151; font-weight: 500; margin-bottom: 6px; display: block;">Schedule Start</label>
-                                <input type="datetime-local" class="form-control" name="schedule_start" required style="border-radius: 8px; padding: 10px 14px; border: 1px solid #d1d5db; font-size: 0.875rem;">
+                                <input type="datetime-local" class="form-control" name="schedule_start" id="scheduleStart" required 
+                                       style="border-radius: 8px; padding: 10px 14px; border: 1px solid #d1d5db; font-size: 0.875rem;">
+                                <small class="text-danger" id="startDateError" style="display: none;"></small>
                             </div>
 
                             <div class="col-md-6 mb-3">
                                 <label style="font-size: 0.875rem; color: #374151; font-weight: 500; margin-bottom: 6px; display: block;">Schedule End</label>
-                                <input type="datetime-local" class="form-control" name="schedule_end" required style="border-radius: 8px; padding: 10px 14px; border: 1px solid #d1d5db; font-size: 0.875rem;">
+                                <input type="datetime-local" class="form-control" name="schedule_end" id="scheduleEnd" required 
+                                       style="border-radius: 8px; padding: 10px 14px; border: 1px solid #d1d5db; font-size: 0.875rem;">
+                                <small class="text-danger" id="endDateError" style="display: none;"></small>
                             </div>
                         </div>
                     </div>
@@ -776,59 +984,188 @@
     </div>
 </div>
 
-<!-- Add Collaborator Modal -->
+<!-- Manage Collaborator Modal -->
 <div class="modal fade" id="addCollaboratorModal" tabindex="-1" aria-labelledby="addCollaboratorModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content" style="border-radius: 12px; border: none;">
             <div class="collab-modal-header">
                 <div class="collab-modal-title">
-                    <i class="bi bi-person-plus-fill"></i>
-                    <span>Add a Collaborator</span>
+                    <i class="bi bi-people-fill"></i>
+                    <span id="collabModalTitle">Manage Collaborators</span>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body" style="padding: 24px;">
-                <div class="collab-search-bar">
-                    <i class="bi bi-search" style="color: #9ca3af;"></i>
-                    <input type="text" id="collabSearchInput" placeholder="Search for teachers" oninput="searchCollaborators()">
+                <!-- Tabs -->
+                <div class="manage-collabs-tabs">
+                    <button class="manage-tab active" onclick="switchTab('existing', event)">
+                        <i class="bi bi-people"></i> Current Collaborators
+                    </button>
+                    <button class="manage-tab" onclick="switchTab('add', event)">
+                        <i class="bi bi-person-plus"></i> Add New
+                    </button>
                 </div>
 
-                <div class="collab-search-results" id="collabSearchResults" style="display: none;">
-                </div>
-
-                <div class="selected-collabs-section" id="selectedCollabsSection">
-                    <div id="selectedCollabsList">
+                <!-- Existing Collaborators Tab -->
+                <div id="existingTab" class="tab-content active">
+                    <div id="existingCollaboratorsList">
+                        <p class="text-muted text-center p-3">Loading collaborators...</p>
                     </div>
                 </div>
 
-                <div class="d-flex justify-content-end">
-                    <button type="button" class="add-collab-submit-btn" id="addCollabSubmitBtn" disabled onclick="submitCollaborators()">
-                        Add as Collaborator
-                    </button>
+                <!-- Add New Collaborators Tab -->
+                <div id="addTab" class="tab-content">
+                    <div class="collab-search-bar">
+                        <i class="bi bi-search" style="color: #9ca3af;"></i>
+                        <input type="text" id="collabSearchInput" placeholder="Search for teachers" oninput="searchCollaborators()">
+                    </div>
+
+                    <div class="collab-search-results" id="collabSearchResults" style="display: none;">
+                    </div>
+
+                    <div class="selected-collabs-section" id="selectedCollabsSection">
+                        <div id="selectedCollabsList">
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end">
+                        <button type="button" class="add-collab-submit-btn" id="addCollabSubmitBtn" disabled onclick="submitCollaborators()">
+                            Add as Collaborator
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Rename Modal -->
-<div class="modal fade" id="renameExamModal" tabindex="-1" aria-labelledby="renameExamModalLabel" aria-hidden="true">
+<!-- Delete Modal -->
+<div class="modal fade" id="deleteExamModal" tabindex="-1" aria-labelledby="deleteExamModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content" style="border-radius: 12px; border: none;">
-            <div class="modal-header" style="background-color: #5f8a9a; color: white; border-radius: 12px 12px 0 0;">
-                <h5 class="modal-title" id="renameExamModalLabel">Rename Exam</h5>
+            <div class="modal-header" style="background-color: #dc3545; color: white; border-radius: 12px 12px 0 0;">
+                <h5 class="modal-title" id="deleteExamModalLabel">Delete Exam</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body" style="padding: 24px;">
-                <form id="renameExamForm">
-                    <input type="hidden" id="renameExamId">
+                <p class="mb-0">Are you sure you want to delete the exam:</p>
+                <p class="fw-bold mb-3" id="deleteExamTitle"></p>
+                <p class="text-danger mb-4">This action cannot be undone.</p>
+                
+                <div class="d-flex justify-content-end gap-2">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="border-radius: 8px;">Cancel</button>
+                    <button type="button" class="btn btn-danger" onclick="confirmDeleteExam()" style="border-radius: 8px;">Delete Exam</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Exam Modal -->
+<div class="modal fade" id="editExamModal" tabindex="-1" aria-labelledby="editExamModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content" style="border-radius: 12px; border: none;">
+            <div class="modal-header" style="background-color: #5f8a9a; color: white; border-radius: 12px 12px 0 0; padding: 16px 24px;">
+                <h5 class="modal-title d-flex align-items-center gap-2" id="editExamModalLabel">
+                    <i class="bi bi-pencil-square"></i>
+                    <span>Edit Exam</span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" style="padding: 24px;">
+                <form id="editExamForm">
+                    @csrf
+                    <input type="hidden" name="_method" value="PUT">
+                    <input type="hidden" id="editExamId" name="exam_id">
+                    
                     <div class="mb-3">
-                        <label style="font-size: 0.875rem; color: #374151; font-weight: 500; margin-bottom: 6px;">New Exam Title</label>
-                        <input type="text" class="form-control" id="renameExamTitle" required style="border-radius: 8px; padding: 12px 16px;">
+                        <input type="text" class="form-control" name="exam_title" id="editExamTitle" placeholder="Exam Title" required 
+                               style="border-radius: 8px; padding: 12px 16px; border: 1px solid #d1d5db; font-size: 0.95rem;">
                     </div>
-                    <div class="d-flex justify-content-end gap-2">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="border-radius: 8px;">Cancel</button>
-                        <button type="submit" class="btn" style="background-color: #5f8a9a; color: white; border-radius: 8px;">Rename</button>
+
+                    <div class="mb-3">
+                        <input type="text" class="form-control" name="exam_desc" id="editExamDesc" placeholder="Exam Description" 
+                               style="border-radius: 8px; padding: 12px 16px; border: 1px solid #d1d5db; font-size: 0.95rem;">
+                    </div>
+
+                    <label style="font-size: 0.75rem; color: #6b7280; font-weight: 600; margin-bottom: 12px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px; display: block;">Settings</label>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label style="font-size: 0.875rem; color: #374151; font-weight: 500; margin-bottom: 6px; display: block;">Subject</label>
+                            <select class="form-select" name="subject_id" id="editSubjectSelect" required onchange="loadClassesBySubject('edit')" 
+                                    style="border-radius: 8px; padding: 10px 14px; border: 1px solid #d1d5db; font-size: 0.875rem;">
+                                <option value="" disabled selected>Select Subject</option>
+                                @foreach($subjects as $subject)
+                                    <option value="{{ $subject->subject_id }}">{{ $subject->subject_name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label style="font-size: 0.875rem; color: #374151; font-weight: 500; margin-bottom: 6px; display: block;">Class Assignment</label>
+                            <div class="class-dropdown">
+                                <button type="button" class="form-select" onclick="toggleClassDropdown(event, 'edit')" 
+                                        style="border-radius: 8px; padding: 12px 16px; border: 1px solid #d1d5db; font-size: 0.95rem; text-align: left; width: 100%;">
+                                    <span id="editSelectedClassesText">Select Classes</span>
+                                    <span class="selected-classes-counter" id="editSelectedClassesCounter" style="display: none;"></span>
+                                </button>
+                                <div id="editClassDropdownList" class="class-dropdown-list" style="display: none;">
+                                    <div class="class-search">
+                                        <input type="text" id="editClassSearchInput" placeholder="Search classes..." onkeyup="filterClasses(this, 'edit')">
+                                    </div>
+                                    <div class="class-list" id="editClassCheckboxList">
+                                        <div class="p-3 text-muted">Select subject first</div>
+                                    </div>
+                                </div>
+                                <input type="hidden" name="selected_classes" id="editSelectedClassesInput" value="">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label style="font-size: 0.875rem; color: #374151; font-weight: 500; margin-bottom: 6px; display: block;">Term</label>
+                            <select class="form-select" name="term" id="editTermSelect" 
+                                    style="border-radius: 8px; padding: 10px 14px; border: 1px solid #d1d5db; font-size: 0.875rem;">
+                                <option value="" disabled selected>Select Term</option>
+                                <option value="Preliminaries">Preliminaries</option>
+                                <option value="Midterm">Midterm</option>
+                                <option value="Finals">Finals</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label style="font-size: 0.875rem; color: #374151; font-weight: 500; margin-bottom: 6px; display: block;">Duration</label>
+                            <div class="input-group" style="border-radius: 8px; overflow: hidden;">
+                                <input type="number" class="form-control" name="duration" id="editDuration" value="0" min="0" required 
+                                       style="border: 1px solid #d1d5db; font-size: 0.875rem; padding: 10px 14px;">
+                                <span class="input-group-text" style="background-color: #f9fafb; border: 1px solid #d1d5db; border-left: none; color: #6b7280; font-size: 0.875rem;">mins</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label style="font-size: 0.875rem; color: #374151; font-weight: 500; margin-bottom: 6px; display: block;">Schedule Start</label>
+                            <input type="datetime-local" class="form-control" name="schedule_start" id="editScheduleStart" required 
+                                   style="border-radius: 8px; padding: 10px 14px; border: 1px solid #d1d5db; font-size: 0.875rem;">
+                            <small class="text-danger" id="editStartDateError" style="display: none;"></small>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label style="font-size: 0.875rem; color: #374151; font-weight: 500; margin-bottom: 6px; display: block;">Schedule End</label>
+                            <input type="datetime-local" class="form-control" name="schedule_end" id="editScheduleEnd" required 
+                                   style="border-radius: 8px; padding: 10px 14px; border: 1px solid #d1d5db; font-size: 0.875rem;">
+                            <small class="text-danger" id="editEndDateError" style="display: none;"></small>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end">
+                        <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal" style="border-radius: 8px;">Cancel</button>
+                        <button type="submit" class="btn" style="background-color: #5f8a9a; color: white; border-radius: 8px; padding: 10px 28px; font-size: 0.95rem; font-weight: 500; border: none;">
+                            Save Changes
+                        </button>
                     </div>
                 </form>
             </div>
@@ -870,39 +1207,240 @@
 
     function openNewExamModal() {
         document.getElementById('newExamForm').reset();
-        document.getElementById('classSelect').innerHTML = '<option value="">Select subject first</option>';
-        
+        document.getElementById('selectedClassesText').textContent = 'Select Classes';
+        if (document.getElementById('classCheckboxList')) {
+            document.getElementById('classCheckboxList').innerHTML = '<div class="p-3 text-muted">Select subject first</div>';
+        }
         const modal = new bootstrap.Modal(document.getElementById('newExamModal'));
         modal.show();
     }
 
     function loadClassesBySubject() {
         const subjectId = document.getElementById('subjectSelect').value;
-        const classSelect = document.getElementById('classSelect');
+        const classCheckboxList = document.getElementById('classCheckboxList');
+        const selectedClassesText = document.getElementById('selectedClassesText');
+        const selectedClassesCounter = document.getElementById('selectedClassesCounter');
+        
+        // Reset selection when subject changes
+        selectedClassesText.textContent = 'Select Classes';
+        selectedClassesCounter.style.display = 'none';
+        document.getElementById('selectedClassesInput').value = '';
         
         if (!subjectId) {
-            classSelect.innerHTML = '<option value="">Select subject first</option>';
+            classCheckboxList.innerHTML = '<div class="p-3 text-muted">Select subject first</div>';
             return;
         }
         
-        classSelect.innerHTML = '<option value="">Loading...</option>';
+        classCheckboxList.innerHTML = '<div class="p-3 text-muted">Loading classes...</div>';
         
         fetch(`{{ route('instructor.classes.get') }}?subject_id=${subjectId}`)
             .then(response => response.json())
             .then(classes => {
                 if (classes.length === 0) {
-                    classSelect.innerHTML = '<option value="">No classes available</option>';
+                    classCheckboxList.innerHTML = '<div class="p-3 text-muted">No classes available for this subject</div>';
                 } else {
-                    classSelect.innerHTML = classes.map(cls => 
-                        `<option value="${cls.class_id}">${cls.display}</option>`
-                    ).join('');
+                    classCheckboxList.innerHTML = classes.map(cls => `
+                        <div class="class-item">
+                            <input type="checkbox" id="class_${cls.class_id}" name="classes[]" 
+                                   value="${cls.class_id}" onchange="updateSelectedClasses()"
+                                   class="form-check-input me-2">
+                            <label for="class_${cls.class_id}" class="form-check-label">${cls.display}</label>
+                        </div>
+                    `).join('');
                 }
             })
             .catch(error => {
                 console.error('Error loading classes:', error);
-                classSelect.innerHTML = '<option value="">Error loading classes</option>';
+                classCheckboxList.innerHTML = '<div class="p-3 text-danger">Error loading classes. Please try again.</div>';
             });
     }
+
+    function toggleClassDropdown(event, mode = 'new') {
+        event.preventDefault();
+        
+        // Get element IDs based on mode
+        const dropdownId = mode === 'edit' ? 'editClassDropdownList' : 'classDropdownList';
+        const subjectSelectId = mode === 'edit' ? 'editSubjectSelect' : 'subjectSelect';
+        const searchInputId = mode === 'edit' ? 'editClassSearchInput' : 'classSearchInput';
+        
+        const dropdown = document.getElementById(dropdownId);
+        const subjectSelect = document.getElementById(subjectSelectId);
+        
+        if (!dropdown) {
+            console.error('Dropdown not found:', dropdownId);
+            return;
+        }
+        
+        if (!subjectSelect) {
+            console.error('Subject select not found:', subjectSelectId);
+            return;
+        }
+        
+        const subjectId = subjectSelect.value;
+        
+        if (!subjectId) {
+            alert('Please select a subject first');
+            return;
+        }
+        
+        if (dropdown.style.display === 'none') {
+            // Close any other open dropdowns first
+            document.querySelectorAll('.class-dropdown-list').forEach(d => {
+                if (d !== dropdown) d.style.display = 'none';
+            });
+            dropdown.style.display = 'block';
+            // Focus the search input when opening
+            const searchInput = document.getElementById(searchInputId);
+            if (searchInput) searchInput.focus();
+        } else {
+            dropdown.style.display = 'none';
+        }
+    }
+
+    function updateSelectedClasses(mode = 'new') {
+        // Get element IDs based on mode
+        const classCheckboxListId = mode === 'edit' ? 'editClassCheckboxList' : 'classCheckboxList';
+        const selectedClassesTextId = mode === 'edit' ? 'editSelectedClassesText' : 'selectedClassesText';
+        const selectedClassesCounterId = mode === 'edit' ? 'editSelectedClassesCounter' : 'selectedClassesCounter';
+        const selectedClassesInputId = mode === 'edit' ? 'editSelectedClassesInput' : 'selectedClassesInput';
+        
+        const checkboxes = document.querySelectorAll(`#${classCheckboxListId} input[type="checkbox"]:checked`);
+        const selectedClassesText = document.getElementById(selectedClassesTextId);
+        const selectedClassesCounter = document.getElementById(selectedClassesCounterId);
+        const selectedClassesInput = document.getElementById(selectedClassesInputId);
+        
+        if (!selectedClassesText || !selectedClassesCounter || !selectedClassesInput) {
+            console.error('Required elements not found in updateSelectedClasses');
+            return;
+        }
+        
+        const selectedClasses = Array.from(checkboxes).map(cb => cb.value);
+        const count = selectedClasses.length;
+        
+        // Update hidden input value
+        selectedClassesInput.value = selectedClasses.join(',');
+        
+        // Update display text and counter
+        if (count === 0) {
+            selectedClassesText.textContent = 'Select Classes';
+            selectedClassesCounter.style.display = 'none';
+        } else {
+            selectedClassesText.textContent = 'Classes Selected';
+            selectedClassesCounter.textContent = count;
+            selectedClassesCounter.style.display = 'inline-block';
+        }
+    }
+
+    function filterClasses(input, mode = 'new') {
+        const filter = input.value.toLowerCase();
+        const items = input.closest('.class-dropdown-list').querySelectorAll('.class-item');
+        let hasMatches = false;
+        
+        items.forEach(item => {
+            const text = item.textContent.toLowerCase();
+            const matches = text.includes(filter);
+            item.style.display = matches ? '' : 'none';
+            if (matches) hasMatches = true;
+        });
+        
+        // Show no results message if no matches found
+        const classList = input.closest('.class-dropdown-list').querySelector('.class-list');
+        const noResults = classList.querySelector('.no-results');
+        if (!hasMatches) {
+            if (!noResults) {
+                const message = document.createElement('div');
+                message.className = 'no-results p-3 text-muted text-center';
+                message.textContent = 'No matching classes found';
+                classList.appendChild(message);
+            }
+        } else if (noResults) {
+            noResults.remove();
+        }
+    }
+
+    function loadClassesBySubject(mode = 'new') {
+        const prefix = mode === 'edit' ? 'edit' : '';
+        const subjectSelectId = mode === 'edit' ? 'editSubjectSelect' : 'subjectSelect';
+        const subjectSelect = document.getElementById(subjectSelectId);
+        
+        if (!subjectSelect) {
+            console.error('Subject select not found:', subjectSelectId);
+            return Promise.reject();
+        }
+        
+        const subjectId = subjectSelect.value;
+        
+        // Get element IDs based on mode
+        const classCheckboxListId = mode === 'edit' ? 'editClassCheckboxList' : 'classCheckboxList';
+        const selectedClassesTextId = mode === 'edit' ? 'editSelectedClassesText' : 'selectedClassesText';
+        const selectedClassesCounterId = mode === 'edit' ? 'editSelectedClassesCounter' : 'selectedClassesCounter';
+        const selectedClassesInputId = mode === 'edit' ? 'editSelectedClassesInput' : 'selectedClassesInput';
+        
+        const classCheckboxList = document.getElementById(classCheckboxListId);
+        const selectedClassesText = document.getElementById(selectedClassesTextId);
+        const selectedClassesCounter = document.getElementById(selectedClassesCounterId);
+        const selectedClassesInput = document.getElementById(selectedClassesInputId);
+        
+        if (!classCheckboxList || !selectedClassesText || !selectedClassesCounter || !selectedClassesInput) {
+            console.error('Required elements not found:', {
+                classCheckboxList: !!classCheckboxList,
+                selectedClassesText: !!selectedClassesText,
+                selectedClassesCounter: !!selectedClassesCounter,
+                selectedClassesInput: !!selectedClassesInput
+            });
+            return Promise.reject();
+        }
+        
+        // Reset selection when subject changes in new mode
+        if (mode === 'new') {
+            selectedClassesText.textContent = 'Select Classes';
+            selectedClassesCounter.style.display = 'none';
+            selectedClassesInput.value = '';
+        }
+        
+        if (!subjectId) {
+            classCheckboxList.innerHTML = '<div class="p-3 text-muted">Select subject first</div>';
+            return Promise.reject();
+        }
+        
+        classCheckboxList.innerHTML = '<div class="p-3 text-muted">Loading classes...</div>';
+        
+        console.log('Loading classes for subject:', subjectId);
+        
+        return fetch(`{{ route('instructor.classes.get') }}?subject_id=${subjectId}`)
+            .then(response => {
+                console.log('Response status:', response.status);
+                return response.json();
+            })
+            .then(classes => {
+                console.log('Classes received:', classes);
+                if (classes.length === 0) {
+                    classCheckboxList.innerHTML = '<div class="p-3 text-muted">No classes available for this subject</div>';
+                } else {
+                    classCheckboxList.innerHTML = classes.map(cls => `
+                        <div class="class-item">
+                            <input type="checkbox" id="${classCheckboxListId.replace('CheckboxList', '')}_${cls.class_id}" name="classes[]" 
+                                   value="${cls.class_id}" onchange="updateSelectedClasses('${mode}')"
+                                   class="form-check-input me-2">
+                            <label for="${classCheckboxListId.replace('CheckboxList', '')}_${cls.class_id}" class="form-check-label">${cls.display}</label>
+                        </div>
+                    `).join('');
+                }
+                return classes;
+            })
+            .catch(error => {
+                console.error('Error loading classes:', error);
+                classCheckboxList.innerHTML = '<div class="p-3 text-danger">Error loading classes. Please try again.</div>';
+                throw error;
+            });
+    }
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.class-dropdown')) {
+            document.getElementById('classDropdownList').style.display = 'none';
+        }
+    });
 
     function openAddCollaboratorModal(examId) {
         currentExamId = examId;
@@ -912,8 +1450,150 @@
         document.getElementById('collabSearchResults').style.display = 'none';
         document.getElementById('addCollabSubmitBtn').disabled = true;
         
+        // Switch to existing tab by default
+        switchTab('existing');
+        
+        // Load existing collaborators
+        loadExistingCollaborators(examId);
+        
         const modal = new bootstrap.Modal(document.getElementById('addCollaboratorModal'));
         modal.show();
+    }
+
+    function switchTab(tabName, event) {
+        // Update tab buttons
+        document.querySelectorAll('.manage-tab').forEach(tab => {
+            tab.classList.remove('active');
+        });
+        
+        // If event is provided, set the clicked tab as active
+        // Otherwise, set the first tab (existing) as active
+        if (event && event.target) {
+            event.target.closest('.manage-tab').classList.add('active');
+        } else {
+            // Default to first tab (existing collaborators)
+            const tabs = document.querySelectorAll('.manage-tab');
+            if (tabs.length > 0) {
+                if (tabName === 'existing') {
+                    tabs[0].classList.add('active');
+                } else if (tabName === 'add') {
+                    tabs[1].classList.add('active');
+                }
+            }
+        }
+        
+        // Update tab content
+        document.querySelectorAll('.tab-content').forEach(content => {
+            content.classList.remove('active');
+        });
+        
+        if (tabName === 'existing') {
+            document.getElementById('existingTab').classList.add('active');
+        } else if (tabName === 'add') {
+            document.getElementById('addTab').classList.add('active');
+        }
+    }
+
+    function loadExistingCollaborators(examId) {
+        const container = document.getElementById('existingCollaboratorsList');
+        container.innerHTML = '<p class="text-muted text-center p-3">Loading collaborators...</p>';
+        
+        fetch(`/instructor/exams/${examId}/collaborators`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const collaborators = data.collaborators;
+                    const isOwner = data.is_owner;
+                    
+                    if (collaborators.length === 0) {
+                        container.innerHTML = '<p class="text-muted text-center p-3">No collaborators yet</p>';
+                        return;
+                    }
+                    
+                    container.innerHTML = collaborators.map(collab => {
+                        const initials = collab.name.split(' ').map(n => n[0]).join('').toUpperCase();
+                        const isCollaboratorRole = collab.role === 'collaborator';
+                        const canRemove = isOwner && isCollaboratorRole;
+                        
+                        return `
+                            <div class="existing-collab-item">
+                                <div class="existing-collab-info">
+                                    <div class="existing-collab-avatar">
+                                        ${initials}
+                                    </div>
+                                    <div class="existing-collab-details">
+                                        <div class="existing-collab-name">${collab.name}</div>
+                                        <div class="existing-collab-email">${collab.email}</div>
+                                    </div>
+                                </div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="existing-collab-role ${collab.role}">${collab.role === 'owner' ? 'Owner' : 'Collaborator'}</span>
+                                    ${canRemove ? `
+                                        <button class="remove-existing-collab-btn" onclick="removeExistingCollaborator(${collab.id}, '${collab.name}')">
+                                            <i class="bi bi-trash"></i> Remove
+                                        </button>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    container.innerHTML = '<p class="text-danger text-center p-3">Error loading collaborators</p>';
+                }
+            })
+            .catch(error => {
+                console.error('Error loading collaborators:', error);
+                container.innerHTML = '<p class="text-danger text-center p-3">Error loading collaborators</p>';
+            });
+    }
+
+    function removeExistingCollaborator(teacherId, teacherName) {
+        if (!confirm(`Are you sure you want to remove ${teacherName} as a collaborator?`)) {
+            return;
+        }
+        
+        fetch(`/instructor/exams/${currentExamId}/collaborators/${teacherId}`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Reload the collaborators list
+                loadExistingCollaborators(currentExamId);
+                
+                // Reload exam details to update the sidebar
+                const activeCard = document.querySelector('.exam-card-wrapper.active');
+                if (activeCard) {
+                    loadExamDetails(currentExamId, activeCard);
+                }
+                
+                // Show success message
+                showAlert('success', data.message);
+            } else {
+                alert('Error: ' + (data.error || 'Failed to remove collaborator'));
+            }
+        })
+        .catch(error => {
+            console.error('Error removing collaborator:', error);
+            alert('Failed to remove collaborator. Please try again.');
+        });
+    }
+
+    function showAlert(type, message) {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+        alertDiv.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        document.querySelector('.exam-content .container-fluid').insertBefore(
+            alertDiv,
+            document.querySelector('.search-bar')
+        );
+        setTimeout(() => alertDiv.remove(), 5000);
     }
 
     let searchTimeout;
@@ -1024,28 +1704,31 @@
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                const modal = bootstrap.Modal.getInstance(document.getElementById('addCollaboratorModal'));
-                modal.hide();
-                
-                const alertDiv = document.createElement('div');
-                alertDiv.className = 'alert alert-success alert-dismissible fade show';
-                alertDiv.innerHTML = `
-                    ${data.message}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                `;
-                document.querySelector('.exam-content .container-fluid').insertBefore(
-                    alertDiv,
-                    document.querySelector('.search-bar')
-                );
-                
-                setTimeout(() => alertDiv.remove(), 5000);
-                
-                // Reload exam details to show new collaborators
-                loadExamDetails(currentExamId, document.querySelector(`[data-exam-id="${currentExamId}"]`));
-                
+                // Clear the selected collaborators and reset the form
                 selectedCollaborators = [];
-                submitBtn.disabled = false;
+                document.getElementById('selectedCollabsList').innerHTML = '';
+                document.getElementById('collabSearchInput').value = '';
+                document.getElementById('collabSearchResults').style.display = 'none';
+                submitBtn.disabled = true;
                 submitBtn.textContent = 'Add as Collaborator';
+                
+                // Reload existing collaborators
+                loadExistingCollaborators(currentExamId);
+                
+                // Switch to existing tab
+                document.querySelectorAll('.manage-tab').forEach(tab => tab.classList.remove('active'));
+                document.querySelectorAll('.manage-tab')[0].classList.add('active');
+                document.getElementById('existingTab').classList.add('active');
+                document.getElementById('addTab').classList.remove('active');
+                
+                // Reload exam details to show new collaborators in sidebar
+                const activeCard = document.querySelector('.exam-card-wrapper.active');
+                if (activeCard) {
+                    loadExamDetails(currentExamId, activeCard);
+                }
+                
+                // Show success message
+                showAlert('success', data.message);
             } else {
                 alert('Error: ' + (data.error || 'Failed to add collaborators'));
                 submitBtn.disabled = false;
@@ -1065,14 +1748,36 @@
         event.preventDefault();
         
         const menu = document.getElementById(menuId);
+        const card = event.target.closest('.exam-card-wrapper');
         
+        // Close all other menus and remove menu-open class from all cards
         document.querySelectorAll('.menu-dropdown').forEach(m => {
             if (m.id !== menuId) {
                 m.classList.remove('show');
             }
         });
+        document.querySelectorAll('.exam-card-wrapper').forEach(c => {
+            if (c !== card) {
+                c.classList.remove('menu-open');
+            }
+        });
         
-        menu.classList.toggle('show');
+        // Toggle current menu and card class
+        const isShowing = menu.classList.toggle('show');
+        if (isShowing) {
+            card.classList.add('menu-open');
+        } else {
+            card.classList.remove('menu-open');
+        }
+    }
+
+    function closeAllMenus() {
+        document.querySelectorAll('.menu-dropdown').forEach(m => {
+            m.classList.remove('show');
+        });
+        document.querySelectorAll('.exam-card-wrapper').forEach(card => {
+            card.classList.remove('menu-open');
+        });
     }
 
     function loadExamDetails(examId, cardElement) {
@@ -1097,15 +1802,20 @@
                 }
                 
                 const statusBadge = document.getElementById('detail-status');
-                statusBadge.textContent = exam.status.charAt(0).toUpperCase() + exam.status.slice(1);
-                statusBadge.className = 'status-badge status-' + exam.status;
+                // Format status properly: "for approval" → "For Approval", "draft" → "Draft"
+                const formattedStatus = exam.status.split(' ').map(word => 
+                    word.charAt(0).toUpperCase() + word.slice(1)
+                ).join(' ');
+                statusBadge.textContent = formattedStatus;
+                // Convert status to CSS class: "for approval" → "for-approval"
+                statusBadge.className = 'status-badge status-' + exam.status.replace(/ /g, '-');
                 
                 if (document.getElementById('detail-notes')) {
-                    document.getElementById('detail-notes').textContent = exam.exam_desc || 'None';
+                    document.getElementById('detail-notes').textContent = exam.revision_notes || 'N/A';
                 }
                 
                 // Update collaborator display
-                updateCollaboratorDisplay(data.collaborators || [], data.creator_name);
+                updateCollaboratorDisplay(data.collaborators || [], data.creator_name, exam.status, exam.exam_id);
             })
             .catch(error => {
                 console.error('Error loading exam details:', error);
@@ -1113,12 +1823,35 @@
             });
     }
 
-    function updateCollaboratorDisplay(collaborators, creatorName) {
+    function updateCollaboratorDisplay(collaborators, creatorName, examStatus, examId) {
         const avatarsContainer = document.getElementById('collaborator-avatars');
         const textContainer = document.getElementById('collaborator-text');
         
         // Clear existing avatars
         avatarsContainer.innerHTML = '';
+        
+        // Update or create the "Manage Collaborators" button based on status
+        const collaboratorHeader = document.querySelector('.collaborator-header');
+        let addCollabBtn = collaboratorHeader.querySelector('.add-collab-btn');
+        
+        if (examStatus === 'draft') {
+            if (!addCollabBtn) {
+                // Create button if it doesn't exist
+                addCollabBtn = document.createElement('button');
+                addCollabBtn.className = 'add-collab-btn';
+                addCollabBtn.innerHTML = '<i class="bi bi-people"></i> Manage Collaborators';
+                collaboratorHeader.appendChild(addCollabBtn);
+            }
+            addCollabBtn.onclick = () => openAddCollaboratorModal(examId);
+        } else {
+            // Remove button if status is not draft
+            if (addCollabBtn) {
+                addCollabBtn.remove();
+            }
+        }
+        
+        // Filter out the owner from collaborators (only show additional collaborators)
+        const additionalCollaborators = collaborators.filter(collab => collab.role !== 'owner');
         
         // Add creator avatar (you)
         const youAvatar = document.createElement('div');
@@ -1126,8 +1859,8 @@
         youAvatar.innerHTML = '<i class="bi bi-person-fill"></i>';
         avatarsContainer.appendChild(youAvatar);
         
-        // Add collaborator avatars
-        collaborators.forEach((collab, index) => {
+        // Add collaborator avatars (excluding owner)
+        additionalCollaborators.forEach((collab, index) => {
             if (index < 2) { // Show max 3 avatars including creator
                 const avatar = document.createElement('div');
                 avatar.className = 'collab-avatar-circle';
@@ -1136,13 +1869,13 @@
             }
         });
         
-        // Update text
-        if (collaborators.length === 0) {
+        // Update text based on additional collaborators (excluding owner)
+        if (additionalCollaborators.length === 0) {
             textContainer.textContent = 'Only you';
-        } else if (collaborators.length === 1) {
+        } else if (additionalCollaborators.length === 1) {
             textContainer.textContent = 'You and 1 other';
         } else {
-            textContainer.textContent = `You and ${collaborators.length} others`;
+            textContainer.textContent = `You and ${additionalCollaborators.length} others`;
         }
     }
 
@@ -1151,68 +1884,59 @@
         alert('Download functionality for exam ' + examId);
     }
 
-    function renameExam(examId, currentTitle) {
-        document.getElementById('renameExamId').value = examId;
-        document.getElementById('renameExamTitle').value = currentTitle;
-        
-        const modal = new bootstrap.Modal(document.getElementById('renameExamModal'));
-        modal.show();
-    }
-
-    document.getElementById('renameExamForm')?.addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        const examId = document.getElementById('renameExamId').value;
-        const newTitle = document.getElementById('renameExamTitle').value;
-        
-        // Send rename request to server
-        fetch(`/instructor/exams/${examId}/rename`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-            },
-            body: JSON.stringify({ exam_title: newTitle })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                const modal = bootstrap.Modal.getInstance(document.getElementById('renameExamModal'));
-                modal.hide();
+    function editExam(examId) {
+        // Fetch exam details
+        fetch(`/instructor/api/exams/${examId}/details`)
+            .then(response => response.json())
+            .then(data => {
+                const exam = data.exam;
                 
-                // Update the card title and detail title
-                const card = document.querySelector(`[data-exam-id="${examId}"]`);
-                if (card) {
-                    card.querySelector('.exam-title-text').textContent = newTitle;
+                // Populate form fields
+                document.getElementById('editExamId').value = exam.exam_id;
+                document.getElementById('editExamTitle').value = exam.exam_title;
+                document.getElementById('editExamDesc').value = exam.exam_desc || '';
+                document.getElementById('editSubjectSelect').value = exam.subject_id;
+                document.getElementById('editTermSelect').value = exam.term;
+                document.getElementById('editDuration').value = exam.duration;
+                
+                // Format and set dates
+                if (exam.schedule_start) {
+                    document.getElementById('editScheduleStart').value = 
+                        new Date(exam.schedule_start).toISOString().slice(0, 16);
                 }
-                document.getElementById('detail-title').textContent = newTitle;
+                if (exam.schedule_end) {
+                    document.getElementById('editScheduleEnd').value = 
+                        new Date(exam.schedule_end).toISOString().slice(0, 16);
+                }
+
+                // Load classes for the selected subject
+                loadClassesBySubject('edit').then(() => {
+                    // Set selected classes
+                    const selectedClasses = exam.class_assignments || [];
+                    selectedClasses.forEach(classId => {
+                        const checkbox = document.querySelector(`#editClassCheckboxList input[value="${classId}"]`);
+                        if (checkbox) checkbox.checked = true;
+                    });
+                    updateSelectedClasses('edit');
+                });
                 
-                // Show success message
-                const alertDiv = document.createElement('div');
-                alertDiv.className = 'alert alert-success alert-dismissible fade show';
-                alertDiv.innerHTML = `
-                    Exam renamed successfully!
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                `;
-                document.querySelector('.exam-content .container-fluid').insertBefore(
-                    alertDiv,
-                    document.querySelector('.search-bar')
-                );
-                setTimeout(() => alertDiv.remove(), 5000);
-            } else {
-                alert('Error renaming exam');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('Failed to rename exam');
-        });
-    });
+                // Show modal
+                const modal = new bootstrap.Modal(document.getElementById('editExamModal'));
+                modal.show();
+            })
+            .catch(error => {
+                console.error('Error fetching exam details:', error);
+                alert('Failed to load exam details');
+            });
+    }
 
     document.addEventListener('click', function(event) {
         if (!event.target.closest('.menu-dots') && !event.target.closest('.menu-dropdown')) {
             document.querySelectorAll('.menu-dropdown').forEach(m => {
                 m.classList.remove('show');
+            });
+            document.querySelectorAll('.exam-card-wrapper').forEach(card => {
+                card.classList.remove('menu-open');
             });
         }
     });
@@ -1222,5 +1946,245 @@
             event.stopPropagation();
         });
     });
+
+    // Delete exam functionality
+    let examToDelete = null;
+
+    function deleteExam(examId, examTitle) {
+        examToDelete = examId;
+        document.getElementById('deleteExamTitle').textContent = examTitle;
+        const modal = new bootstrap.Modal(document.getElementById('deleteExamModal'));
+        modal.show();
+    }
+
+    function confirmDeleteExam() {
+        if (!examToDelete) return;
+
+        const deleteButton = document.querySelector('#deleteExamModal .btn-danger');
+        const originalText = deleteButton.textContent;
+        deleteButton.disabled = true;
+        deleteButton.textContent = 'Deleting...';
+
+        // Create form data with CSRF token and method spoofing
+        const formData = new FormData();
+        formData.append('_token', document.querySelector('meta[name="csrf-token"]').content);
+        formData.append('_method', 'DELETE');
+
+        fetch(`/instructor/exams/${examToDelete}`, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Hide the modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('deleteExamModal'));
+                modal.hide();
+
+                // Remove the exam card from the UI
+                const examCard = document.querySelector(`[data-exam-id="${examToDelete}"]`);
+                if (examCard) {
+                    const parentCol = examCard.closest('.col-lg-4');
+                    if (parentCol) {
+                        parentCol.remove();
+                    }
+                }
+
+                // Clear the details panel if this was the selected exam
+                const detailsPanel = document.getElementById('exam-details-panel');
+                if (detailsPanel) {
+                    detailsPanel.innerHTML = `
+                        <div class="details-panel">
+                            <div class="empty-details">
+                                <i class="bi bi-file-text"></i>
+                                <p class="text-muted">Select an exam to view details</p>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                // Show success message
+                const alertDiv = document.createElement('div');
+                alertDiv.className = 'alert alert-success alert-dismissible fade show';
+                alertDiv.innerHTML = `
+                    Exam deleted successfully!
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+                document.querySelector('.exam-content .container-fluid').insertBefore(
+                    alertDiv,
+                    document.querySelector('.search-bar')
+                );
+                setTimeout(() => alertDiv.remove(), 5000);
+
+                // Show "No exams" message if this was the last exam
+                const examCards = document.querySelectorAll('.exam-card-wrapper');
+                if (examCards.length === 0) {
+                    const examContainer = document.querySelector('.col-lg-7');
+                    if (examContainer) {
+                        examContainer.innerHTML = `
+                            <div class="recents-label">Recents</div>
+                            <div class="no-exams">
+                                <i class="bi bi-folder2-open"></i>
+                                <p class="mt-3">No exams found. Create your first exam!</p>
+                            </div>
+                        `;
+                    }
+                }
+            } else {
+                alert('Error: ' + (data.error || 'Failed to delete exam'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Failed to delete exam. Please try again.');
+        })
+        .finally(() => {
+            deleteButton.disabled = false;
+            deleteButton.textContent = originalText;
+            examToDelete = null;
+        });
+    }
+
+    // Date validation functions
+    document.addEventListener('DOMContentLoaded', function() {
+        const submitButton = document.querySelector('#newExamForm button[type="submit"]');
+        const startDateInput = document.getElementById('scheduleStart');
+        const endDateInput = document.getElementById('scheduleEnd');
+
+        // Set initial min dates
+        updateMinDates();
+
+        // Update min dates every minute
+        setInterval(updateMinDates, 60000);
+
+        // Add input event listeners
+        startDateInput.addEventListener('input', validateDates);
+        endDateInput.addEventListener('input', validateDates);
+
+        function updateMinDates() {
+            const now = new Date();
+            const tzOffset = now.getTimezoneOffset() * 60000;
+            const localISOTime = (new Date(Date.now() - tzOffset)).toISOString().slice(0, 16);
+            startDateInput.min = localISOTime;
+            
+            if (startDateInput.value) {
+                endDateInput.min = startDateInput.value;
+            } else {
+                endDateInput.min = localISOTime;
+            }
+        }
+
+        function validateDates() {
+            const startDate = startDateInput.value ? new Date(startDateInput.value) : null;
+            const endDate = endDateInput.value ? new Date(endDateInput.value) : null;
+            const now = new Date();
+            let isValid = true;
+            
+            // Validate start date
+            const startError = document.getElementById('startDateError');
+            startError.style.display = 'none';
+            
+            if (startDate) {
+                if (startDate < now) {
+                    startError.textContent = 'Start date/time cannot be in the past';
+                    startError.style.display = 'block';
+                    startDateInput.value = '';
+                    isValid = false;
+                }
+            }
+
+            // Validate end date
+            const endError = document.getElementById('endDateError');
+            endError.style.display = 'none';
+
+            if (startDate && endDate) {
+                if (endDate <= startDate) {
+                    endError.textContent = 'End date/time must be after start date/time';
+                    endError.style.display = 'block';
+                    endDateInput.value = '';
+                    isValid = false;
+                }
+            }
+
+            // Enable/disable submit button based on validation and required fields
+            submitButton.disabled = !isValid || !startDate || !endDate;
+
+            return isValid;
+        }
+
+        // Add form submit validation
+        document.getElementById('newExamForm').addEventListener('submit', function(e) {
+            if (!validateDates()) {
+                e.preventDefault();
+            }
+        });
+
+        // Edit Exam Form Submission Handler
+        const editExamForm = document.getElementById('editExamForm');
+        if (editExamForm) {
+            console.log('Edit exam form found, attaching event listener');
+            editExamForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                console.log('Edit form submitted!');
+                
+                const formData = new FormData(this);
+                const examId = formData.get('exam_id');
+                
+                console.log('Submitting edit for exam ID:', examId);
+                console.log('Form data entries:');
+                for (let [key, value] of formData.entries()) {
+                    console.log(key, ':', value);
+                }
+                
+                fetch(`/instructor/exams/${examId}`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: formData
+                })
+                .then(response => {
+                    console.log('Response status:', response.status);
+                    console.log('Response headers:', response.headers);
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Response data:', data);
+                    if (data.success) {
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('editExamModal'));
+                        modal.hide();
+                        
+                        // Show success message
+                        const alertDiv = document.createElement('div');
+                        alertDiv.className = 'alert alert-success alert-dismissible fade show';
+                        alertDiv.innerHTML = `
+                            Exam updated successfully!
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        `;
+                        document.querySelector('.exam-content .container-fluid').insertBefore(
+                            alertDiv,
+                            document.querySelector('.search-bar')
+                        );
+                        
+                        // Reload the page to show updated data
+                        setTimeout(() => {
+                            location.reload();
+                        }, 1000);
+                    } else {
+                        alert('Error updating exam: ' + (data.message || data.error || 'Unknown error'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Fetch error:', error);
+                    alert('Failed to update exam: ' + error.message);
+                });
+            });
+        } else {
+            console.log('Edit exam form NOT found');
+        }
+    });
 </script>
-@endpush
+   

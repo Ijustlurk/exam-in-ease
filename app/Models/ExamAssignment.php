@@ -13,7 +13,6 @@ class ExamAssignment extends Model
     protected $primaryKey = 'assignment_id';
     public $timestamps = false;
     
-    // ✅ ADD THIS - This was missing!
     protected $fillable = [
         'class_id',
         'exam_id'
@@ -28,9 +27,9 @@ class ExamAssignment extends Model
     }
 
     /**
-     * Relationship with Class
+     * Relationship with Class - RENAMED from classModel to class
      */
-    public function classModel()
+    public function class()
     {
         return $this->belongsTo(ClassModel::class, 'class_id', 'class_id');
     }

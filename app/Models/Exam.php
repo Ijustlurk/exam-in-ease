@@ -21,6 +21,7 @@ class Exam extends Model
         'schedule_start',
         'schedule_end',
         'duration',
+        'term',
         'total_points',
         'no_of_items',
         'status',
@@ -56,7 +57,7 @@ class Exam extends Model
     public function sections()
     {
         return $this->hasMany(Section::class, 'exam_id', 'exam_id')
-                    ->orderBy('created_at', 'asc');
+            ->orderBy('created_at', 'asc');
     }
 
     /**
@@ -65,7 +66,7 @@ class Exam extends Model
     public function items()
     {
         return $this->hasMany(ExamItem::class, 'exam_id', 'exam_id')
-                    ->orderBy('order', 'asc');
+            ->orderBy('order', 'asc');
     }
 
     /**
@@ -133,7 +134,7 @@ class Exam extends Model
         return $this->hasMany(ExamApproval::class, 'exam_id', 'exam_id');
     }
 
-   
+
 
     /**
      * Get all collaborators for this exam
@@ -166,5 +167,22 @@ class Exam extends Model
     {
         $latestApproval = $this->latest_approval;
         return $latestApproval ? $latestApproval->status : 'pending';
+    }
+
+    public function examAssignments()
+    {
+        return $this->hasMany(ExamAssignment::class, 'exam_id', 'exam_id');
+    }
+
+    public function classes()
+    {
+        return $this->belongsToMany(
+            ClassModel::class,
+            'exam_assignments',
+            'exam_id',
+            'class_id',
+            'exam_id',
+            'class_id'
+        );
     }
 }

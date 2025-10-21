@@ -1,7 +1,8 @@
+<!-- Styles -->
 <style>
-    /* Sidebar */
     .sidebar {
-        background-color: #cfdadf;
+        background-color: rgb(207, 218, 225);
+        height: calc(100vh - 90px);
         display: flex;
         flex-direction: column;
         padding-top: 1rem;
@@ -10,111 +11,112 @@
         overflow-x: hidden;
         position: fixed;
         top: 90px;
-        /* Corrected 'left' positioning to account for 'ms-3' in the HTML */
         left: 0;
-        height: calc(100vh - 90px);
         z-index: 999;
-        border-radius: 0.5rem;
-        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     }
 
-    .sidebar.sidebar-expanded {
+    .sidebar.expanded {
         width: 220px;
     }
 
-    /* FIX: Changed .sidebar-icon to .nav-icon */
-    .nav-icon {
-        font-size: 1.5rem;
-    }
-
-    /* FIX: Changed .sidebar-icon.active to .nav-icon.active */
-    .nav-icon.active {
-        color: #0d6efd;
-    }
-
-    /* FIX: Changed .sidebar-icon-container to .nav-item */
-    .nav-item {
+    .sidebar a,
+    .sidebar button {
+        text-decoration: none;
+        color: #000;
         display: flex;
         align-items: center;
-        gap: 10px;
-        padding: 0.75rem 1rem;
-        white-space: nowrap;
-        transition: background 0.3s;
+        width: 100%;
+        background: none;
+        border: none;
+        text-align: left;
+    }
+
+    .sidebar .nav-item {
+        padding: 1rem;
+        display: flex;
+        align-items: center;
         cursor: pointer;
+        transition: background 0.2s;
+        white-space: nowrap;
     }
-    
-    /* Ensure the anchor tags inside nav-item inherit the display properties */
-    .nav-item a {
-        display: flex;
+
+    .sidebar .nav-item:hover {
+        background-color: #c6e3ef;
+    }
+
+    .sidebar .nav-item.active {
+        background-color: #5f9eb7;
+        color: white;
+        border-left: 4px solid #2c5f75;
+    }
+
+    .sidebar .nav-item.active * {
+        color: white;
+    }
+
+    .sidebar .nav-icon {
+        font-size: 1.5rem;
+        min-width: 28px;
+        display: inline-flex;
         align-items: center;
-        text-decoration: none; /* Add this if you want to remove underline from links */
-        color: inherit; /* Ensure link color is inherited or set explicitly */
+        justify-content: center;
     }
 
-    /* FIX: Changed .sidebar-icon-container:hover to .nav-item:hover */
-    .nav-item:hover {
-        background-color: #c0d8e2;
-    }
-
-    /* FIX: Changed .sidebar-label to .nav-label */
-    .nav-label {
+    .sidebar .nav-label {
         display: none;
-        font-size: 1rem;
+        font-weight: 500;
+        margin-left: 1rem;
+        line-height: 1.5rem;
     }
 
-    /* FIX: Changed .sidebar.sidebar-expanded .sidebar-label to .sidebar.sidebar-expanded .nav-label */
-    .sidebar.sidebar-expanded .nav-label {
+    .sidebar.expanded .nav-label {
         display: inline;
     }
 
-    /* Content offset */
     .main-content {
-        /* FIX: Adjusted for sidebar width (60px) + ms-3 (which is usually 1rem or 16px) */
         margin-left: 60px;
         transition: margin-left 0.3s;
-        padding: 1rem;
+        padding: 2rem;
     }
 
-    .sidebar.sidebar-expanded~.main-content {
-        /* FIX: Adjusted for expanded sidebar (220px) + ms-3 */
+    .main-content.expanded {
         margin-left: 220px;
-    }
-    
-    /* Additional fix for Top Navbar to prevent content from scrolling under it */
-    .sticky-top {
-        position: sticky;
-        top: 0;
-        z-index: 1000;
     }
 </style>
 
+<!-- Navbar -->
 <nav x-data="{ open: false }" class="bg-white border-b border-gray-100 sticky-top">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between h-16">
-            <div class="flex items-center">
-                <a href="{{ route('dashboard') }}" class="text-dark fs-2">
-                    <i class="bi bi-clipboard-data"></i>
-                </a>
+            <div class="flex">
+                <!-- Logo -->
+                <div class="shrink-0 flex items-center">
+                    <a href="{{ route('dashboard') }}">
+                        <i class="bi bi-clipboard-data text-dark fs-2"></i>
+                    </a>
+                </div>
             </div>
 
-            <div class="hidden sm:flex sm:items-center sm:ms-6">
+            <!-- Settings Dropdown -->
+            <div class="d-flex sm:items-center sm:ms-6">
                 <x-dropdown align="right" width="48">
                     <x-slot name="trigger">
                         <button
-                            class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 bg-white hover:text-gray-700 focus:outline-none transition">
-                            {{ Auth::user()->name }}
-                            <svg class="ms-1 h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg"
-                                viewBox="0 0 20 20">
-                                <path fill-rule="evenodd"
-                                    d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                                    clip-rule="evenodd" />
-                            </svg>
+                            class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 bg-white hover:text-gray-700 focus:outline-none transition ease-in-out duration-150">
+                            <div>{{ Auth::user()->name }}</div>
+                            <div class="ms-1">
+                                <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg"
+                                    viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd"
+                                        d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                                        clip-rule="evenodd" />
+                                </svg>
+                            </div>
                         </button>
                     </x-slot>
 
                     <x-slot name="content">
-                        <x-dropdown-link :href="route('profile.edit')">{{ __('Profile') }}</x-dropdown-link>
-
+                        <!-- Logout -->
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf
                             <x-dropdown-link :href="route('logout')"
@@ -123,105 +125,56 @@
                             </x-dropdown-link>
                         </form>
 
-                        <x-dropdown-link>Logged in as {{ Auth::user()->roles[0]->name }}</x-dropdown-link>
+                        <x-dropdown-link>
+                            Logged in as {{ Auth::user()->roles[0]->name }}
+                        </x-dropdown-link>
                     </x-slot>
                 </x-dropdown>
-            </div>
-
-            <div class="-me-2 flex items-center sm:hidden">
-                <button @click="open = !open"
-                    class="p-2 rounded-md text-gray-400 hover:text-gray-500 focus:outline-none">
-                    <svg class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
-                        <path :class="{ 'hidden': open, 'inline-flex': !open }" class="inline-flex"
-                            stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M4 6h16M4 12h16M4 18h16" />
-                        <path :class="{ 'hidden': !open, 'inline-flex': open }" class="hidden" stroke-linecap="round"
-                            stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <div :class="{ 'block': open, 'hidden': !open }" class="hidden sm:hidden">
-        <div class="pt-2 pb-3 space-y-1">
-            <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
-                {{ __('Dashboard') }}
-            </x-responsive-nav-link>
-        </div>
-
-        <div class="pt-4 pb-1 border-t border-gray-200">
-            <div class="px-4">
-                <div class="font-medium text-base text-gray-800">{{ Auth::user()->name }}</div>
-                <div class="font-medium text-sm text-gray-500">{{ Auth::user()->email }}</div>
-            </div>
-
-            <div class="mt-3 space-y-1">
-                <x-responsive-nav-link :href="route('profile.edit')">{{ __('Profile') }}</x-responsive-nav-link>
-
-                <form method="POST" action="{{ route('logout') }}">
-                    @csrf
-                    <x-responsive-nav-link :href="route('logout')"
-                        onclick="event.preventDefault(); this.closest('form').submit();">
-                        {{ __('Log Out') }}
-                    </x-responsive-nav-link>
-                </form>
             </div>
         </div>
     </div>
 </nav>
 
-<div class="sidebar shadow border ms-3" id="sidebar">
+<!-- Sidebar -->
+<div class="col-auto sidebar ms-3 rounded shadow border" id="sidebar" style="z-index: 9999;">
     <button class="nav-item" onclick="toggleSidebar()">
         <i class="bi bi-list nav-icon"></i>
         <span class="nav-label">Menu</span>
     </button>
 
-    <a href="{{ route('dashboard') }}" class="nav-item">
-        <i class="bi bi-house nav-icon"></i>
+    <a href="{{ route('dashboard') }}" class="nav-item {{ request()->routeIs('dashboard') ? 'active' : '' }}">
+        <i class="bi bi-house-door-fill nav-icon"></i>
         <span class="nav-label">Home</span>
     </a>
 
-    <a href="{{ route('programchair.manage-approval.index') }}" class="nav-item">
-        <i class="bi bi-journal-text nav-icon"></i>
+    <a href="{{ route('programchair.manage-approval.index') }}" class="nav-item {{ request()->routeIs('programchair.manage-approval.*') ? 'active' : '' }}">
+        <i class="bi bi-clipboard-check nav-icon"></i>
         <span class="nav-label">Manage Approval</span>
     </a>
 
-    <a href="{{ route('programchair.exam-statistics.index') }}" class="nav-item">
-        <i class="bi bi-bar-chart-line nav-icon"></i>
+    <a href="{{ route('programchair.exam-statistics.index') }}" class="nav-item {{ request()->routeIs('programchair.exam-statistics.*') ? 'active' : '' }}">
+        <i class="bi bi-graph-up-arrow nav-icon"></i>
         <span class="nav-label">Exam Statistics</span>
     </a>
 
-    <button class="nav-item mt-auto mb-3" onclick="switchView('account', event)">
-        <i class="bi bi-person-circle nav-icon"></i>
+    <a href="{{ route('profile.edit') }}" class="nav-item mt-auto mb-3 {{ request()->routeIs('profile.*') ? 'active' : '' }}">
+        <i class="bi bi-gear-fill nav-icon"></i>
         <span class="nav-label">Account Options</span>
-    </button>
+    </a>
 </div>
 
-<div class="main-content">
+<div class="main-content" id="mainContent">
     @yield('main-content')
 </div>
 
+<!-- Scripts -->
 <script>
-    function switchView(viewId, event) {
-        const sections = ['home', 'statistics', 'classes', 'account'];
-        sections.forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.classList.remove('visible');
-        });
-        const target = document.getElementById(viewId);
-        if (target) target.classList.add('visible');
-
-        // FIX: Changed .sidebar-icon to .nav-icon
-        document.querySelectorAll('.nav-icon').forEach(icon => icon.classList.remove('active'));
-        if (event) {
-            // FIX: Ensure it selects the icon from the correct element (button/anchor) that was clicked
-            const icon = event.currentTarget.querySelector('.nav-icon');
-            if (icon) icon.classList.add('active');
-        }
-    }
-
     function toggleSidebar() {
-        document.getElementById('sidebar').classList.toggle('sidebar-expanded');
+        const sidebar = document.getElementById('sidebar');
+        const main = document.getElementById('mainContent');
+        sidebar.classList.toggle('expanded');
+        if (main) {
+            main.classList.toggle('expanded');
+        }
     }
 </script>

@@ -1,7 +1,8 @@
+<!-- Styles -->
 <style>
-    /* Sidebar */
     .sidebar {
-        background-color: #cfdadf;
+        background-color: rgb(207, 218, 225);
+        height: calc(100vh - 90px);
         display: flex;
         flex-direction: column;
         padding-top: 1rem;
@@ -11,56 +12,80 @@
         position: fixed;
         top: 90px;
         left: 0;
-        height: calc(100vh - 90px);
         z-index: 999;
-        border-radius: 0.5rem;
-        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     }
 
-    .sidebar.sidebar-expanded {
+    .sidebar.expanded {
         width: 220px;
     }
 
-    .sidebar-icon {
-        font-size: 1.5rem;
-    }
-
-    .sidebar-icon.active {
-        color: #0d6efd;
-    }
-
-    .sidebar-icon-container {
+    .sidebar a,
+    .sidebar button {
+        text-decoration: none;
+        color: #000;
         display: flex;
         align-items: center;
-        gap: 10px;
-        padding: 0.75rem 1rem;
-        white-space: nowrap;
-        transition: background 0.3s;
+        width: 100%;
+        background: none;
+        border: none;
+        text-align: left;
+    }
+
+    .sidebar .nav-item {
+        padding: 1rem;
+        display: flex;
+        align-items: center;
         cursor: pointer;
+        transition: background 0.2s;
+        white-space: nowrap;
     }
 
-    .sidebar-icon-container:hover {
-        background-color: #c0d8e2;
+    .sidebar .nav-item:hover {
+        background-color: #c6e3ef;
     }
 
-    .sidebar-label {
+    .sidebar .nav-item.active {
+        background-color: #5f9eb7;
+        color: white;
+        border-left: 4px solid #2c5f75;
+    }
+
+    .sidebar .nav-item.active * {
+        color: white;
+    }
+
+    .sidebar .nav-icon {
+        font-size: 1.5rem;
+        min-width: 28px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .sidebar .nav-label {
         display: none;
-        font-size: 1rem;
+        font-weight: 500;
+        margin-left: 1rem;
+        line-height: 1.5rem;
     }
 
-    .sidebar.sidebar-expanded .sidebar-label {
+    .sidebar.expanded .nav-label {
         display: inline;
     }
 
-    /* Content offset */
-    .main-content {
+
+    .main {
         margin-left: 60px;
         transition: margin-left 0.3s;
-        padding: 1rem;
+        padding: 2rem;
     }
 
-    .sidebar.sidebar-expanded~.main-content {
+    .main.expanded {
         margin-left: 220px;
+    }
+
+    .no-sidebar .main {
+        margin-left: 0;
     }
 </style>
 
@@ -151,57 +176,47 @@
 </nav>
 
 <!-- Sidebar -->
-<div class="sidebar shadow border ms-3" id="sidebar">
-    <div class="sidebar-icon-container" onclick="toggleSidebar()">
-        <i class="bi bi-list sidebar-icon"></i>
-        <span class="sidebar-label">Menu</span>
-    </div>
-    <div class="sidebar-icon-container" onclick="switchView('home', event)">
-        <a href="{{ route('dashboard') }}">
-            <i class="bi bi-house-fill sidebar-icon active"></i>
-            <span class="sidebar-label">Home</span>
-        </a>
+@if(!request()->routeIs('instructor.exams.create'))
+<div class="sidebar shadow border ms-3 rounded" id="sidebar">
+    <button class="nav-item" onclick="toggleSidebar()">
+        <i class="bi bi-list nav-icon"></i>
+        <span class="nav-label">Menu</span>
+    </button>
 
-    </div>
-    <div class="sidebar-icon-container" onclick="switchView('statistics', event)">
-        <a href="{{ route('instructor.exam-statistics.index') }}">
-            <i class="bi bi-bar-chart-fill sidebar-icon"></i>
-            <span class="sidebar-label">Exam Statistics</span>
-        </a>
-    </div>
-    <div class="sidebar-icon-container" onclick="switchView('classes', event)">
-        <i class="bi bi-journal-bookmark-fill sidebar-icon"></i>
-        <span class="sidebar-label">Your Classes</span>
-    </div>
-    <div class="mt-auto mb-3 sidebar-icon-container" onclick="switchView('account', event)">
-        <i class="bi bi-person-circle sidebar-icon"></i>
-        <span class="sidebar-label">Account Options</span>
-    </div>
+    <a href="{{ route('dashboard') }}" class="nav-item {{ request()->routeIs('dashboard') ? 'active' : '' }}">
+        <i class="bi bi-house-door-fill nav-icon"></i>
+        <span class="nav-label">Home</span>
+    </a>
+
+    <a href="{{ route('instructor.exam-statistics.index') }}" class="nav-item {{ request()->routeIs('instructor.exam-statistics.*') ? 'active' : '' }}">
+        <i class="bi bi-graph-up-arrow nav-icon"></i>
+        <span class="nav-label">Exam Statistics</span>
+    </a>
+{{-- 
+    <a href="{{ route('instructor.classes.index') }}" class="nav-item {{ request()->routeIs('instructor.classes.*') ? 'active' : '' }}">
+        <i class="bi bi-journal-text nav-icon"></i>
+        <span class="nav-label">Your Classes</span>
+    </a> --}}
+
+    <a href="{{ route('profile.edit') }}" class="nav-item mt-auto mb-3 {{ request()->routeIs('profile.*') ? 'active' : '' }}">
+        <i class="bi bi-gear-fill nav-icon"></i>
+        <span class="nav-label">Account Options</span>
+    </a>
 </div>
+@endif
 
 <!-- Main Content -->
-<div class="main-content">
+<div class="main-content {{ request()->routeIs('instructor.exams.create') ? 'no-sidebar' : '' }}" id="mainContent">
     @yield('main-content')
 </div>
 
 <script>
-    function switchView(viewId, event) {
-        const sections = ['home', 'statistics', 'classes', 'account'];
-        sections.forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.classList.remove('visible');
-        });
-        const target = document.getElementById(viewId);
-        if (target) target.classList.add('visible');
-
-        document.querySelectorAll('.sidebar-icon').forEach(icon => icon.classList.remove('active'));
-        if (event) {
-            const icon = event.currentTarget.querySelector('.sidebar-icon');
-            if (icon) icon.classList.add('active');
-        }
-    }
-
     function toggleSidebar() {
-        document.getElementById('sidebar').classList.toggle('sidebar-expanded');
+        const sidebar = document.getElementById('sidebar');
+        const main = document.getElementById('mainContent');
+        sidebar.classList.toggle('expanded');
+        if (main) {
+            main.classList.toggle('expanded');
+        }
     }
 </script>

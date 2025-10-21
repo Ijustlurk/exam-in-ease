@@ -1,305 +1,295 @@
-@extends('layouts.Admin.app') {{-- Assume this is your main admin layout --}}
+@can('admin-access')
+@extends('layouts.Admin.app')
 
 @section('content')
-    <style>
-        /* Container and Main Layout Styles (Adjust based on your sidebar) */
-        .main-content {
-            padding: 2rem;
-            margin-left: 60px; /* Adjust if needed to fit sidebar */
-        }
-        
-        /* Main Dashboard Container (White Card) */
-        .approval-dashboard-container {
-            background-color: #fff;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            padding: 1.5rem;
-            min-height: 80vh; /* Para magkaroon ng space sa baba */
-        }
+<style>
+    .exam-view-container {
+        background-color: #e8f1f5;
+        min-height: 100vh;
+        padding: 30px;
+    }
 
-        /* Header Section: Title and Search Bar */
-        .header-section {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1.5rem;
-            gap: 20px;
-        }
-        .header-section h2 {
-            margin: 0;
-            font-weight: 600;
-            color: #333;
-            font-size: 1.5rem; /* Adjusted to look closer to the image */
-        }
-        .search-bar {
-            display: flex;
-            flex-grow: 1; 
-            max-width: 400px; 
-            border: 1px solid #ced4da;
-            border-radius: 0.25rem;
-            overflow: hidden; 
-        }
-        .search-bar input {
-            border: none;
-            padding: 0.5rem 1rem;
-            flex-grow: 1;
-            outline: none;
-            font-size: 1rem;
-        }
-        .search-bar button {
-            background-color: #f8f9fa;
-            border: none;
-            padding: 0.5rem 1rem;
-            cursor: pointer;
-            color: #495057;
-        }
+    .exam-header {
+        background-color: #6ba5b3;
+        color: white;
+        padding: 20px 30px;
+        border-radius: 12px 12px 0 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
 
-        /* Table Structure and Head */
-        .exams-table-container {
-            border: 1px solid #e0e0e0; /* Border around the entire table area in the image */
-            border-radius: 4px;
-            overflow: hidden; /* Important for border-radius */
-        }
-        .exams-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        .exams-table thead {
-            background-color: #f8f9fa; /* Light gray header background */
-        }
-        .exams-table th,
-        .exams-table td {
-            padding: 10px 15px; /* Adjust padding to match image density */
-            border-bottom: 1px solid #e0e0e0;
-            vertical-align: middle;
-            font-size: 0.95rem;
-        }
-        .exams-table th {
-            color: #495057;
-            text-align: left;
-            font-weight: 600;
-        }
-        
-        /* Table Rows */
-        .exams-table tbody tr:last-child td {
-            border-bottom: none; /* Remove border from the last row */
-        }
+    .exam-title {
+        font-size: 24px;
+        font-weight: 600;
+        margin: 0;
+    }
 
-        /* Column Styles */
-        /* Exam Name Column */
-        .exam-info .title {
-            font-weight: 500;
-            color: #333;
-        }
-        .exam-info .author {
-            font-size: 0.8em;
-            color: #6c757d;
-            margin-top: 2px;
-        }
+    .approve-btn {
+        background-color: #5a94aa;
+        color: white;
+        border: none;
+        padding: 12px 30px;
+        border-radius: 8px;
+        font-size: 15px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
 
-        /* Approval Status Badges/Spans */
-        .status-badge {
-            padding: 5px 10px;
-            border-radius: 5px;
-            font-size: 0.85em;
-            font-weight: 600;
-            display: inline-block;
-        }
-        /* Matching the image colors */
-        .status-pending { background-color: #fff3cd; color: #856404; border: 1px solid #ffc821; } /* Yellow/Orange (Lighter background, darker text) */
-        .status-approved { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; } /* Green */
-        
-        /* Actions Column */
-        .action-buttons {
-            display: flex;
-            gap: 15px;
-            align-items: center;
-        }
-        .action-buttons button, 
-        .action-buttons a {
-            background: none;
-            border: none;
-            cursor: pointer;
-            padding: 0;
-            text-decoration: none; /* Remove underline from <a> */
-            font-size: 0.95rem;
-            color: #6c757d; /* Default icon color */
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-        .action-buttons .text-success { color: #28a745; }
-        .action-buttons .text-danger { color: #dc3545; }
-        .action-buttons .text-info { color: #17a2b8; }
-        
-        /* Pagination Area */
-        .pagination-area {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px 0;
-        }
-        .pagination-controls {
-            display: flex;
-            list-style: none;
-            padding: 0;
-            margin: 0;
-            gap: 5px;
-        }
-        .page-link-custom {
-            display: block;
-            padding: 6px 12px;
-            border: 1px solid #dee2e6;
-            color: #007bff;
-            text-decoration: none;
-            border-radius: 4px;
-            transition: background-color 0.2s;
-        }
-        .page-item-active .page-link-custom {
-            background-color: #007bff;
-            color: #fff;
-            border-color: #007bff;
-        }
-        .page-link-nav {
-            color: #333;
-            font-weight: 500;
-        }
-        .page-link-nav:hover {
-            text-decoration: underline;
-        }
+    .approve-btn:hover {
+        background-color: #4a7d8f;
+    }
 
-    </style>
+    .approve-btn:disabled {
+        background-color: #95a5a6;
+        cursor: not-allowed;
+    }
 
-    <div class="main-content">
-        <div class="approval-dashboard-container">
-            <div class="header-section">
-                <h2>Exams for Approval</h2>
-                <div class="search-bar">
-                    <input type="text" placeholder="Search for exams" value="" readonly>
-                    <button type="button"><i class="bi bi-search"></i></button>
+    .tabs-container {
+        background: white;
+        border-bottom: 2px solid #e0e0e0;
+    }
+
+    .tabs {
+        display: flex;
+        gap: 0;
+    }
+
+    .tab {
+        padding: 18px 40px;
+        background: transparent;
+        border: none;
+        color: #95a5a6;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        border-bottom: 3px solid transparent;
+        transition: all 0.3s;
+    }
+
+    .tab.active {
+        color: #6ba5b3;
+        border-bottom-color: #6ba5b3;
+    }
+
+    .questions-container {
+        background: white;
+        padding: 30px;
+        border-radius: 0 0 12px 12px;
+        min-height: 500px;
+    }
+
+    .section-header {
+        background: white;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        padding: 15px 20px;
+        margin-bottom: 20px;
+    }
+
+    .section-title {
+        font-size: 18px;
+        font-weight: 700;
+        color: #1a1a1a;
+        margin-bottom: 8px;
+    }
+
+    .section-directions {
+        font-size: 14px;
+        color: #5a6c7d;
+    }
+
+    .question-card {
+        background: white;
+        border: 1px solid #d1d5db;
+        border-radius: 10px;
+        padding: 25px;
+        margin-bottom: 25px;
+    }
+
+    .question-header {
+        font-size: 16px;
+        font-weight: 600;
+        color: #1a1a1a;
+        margin-bottom: 15px;
+    }
+
+    .answer-option {
+        border: 2px solid #d1d5db;
+        border-radius: 25px;
+        padding: 12px 20px;
+        margin-bottom: 10px;
+        font-size: 15px;
+        color: #333;
+        transition: all 0.2s;
+    }
+
+    .answer-option.correct {
+        background-color: #4caf50;
+        color: white;
+        border-color: #4caf50;
+        font-weight: 600;
+    }
+
+    .back-btn {
+        background-color: #6ba5b3;
+        color: white;
+        border: none;
+        padding: 10px 25px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background-color 0.2s;
+        text-decoration: none;
+        display: inline-block;
+        margin-bottom: 20px;
+    }
+
+    .back-btn:hover {
+        background-color: #5a94aa;
+    }
+
+    .no-questions {
+        text-align: center;
+        padding: 60px;
+        color: #95a5a6;
+        font-size: 18px;
+    }
+</style>
+
+<div id="mainContent" class="main exam-view-container">
+    <a href="{{ route('admin.exam-statistics.index') }}" class="back-btn">
+        <i class="fas fa-arrow-left"></i> Back to Exams
+    </a>
+
+    <div style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);">
+        <!-- Exam Header -->
+        <div class="exam-header">
+            <h1 class="exam-title">{{ $exam->exam_title }}</h1>
+            @if($exam->status === 'draft' || $exam->status === 'pending')
+            <button class="approve-btn" onclick="approveExam({{ $exam->exam_id }})">
+                Approve Exam
+            </button>
+            @else
+            <button class="approve-btn" disabled>
+                {{ ucfirst($exam->status) }}
+            </button>
+            @endif
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs-container">
+            <div class="tabs">
+                <button class="tab active">Questions</button>
+            </div>
+        </div>
+
+        <!-- Questions Container -->
+        <div class="questions-container">
+            @if($exam->sections->count() > 0)
+                @foreach($exam->sections as $section)
+                    <!-- Section Header -->
+                    <div class="section-header">
+                        <div class="section-title">{{ $section->section_title }}</div>
+                        @if($section->section_directions)
+                        <div class="section-directions">{{ $section->section_directions }}</div>
+                        @endif
+                    </div>
+
+                    <!-- Questions in this section -->
+                    @if($section->examItems->count() > 0)
+                        @foreach($section->examItems as $index => $item)
+                            <div class="question-card">
+                                <div class="question-header">
+                                    Question {{ $index + 1 }}. {{ $item->question }}
+                                </div>
+
+                                @if($item->item_type === 'mcq')
+                                    @php
+                                        $options = is_array($item->options_array) ? $item->options_array : [];
+                                        $correctAnswer = is_array($item->answer_array) && isset($item->answer_array['correct']) 
+                                            ? $item->answer_array['correct'] 
+                                            : null;
+                                    @endphp
+
+                                    @foreach($options as $key => $option)
+                                        <div class="answer-option {{ strtolower($correctAnswer) === strtolower($key) ? 'correct' : '' }}">
+                                            {{ $key }}. {{ $option }}
+                                        </div>
+                                    @endforeach
+
+                                @elseif($item->item_type === 'torf')
+                                    @php
+                                        $correctAnswer = is_array($item->answer_array) && isset($item->answer_array['correct']) 
+                                            ? strtolower($item->answer_array['correct']) 
+                                            : null;
+                                    @endphp
+
+                                    <div class="answer-option {{ $correctAnswer === 'true' ? 'correct' : '' }}">
+                                        True
+                                    </div>
+                                    <div class="answer-option {{ $correctAnswer === 'false' ? 'correct' : '' }}">
+                                        False
+                                    </div>
+
+                                @elseif($item->item_type === 'essay')
+                                    <div class="answer-option" style="border-radius: 10px; padding: 15px;">
+                                        <em>Essay question - No predefined answer</em>
+                                    </div>
+
+                                @elseif($item->item_type === 'iden' || $item->item_type === 'enum')
+                                    <div class="answer-option correct" style="border-radius: 10px;">
+                                        Expected Answer: {{ $item->expected_answer ?? 'N/A' }}
+                                    </div>
+
+                                @endif
+                            </div>
+                        @endforeach
+                    @else
+                        <div class="no-questions">
+                            <i class="fas fa-question-circle" style="font-size: 48px; margin-bottom: 15px; opacity: 0.3;"></i>
+                            <p>No questions in this section yet</p>
+                        </div>
+                    @endif
+                @endforeach
+            @else
+                <div class="no-questions">
+                    <i class="fas fa-clipboard-list" style="font-size: 48px; margin-bottom: 15px; opacity: 0.3;"></i>
+                    <p>No sections or questions added to this exam yet</p>
                 </div>
-            </div>
-
-            <div class="exams-table-container">
-                <table class="exams-table">
-                    <thead>
-                        <tr>
-                            <th style="width: 5%;"><input type="checkbox"></th>
-                            <th style="width: 35%;">EXAM NAME <i class="bi bi-caret-down-fill ms-1"></i></th>
-                            <th style="width: 20%;">SUBJECT <i class="bi bi-caret-down-fill ms-1"></i></th>
-                            <th style="width: 20%;">APPROVAL STATUS <i class="bi bi-caret-down-fill ms-1"></i></th>
-                            <th style="width: 20%;">ACTIONS</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {{-- Static Row 1: Pending --}}
-                        <tr>
-                            <td><input type="checkbox"></td>
-                            <td>
-                                <div class="exam-info">
-                                    <div class="title">Midterm Computer Programming</div>
-                                    <div class="author">Author Name, 1 other</div>
-                                </div>
-                            </td>
-                            <td>Computer Programming 1</td>
-                            <td>
-                                <span class="status-badge status-pending">Pending</span>
-                            </td>
-                            <td>
-                                <div class="action-buttons">
-                                    <button class="text-success" title="Approve"><i class="bi bi-check2-circle"></i> Approve</button>
-                                    <button class="text-danger" title="Revise"><i class="bi bi-x"></i> Revise</button>
-                                    <a href="#" title="View" style="color: #6c757d;"><i class="bi bi-eye"></i> View</a>
-                                </div>
-                            </td>
-                        </tr>
-                        
-                        {{-- Static Row 2: Pending --}}
-                        <tr>
-                            <td><input type="checkbox"></td>
-                            <td>
-                                <div class="exam-info">
-                                    <div class="title">Midterm Discrete Structures</div>
-                                    <div class="author">Author Name, 2 others</div>
-                                </div>
-                            </td>
-                            <td>Discrete Structures</td>
-                            <td>
-                                <span class="status-badge status-pending">Pending</span>
-                            </td>
-                            <td>
-                                <div class="action-buttons">
-                                    <button class="text-success" title="Approve"><i class="bi bi-check2-circle"></i> Approve</button>
-                                    <button class="text-danger" title="Revise"><i class="bi bi-x"></i> Revise</button>
-                                    <a href="#" title="View" style="color: #6c757d;"><i class="bi bi-eye"></i> View</a>
-                                </div>
-                            </td>
-                        </tr>
-
-                        {{-- Static Row 3: Approved --}}
-                        <tr>
-                            <td><input type="checkbox"></td>
-                            <td>
-                                <div class="exam-info">
-                                    <div class="title">Midterm System Administration</div>
-                                    <div class="author">Author Name, 1 other</div>
-                                </div>
-                            </td>
-                            <td>System Administration and Management</td>
-                            <td>
-                                <span class="status-badge status-approved">Approved</span>
-                            </td>
-                            <td>
-                                <div class="action-buttons">
-                                    <button title="Rescind" style="color: #6c757d;"><i class="bi bi-arrow-counterclockwise"></i> Rescind</button>
-                                    <button title="Edit Settings" style="color: #6c757d;"><i class="bi bi-pencil-square"></i> Edit Settings</button>
-                                    <a href="#" title="View" style="color: #6c757d;"><i class="bi bi-eye"></i> View</a>
-                                </div>
-                            </td>
-                        </tr>
-                        
-                        {{-- Static Placeholder Row (Optional, remove if only showing exact image content) --}}
-                        {{-- <tr>
-                            <td><input type="checkbox"></td>
-                            <td>
-                                <div class="exam-info">
-                                    <div class="title">Finals Data Structures</div>
-                                    <div class="author">Author Name</div>
-                                </div>
-                            </td>
-                            <td>Data Structures and Algorithms</td>
-                            <td>
-                                <span class="status-badge status-pending">Pending</span>
-                            </td>
-                            <td>
-                                <div class="action-buttons">
-                                    <button class="text-success" title="Approve"><i class="bi bi-check2-circle"></i> Approve</button>
-                                    <button class="text-danger" title="Revise"><i class="bi bi-x"></i> Revise</button>
-                                    <a href="#" title="View" style="color: #6c757d;"><i class="bi bi-eye"></i> View</a>
-                                </div>
-                            </td>
-                        </tr> --}}
-                        
-                    </tbody>
-                </table>
-            </div>
-
-            {{-- Pagination Control --}}
-            <div class="pagination-area">
-                <span style="color: #6c757d; font-size: 0.9rem;">Prev</span>
-                <ul class="pagination-controls">
-                    <li class="page-item page-item-active"><a class="page-link-custom" href="#">1</a></li>
-                    <li class="page-item"><a class="page-link-custom" href="#">2</a></li>
-                    <li class="page-item"><a class="page-link-custom" href="#">3</a></li>
-                    <li class="page-item"><a class="page-link-custom" href="#">4</a></li>
-                    <li class="page-item"><a class="page-link-custom" href="#">5</a></li>
-                </ul>
-                <span style="color: #6c757d; font-size: 0.9rem;">Next</span>
-            </div>
-
+            @endif
         </div>
     </div>
-    
-    {{-- Note: You need to ensure you have Bootstrap Icons loaded in your app.blade.php for the bi-* classes to work. --}}
-    
+</div>
+
+<script>
+    function approveExam(examId) {
+        if (confirm('Are you sure you want to approve this exam?')) {
+            fetch(`/admin/exam-statistics/${examId}/approve`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message);
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while approving the exam');
+            });
+        }
+    }
+</script>
 @endsection
+@endcan

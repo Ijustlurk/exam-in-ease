@@ -18,10 +18,10 @@ use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class UserController extends Controller
 {
-    
+
     public function __construct()
     {
-        $this->middleware('auth'); 
+        $this->middleware('auth');
     }
 
     /**
@@ -56,7 +56,7 @@ class UserController extends Controller
 
         $chairs = UserProgramChair::select('user_id', 'last_name', 'first_name', 'middle_name', 'email_address', 'created_at', 'status')
             ->addSelect(DB::raw("'programchair' as role"));
-        
+
         // Get admin users from main users table
         $adminUserIds = UserAdmin::pluck('user_id');
         $admins = User::whereIn('id', $adminUserIds)
@@ -73,7 +73,7 @@ class UserController extends Controller
         $allUsers = $allUsers->concat($teachers->get());
         $allUsers = $allUsers->concat($chairs->get());
         $allUsers = $allUsers->concat($admins->get());
-        
+
         // Sort by created_at
         $users = $allUsers->sortByDesc('created_at');
 
@@ -94,7 +94,7 @@ class UserController extends Controller
             'role' => 'required|string|in:student,instructor,programchair,admin',
             'password' => 'required|string|min:4',
         ];
-        
+
         // Role-specific validation
         if ($request->role === 'admin') {
             $rules['username'] = 'required|string|max:100|unique:user_admin,username';
@@ -124,11 +124,11 @@ class UserController extends Controller
                 $displayName = $request->first_name . ' ' . $request->last_name;
                 $email = $request->email_address;
             }
-                                    
+
             $user = User::create([
                 'name' => $displayName,
                 'email' => $email,
-                'password' => Hash::make($request->password), 
+                'password' => Hash::make($request->password),
             ]);
 
             // Attach role
@@ -136,16 +136,16 @@ class UserController extends Controller
             if ($role) {
                 $user->roles()->attach($role->id);
             }
-            
+
             // Create role-specific record
             $roleModel = $this->getRoleModel($request->role);
-            
+
             if (!$roleModel) {
                 throw new \Exception("Invalid user role specified.");
             }
-            
+
             $data = ['user_id' => $user->id];
-            
+
             if ($request->role === 'admin') {
                 $data['username'] = $request->username;
                 $data['password_hash'] = Hash::make($request->password);
@@ -166,7 +166,7 @@ class UserController extends Controller
                 $data['password_hash'] = Hash::make($request->password);
                 $data['status'] = 'Active';
             }
-            
+
             $roleModel::create($data);
 
             DB::commit();
@@ -195,7 +195,7 @@ class UserController extends Controller
             if (!$mainUser) {
                 return response()->json(['success' => false, 'message' => 'User not found'], 404);
             }
-            
+
             $role = $mainUser->roles()->first()?->name;
             if (!$role) {
                 return response()->json(['success' => false, 'message' => 'User role not defined'], 400);
@@ -203,7 +203,7 @@ class UserController extends Controller
 
             // Get the role model class
             $roleModel = $this->getRoleModel($role);
-            
+
             if (!$roleModel) {
                 return response()->json(['success' => false, 'message' => 'Invalid role type: ' . $role], 400);
             }
@@ -213,12 +213,12 @@ class UserController extends Controller
                 return response()->json(['success' => false, 'message' => 'Role model class not found: ' . $roleModel], 500);
             }
 
-            $specificUser = $roleModel::where('user_id', $userId)->first(); 
+            $specificUser = $roleModel::where('user_id', $userId)->first();
 
             if (!$specificUser) {
                 return response()->json(['success' => false, 'message' => 'Specific user details not found for role: ' . $role], 404);
             }
-            
+
             $userData = $specificUser->toArray();
             $userData['role'] = $role;
             $userData['user_id'] = $mainUser->id;
@@ -242,12 +242,12 @@ class UserController extends Controller
 
         } catch (\Exception $e) {
             return response()->json([
-                'success' => false, 
+                'success' => false,
                 'message' => 'Error loading user data: ' . $e->getMessage()
             ], 500);
         }
     }
-    
+
     /**
      * Update user
      */
@@ -263,10 +263,10 @@ class UserController extends Controller
 
         // Validation rules
         $rules = [
-            'password' => 'nullable|string|min:4', 
+            'password' => 'nullable|string|min:4',
             'role' => 'required|string|in:student,instructor,programchair,admin',
         ];
-        
+
         // Role-specific validation
         if ($newRole === 'admin') {
             $rules['username'] = ['required', 'string', 'max:100', Rule::unique('user_admin', 'username')->ignore($userId, 'user_id')];
@@ -280,14 +280,14 @@ class UserController extends Controller
             $rules['first_name'] = 'required|string|max:100';
             $rules['last_name'] = 'required|string|max:100';
             $rules['middle_name'] = 'nullable|string|max:100';
-            
+
             $tableToCheck = $newRole === 'instructor' ? 'user_teacher' : 'user_program_chair';
             $rules['email_address'] = ['required', 'email', 'max:150', Rule::unique($tableToCheck, 'email_address')->ignore($userId, 'user_id')];
             $rules['username'] = ['required', 'string', 'max:100', Rule::unique($tableToCheck, 'username')->ignore($userId, 'user_id')];
         }
-        
+
         $request->validate($rules);
-        
+
         DB::beginTransaction();
         try {
             // Update main users table
@@ -298,12 +298,12 @@ class UserController extends Controller
                 $displayName = $request->first_name . ' ' . $request->last_name;
                 $email = $request->email_address;
             }
-            
+
             $updateData = [
                 'email' => $email,
                 'name' => $displayName,
             ];
-            
+
             if (!empty($request->password)) {
                 $updateData['password'] = Hash::make($request->password);
             }
@@ -312,7 +312,7 @@ class UserController extends Controller
             // Handle role change
             $roleModel = $this->getRoleModel($newRole);
             $specificUser = $this->getRoleModel($oldRole)::where('user_id', $userId)->first();
-            
+
             if ($oldRole !== $newRole) {
                 // Delete old role record and detach
                 if ($specificUser) {
@@ -379,7 +379,7 @@ class UserController extends Controller
         if (Gate::denies('admin-access')) {
             return redirect()->back()->with('error', 'Unauthorized action.');
         }
-        
+
         DB::beginTransaction();
 
         try {
@@ -435,8 +435,8 @@ class UserController extends Controller
         }
 
         $filename = $role . '_import_template.csv';
-        
-        $callback = function() use ($headers, $sampleData) {
+
+        $callback = function () use ($headers, $sampleData) {
             $file = fopen('php://output', 'w');
             fputcsv($file, $headers);
             fputcsv($file, $sampleData); // Include sample data
@@ -467,7 +467,7 @@ class UserController extends Controller
         try {
             $file = $request->file('file');
             $role = $request->role;
-            
+
             // Read file based on extension
             $extension = $file->getClientOriginalExtension();
             $data = [];
@@ -489,10 +489,10 @@ class UserController extends Controller
             // Validate headers based on role
             $requiredFields = $this->getRequiredFields($role);
             $missingFields = array_diff($requiredFields, $headers);
-            
+
             if (!empty($missingFields)) {
                 return response()->json([
-                    'success' => false, 
+                    'success' => false,
                     'message' => 'Missing required columns: ' . implode(', ', $missingFields)
                 ], 400);
             }
@@ -503,12 +503,12 @@ class UserController extends Controller
 
             foreach ($data as $index => $row) {
                 $rowNumber = $index + 2; // +2 because array is 0-indexed and we removed header row
-                
+
                 try {
                     // Map row data to headers
                     $userData = array_combine($headers, $row);
                     $userData = array_map('trim', $userData);
-                    
+
                     // Skip empty rows
                     if (empty(array_filter($userData))) {
                         continue;
@@ -650,5 +650,74 @@ class UserController extends Controller
         $roleModel::create($data);
 
         return $user;
+    }
+
+
+    public function resetPassword($id)
+    {
+        try {
+            // Find user in main users table
+            $user = User::findOrFail($id);
+
+            // Generate a random secure password
+            $newPassword = '000000';
+            $hashedPassword = Hash::make($newPassword);
+
+            DB::beginTransaction();
+
+            // Update password in users table
+            $user->update([
+                'password' => $hashedPassword
+            ]);
+
+            // Also update in role-specific tables
+            $roleUser = DB::table('role_user')
+                ->where('user_id', $id)
+                ->first();
+
+            if ($roleUser) {
+                switch ($roleUser->role_id) {
+                    case 1: // Admin
+                        DB::table('user_admin')
+                            ->where('user_id', $id)
+                            ->update(['password_hash' => $hashedPassword]);
+                        break;
+
+                    case 2: // Instructor
+                        DB::table('user_teacher')
+                            ->where('user_id', $id)
+                            ->update(['password_hash' => $hashedPassword]);
+                        break;
+
+                    case 3: // Program Chair
+                        DB::table('user_program_chair')
+                            ->where('user_id', $id)
+                            ->update(['password_hash' => $hashedPassword]);
+                        break;
+
+                    case 4: // Student
+                        DB::table('user_student')
+                            ->where('user_id', $id)
+                            ->update(['password_hash' => $hashedPassword]);
+                        break;
+                }
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => "Password reset successfully!\n\nNew password: {$newPassword}\n\nPlease save this password and share it with the user."
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Password reset error: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to reset password: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }

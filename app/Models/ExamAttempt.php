@@ -9,8 +9,22 @@ class ExamAttempt extends Model
 {
     use HasFactory;
 
-     protected $primaryKey = 'attempt_id';
-    public $timestamps = true; // Dahil may created_at/updated_at ang inyong attempt table
+    protected $table = 'exam_attempts';
+    protected $primaryKey = 'attempt_id';
+
+    protected $fillable = [
+        'exam_assignment_id',
+        'student_id',
+        'start_time',
+        'end_time',
+        'status',
+        'score'
+    ];
+
+    protected $casts = [
+        'start_time' => 'datetime',
+        'end_time' => 'datetime',
+    ];// Dahil may created_at/updated_at ang inyong attempt table
 
     // Link sa Student (UserStudent table)
     public function studentDetails()
@@ -18,10 +32,23 @@ class ExamAttempt extends Model
         // student_id sa attempts table -> user_id sa user_student table
         return $this->belongsTo(UserStudent::class, 'student_id', 'user_id');
     }
-    
+
     // Link sa Main User table (para makuha ang 'name')
     public function user()
     {
         return $this->belongsTo(User::class, 'student_id', 'id');
+    }
+
+    public function examAssignment()
+    {
+        return $this->belongsTo(ExamAssignment::class, 'exam_assignment_id', 'assignment_id');
+    }
+
+    /**
+     * Relationship with Student
+     */
+    public function student()
+    {
+        return $this->belongsTo(UserStudent::class, 'student_id', 'user_id');
     }
 }

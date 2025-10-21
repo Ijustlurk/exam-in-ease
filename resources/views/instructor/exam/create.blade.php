@@ -23,6 +23,14 @@
         align-items: center;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         margin-bottom: 32px;
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+        transition: transform 0.3s ease-in-out;
+    }
+    
+    .builder-header.header-hidden {
+        transform: translateY(-100%);
     }
     
     .header-left {
@@ -584,6 +592,15 @@
         background: #6a94a6;
     }
 
+    /* Class Dropdown Styles */
+    .class-dropdown {
+        position: relative;
+    }
+
+    .class-dropdown-list .class-item:hover {
+        background-color: #f3f4f6;
+    }
+
     @media (max-width: 768px) {
         .builder-header {
             flex-direction: column;
@@ -617,12 +634,19 @@
                        class="exam-title-input" 
                        value="{{ $exam->exam_title }}" 
                        id="examTitle"
-                       onchange="updateExamTitle()">
+                       @if($exam->status === 'for approval' || $exam->status === 'approved')
+                       readonly
+                       style="cursor: not-allowed;"
+                       @else
+                       onchange="updateExamTitle()"
+                       @endif>
                 <span class="exam-subtitle" id="examSubtitle">{{ $exam->subject->subject_name ?? 'Edit Exam.' }}</span>
             </div>
+            @if($exam->status !== 'for approval' && $exam->status !== 'approved')
             <button class="header-icon-btn" title="Edit Title">
                 <i class="bi bi-pencil"></i>
             </button>
+            @endif
         </div>
         <div class="header-actions">
             <a href="{{ route('instructor.exams.index') }}" class="back-btn">
@@ -632,7 +656,7 @@
             <button class="header-icon-btn" title="Save">
                 <i class="bi bi-floppy"></i>
             </button>
-            <button class="header-icon-btn" title="Settings">
+            <button class="header-icon-btn" title="Settings" onclick="openExamSettings()">
                 <i class="bi bi-gear"></i>
             </button>
             <button class="header-icon-btn" title="Download">
@@ -642,25 +666,57 @@
         </div>
     </div>
     
+    @if($exam->status === 'for approval')
+    <div class="container-fluid" style="max-width: 1400px; margin-bottom: 20px;">
+        <div class="alert alert-warning d-flex align-items-center" role="alert">
+            <i class="bi bi-lock-fill me-2"></i>
+            <div>
+                <strong>Read-Only Mode:</strong> This exam is currently under review for approval. No changes can be made until the approval request is cancelled or the exam is approved/rejected.
+            </div>
+        </div>
+    </div>
+    @elseif($exam->status === 'approved')
+    <div class="container-fluid" style="max-width: 1400px; margin-bottom: 20px;">
+        <div class="alert alert-info d-flex align-items-center" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i>
+            <div>
+                <strong>Approved:</strong> This exam has been approved and is now read-only. No further changes can be made.
+            </div>
+        </div>
+    </div>
+    @endif
+    
     <div class="container-fluid" style="max-width: 1400px;">
         @forelse($exam->sections as $section)
         <!-- Section Card -->
         <div class="section-card" data-section-id="{{ $section->section_id }}">
             <div class="section-header">
                 <h3 class="section-title">Section {{ $loop->iteration }} of {{ $exam->sections->count() }}</h3>
+                @if($exam->status !== 'for approval' && $exam->status !== 'approved')
                 <button class="section-delete-btn" onclick="deleteSection({{ $section->section_id }})">
                     <i class="bi bi-trash"></i>
                 </button>
+                @endif
             </div>
             <div class="section-body">
                 <input type="text" 
                        class="section-title-input" 
                        placeholder="(Write your exam title here or exam section title: eg. Part I)"
                        value="{{ $section->section_title ?? '' }}"
-                       onchange="updateSection({{ $section->section_id }}, 'section_title', this.value)">
+                       @if($exam->status === 'for approval' || $exam->status === 'approved')
+                       readonly
+                       style="cursor: not-allowed; color: #6b7280;"
+                       @else
+                       onchange="updateSection({{ $section->section_id }}, 'section_title', this.value)"
+                       @endif>
                 <textarea class="section-directions" 
                           placeholder="You can put your directions here."
-                          onchange="updateSection({{ $section->section_id }}, 'section_directions', this.value)">{{ $section->section_directions ?? '' }}</textarea>
+                          @if($exam->status === 'for approval' || $exam->status === 'approved')
+                          readonly
+                          style="cursor: not-allowed; color: #6b7280;"
+                          @else
+                          onchange="updateSection({{ $section->section_id }}, 'section_directions', this.value)"
+                          @endif>{{ $section->section_directions ?? '' }}</textarea>
             </div>
         </div>
 
@@ -672,6 +728,7 @@
                  onclick="setActiveQuestion(this)">
                 <div class="question-header">
                     <h4 class="question-header-title">Exam Item {{ $loop->iteration }}</h4>
+                    @if($exam->status !== 'for approval' && $exam->status !== 'approved')
                     <div class="question-header-actions">
                         <button class="question-header-btn" onclick="event.stopPropagation(); editQuestion({{ $item->item_id }})" title="Edit">
                             <i class="bi bi-pencil"></i>
@@ -685,6 +742,7 @@
                             <i class="bi bi-trash"></i>
                         </button>
                     </div>
+                    @endif
                 </div>
                 <div class="question-body">
                     @php
@@ -771,6 +829,7 @@
                 </div>
             </div>
             
+            @if($exam->status !== 'for approval' && $exam->status !== 'approved')
             <div class="floating-action-pane">
                 <button class="floating-btn" title="Add Question" onclick="event.stopPropagation(); openQuestionModal('mcq', {{ $section->section_id }})">
                     <i class="bi bi-plus-lg"></i>
@@ -785,6 +844,7 @@
                     <i class="bi bi-arrow-down"></i>
                 </button>
             </div>
+            @endif
         </div>
         @empty
         <div class="no-questions-yet">
@@ -800,6 +860,7 @@
         @endforelse
         
         <!-- Add Section -->
+        @if($exam->status !== 'for approval' && $exam->status !== 'approved')
         <div class="add-section">
             <div class="add-dropdown-wrapper">
                 <button class="add-main-btn" onclick="toggleAddDropdown()">
@@ -837,6 +898,112 @@
                 </div>
             </div>
         </div>
+        @endif
+    </div>
+</div>
+
+<!-- Exam Settings Modal -->
+<div class="modal fade" id="examSettingsModal" tabindex="-1" aria-labelledby="examSettingsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content" style="border-radius: 12px; border: none;">
+            <div class="modal-header-custom">
+                <div class="modal-title-custom">
+                    <i class="bi bi-gear-fill"></i>
+                    <span>Exam Settings</span>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" style="padding: 24px;">
+                <form id="examSettingsForm">
+                    @csrf
+                    
+                    <div class="mb-3">
+                        <label class="form-label-custom">Exam Title</label>
+                        <input type="text" class="form-control-custom" name="exam_title" id="settingsExamTitle" value="{{ $exam->exam_title }}" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label-custom">Exam Description</label>
+                        <input type="text" class="form-control-custom" name="exam_desc" id="settingsExamDesc" value="{{ $exam->exam_desc }}">
+                    </div>
+
+                    <label class="form-label-custom" style="margin-bottom: 12px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px; display: block;">Settings</label>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label-custom">Subject</label>
+                            <select class="form-control-custom" name="subject_id" id="settingsSubjectSelect" required onchange="loadClassesBySubjectSettings()">
+                                <option value="">Select Subject</option>
+                                @foreach(\App\Models\Subject::all() as $subject)
+                                <option value="{{ $subject->subject_id }}" {{ $exam->subject_id == $subject->subject_id ? 'selected' : '' }}>
+                                    {{ $subject->subject_name }}
+                                </option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label-custom">Class Assignment</label>
+                            <div class="class-dropdown">
+                                <button type="button" class="form-control-custom" onclick="toggleClassDropdownSettings(event)" style="text-align: left; display: flex; justify-content: space-between; align-items: center; cursor: pointer;">
+                                    <span id="settingsSelectedClassesText">Select Classes</span>
+                                    <i class="bi bi-chevron-down"></i>
+                                </button>
+                                <input type="hidden" name="class_ids" id="settingsSelectedClassesInput">
+                                <div class="class-dropdown-list" id="settingsClassDropdownList" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #d1d5db; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 1000; max-height: 300px; margin-top: 4px;">
+                                    <div class="class-search" style="padding: 8px; border-bottom: 1px solid #e5e7eb;">
+                                        <input type="text" id="settingsClassSearchInput" placeholder="Search classes..." onkeyup="filterClassesSettings(this)" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.875rem;">
+                                    </div>
+                                    <div class="class-list" id="settingsClassCheckboxList" style="max-height: 250px; overflow-y: auto; padding: 8px;">
+                                        <div class="p-3 text-muted">Select subject first</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label-custom">Term</label>
+                            <select class="form-control-custom" name="term" id="settingsTermSelect">
+                                <option value="prelim" {{ $exam->term == 'prelim' ? 'selected' : '' }}>Prelim</option>
+                                <option value="midterm" {{ $exam->term == 'midterm' ? 'selected' : '' }}>Midterm</option>
+                                <option value="finals" {{ $exam->term == 'finals' ? 'selected' : '' }}>Finals</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label-custom">Duration (minutes)</label>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <input type="number" class="form-control-custom" name="duration" id="settingsDuration" value="{{ $exam->duration }}" required min="1" style="flex: 1;">
+                                <span style="color: #6b7280;">mins</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label-custom">Schedule Start</label>
+                            <input type="datetime-local" class="form-control-custom" name="schedule_start" id="settingsScheduleStart" value="{{ $exam->schedule_start ? $exam->schedule_start->format('Y-m-d\TH:i') : '' }}" required>
+                            <small class="text-danger" id="settingsStartDateError" style="display: none;"></small>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label-custom">Schedule End</label>
+                            <input type="datetime-local" class="form-control-custom" name="schedule_end" id="settingsScheduleEnd" value="{{ $exam->schedule_end ? $exam->schedule_end->format('Y-m-d\TH:i') : '' }}" required>
+                            <small class="text-danger" id="settingsEndDateError" style="display: none;"></small>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 mt-4">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="border-radius: 8px; padding: 10px 24px;">Cancel</button>
+                        <button type="submit" class="btn-save-question">
+                            Save Changes
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -847,16 +1014,50 @@
 @push('scripts')
 <script>
 const examId = {{ $exam->exam_id }};
-let approvalStatus = 'draft';
+let approvalStatus = '{{ $exam->status }}';
+const isLocked = (approvalStatus === 'for approval' || approvalStatus === 'approved');
+
+// Header Scroll Behavior
+let lastScrollTop = 0;
+const header = document.querySelector('.builder-header');
+const scrollThreshold = 5; // Minimum scroll distance to trigger
+
+window.addEventListener('scroll', function() {
+    const currentScroll = window.pageYOffset || document.documentElement.scrollTop;
+    
+    // Prevent negative scrolling
+    if (currentScroll <= 0) {
+        header.classList.remove('header-hidden');
+        return;
+    }
+    
+    // Check if scroll distance is significant enough
+    if (Math.abs(currentScroll - lastScrollTop) < scrollThreshold) {
+        return;
+    }
+    
+    // Scrolling down
+    if (currentScroll > lastScrollTop && currentScroll > 80) {
+        header.classList.add('header-hidden');
+    } 
+    // Scrolling up
+    else {
+        header.classList.remove('header-hidden');
+    }
+    
+    lastScrollTop = currentScroll;
+}, false);
 
 // Set Active Question
 function setActiveQuestion(card) {
+    if (isLocked) return;
     document.querySelectorAll('.question-card').forEach(c => c.classList.remove('active'));
     card.classList.add('active');
 }
 
 // Toggle Add Dropdown
 function toggleAddDropdown() {
+    if (isLocked) return;
     document.getElementById('addDropdown').classList.toggle('show');
 }
 
@@ -869,6 +1070,11 @@ document.addEventListener('click', function(e) {
 
 // Update Exam Title
 function updateExamTitle() {
+    if (isLocked) {
+        alert('Cannot edit exam while it is under approval or approved.');
+        return;
+    }
+    
     const title = document.getElementById('examTitle').value;
     
     fetch(`/instructor/exams/${examId}`, {
@@ -889,6 +1095,11 @@ function updateExamTitle() {
 
 // Update Section
 function updateSection(sectionId, field, value) {
+    if (isLocked) {
+        alert('Cannot edit exam while it is under approval or approved.');
+        return;
+    }
+    
     fetch(`/instructor/exams/${examId}/sections/${sectionId}`, {
         method: 'PUT',
         headers: {
@@ -901,6 +1112,11 @@ function updateSection(sectionId, field, value) {
 
 // Delete Section
 function deleteSection(sectionId) {
+    if (isLocked) {
+        alert('Cannot delete sections while exam is under approval or approved.');
+        return;
+    }
+    
     if (confirm('This will delete all questions in this section. Are you sure?')) {
         fetch(`/instructor/exams/${examId}/sections/${sectionId}`, {
             method: 'DELETE',
@@ -919,6 +1135,11 @@ function deleteSection(sectionId) {
 
 // Duplicate Question
 function duplicateQuestion(examId, itemId) {
+    if (isLocked) {
+        alert('Cannot duplicate questions while exam is under approval or approved.');
+        return;
+    }
+    
     fetch(`/instructor/exams/${examId}/questions/${itemId}/duplicate`, {
         method: 'POST',
         headers: {
@@ -935,6 +1156,11 @@ function duplicateQuestion(examId, itemId) {
 
 // Delete Question
 function deleteQuestion(examId, itemId) {
+    if (isLocked) {
+        alert('Cannot delete questions while exam is under approval or approved.');
+        return;
+    }
+    
     if (confirm('Are you sure you want to delete this question?')) {
         fetch(`/instructor/exams/${examId}/questions/${itemId}`, {
             method: 'DELETE',
@@ -953,6 +1179,11 @@ function deleteQuestion(examId, itemId) {
 
 // Move Question
 function moveQuestion(itemId, direction) {
+    if (isLocked) {
+        alert('Cannot reorder questions while exam is under approval or approved.');
+        return;
+    }
+    
     fetch(`/instructor/exams/${examId}/questions/reorder`, {
         method: 'POST',
         headers: {
@@ -971,6 +1202,11 @@ function moveQuestion(itemId, direction) {
 
 // Add New Section
 function addNewSection() {
+    if (isLocked) {
+        alert('Cannot add sections while exam is under approval or approved.');
+        return;
+    }
+    
     fetch(`/instructor/exams/${examId}/sections`, {
         method: 'POST',
         headers: {
@@ -995,16 +1231,279 @@ function addNewSection() {
 // Approval Button
 document.getElementById('approvalBtn').addEventListener('click', function() {
     if (approvalStatus === 'draft') {
-        approvalStatus = 'pending';
-        this.textContent = 'Cancel Approval Request';
-        this.classList.add('pending');
-        document.getElementById('examSubtitle').textContent = 'Read Only.';
-    } else if (approvalStatus === 'pending') {
-        approvalStatus = 'draft';
-        this.textContent = 'Request for Approval';
-        this.classList.remove('pending');
-        document.getElementById('examSubtitle').textContent = 'Edit Exam.';
+        if (confirm('Are you sure you want to request approval for this exam?')) {
+            updateExamStatus('for approval');
+        }
+    } else if (approvalStatus === 'for approval') {
+        if (confirm('Are you sure you want to cancel the approval request?')) {
+            updateExamStatus('draft');
+        }
     }
+});
+
+// Update Exam Status
+function updateExamStatus(newStatus) {
+    fetch(`/instructor/exams/${examId}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify({ status: newStatus })
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            approvalStatus = newStatus;
+            // Reload page to reflect read-only state
+            location.reload();
+        } else {
+            alert(result.message || 'Error updating exam status');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error updating exam status');
+    });
+}
+
+// Update Approval Button UI
+function updateApprovalButton() {
+    const btn = document.getElementById('approvalBtn');
+    const subtitle = document.getElementById('examSubtitle');
+    
+    if (approvalStatus === 'draft') {
+        btn.textContent = 'Request for Approval';
+        btn.classList.remove('pending', 'approved');
+        subtitle.textContent = '{{ $exam->subject->subject_name ?? "Edit Exam." }}';
+    } else if (approvalStatus === 'for approval') {
+        btn.textContent = 'Cancel Approval Request';
+        btn.classList.add('pending');
+        btn.classList.remove('approved');
+        subtitle.textContent = 'Waiting for approval...';
+    } else if (approvalStatus === 'approved') {
+        btn.textContent = 'Approved';
+        btn.classList.add('approved');
+        btn.classList.remove('pending');
+        btn.disabled = true;
+        subtitle.textContent = 'Read Only.';
+    }
+}
+
+// Initialize button state on page load
+updateApprovalButton();
+
+// Open Exam Settings Modal
+function openExamSettings() {
+    if (isLocked) {
+        alert('Cannot edit exam settings while it is under approval or approved.');
+        return;
+    }
+    
+    // Load existing exam data
+    fetch(`/instructor/api/exams/${examId}/details`)
+        .then(response => response.json())
+        .then(data => {
+            const exam = data.exam;
+            
+            // Populate form fields
+            document.getElementById('settingsExamTitle').value = exam.exam_title;
+            document.getElementById('settingsExamDesc').value = exam.exam_desc || '';
+            document.getElementById('settingsSubjectSelect').value = exam.subject_id;
+            document.getElementById('settingsTermSelect').value = exam.term;
+            document.getElementById('settingsDuration').value = exam.duration;
+            
+            // Format and set dates
+            if (exam.schedule_start) {
+                document.getElementById('settingsScheduleStart').value = 
+                    new Date(exam.schedule_start).toISOString().slice(0, 16);
+            }
+            if (exam.schedule_end) {
+                document.getElementById('settingsScheduleEnd').value = 
+                    new Date(exam.schedule_end).toISOString().slice(0, 16);
+            }
+
+            // Load classes for the selected subject
+            loadClassesBySubjectSettings().then(() => {
+                // Set selected classes
+                const selectedClasses = exam.class_assignments || [];
+                selectedClasses.forEach(classId => {
+                    const checkbox = document.querySelector(`#settingsClassCheckboxList input[value="${classId}"]`);
+                    if (checkbox) checkbox.checked = true;
+                });
+                updateSelectedClassesSettings();
+            });
+            
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('examSettingsModal'));
+            modal.show();
+        })
+        .catch(error => {
+            console.error('Error fetching exam details:', error);
+            alert('Failed to load exam details');
+        });
+}
+
+// Load Classes by Subject for Settings Modal
+function loadClassesBySubjectSettings() {
+    const subjectSelect = document.getElementById('settingsSubjectSelect');
+    const subjectId = subjectSelect.value;
+    
+    const classCheckboxList = document.getElementById('settingsClassCheckboxList');
+    const selectedClassesText = document.getElementById('settingsSelectedClassesText');
+    const selectedClassesInput = document.getElementById('settingsSelectedClassesInput');
+    
+    // Reset selection
+    selectedClassesText.textContent = 'Select Classes';
+    selectedClassesInput.value = '';
+    
+    if (!subjectId) {
+        classCheckboxList.innerHTML = '<div class="p-3 text-muted">Select subject first</div>';
+        return Promise.reject();
+    }
+    
+    classCheckboxList.innerHTML = '<div class="p-3 text-muted">Loading classes...</div>';
+    
+    return fetch(`/instructor/api/classes?subject_id=${subjectId}`)
+        .then(response => response.json())
+        .then(classes => {
+            if (classes.length === 0) {
+                classCheckboxList.innerHTML = '<div class="p-3 text-muted">No classes available for this subject</div>';
+            } else {
+                classCheckboxList.innerHTML = classes.map(cls => `
+                    <div class="class-item" style="display: flex; align-items: center; padding: 8px; cursor: pointer; border-radius: 4px;">
+                        <input type="checkbox" id="settings_class_${cls.class_id}" name="classes[]" 
+                               value="${cls.class_id}" 
+                               onchange="updateSelectedClassesSettings()"
+                               class="form-check-input me-2">
+                        <label for="settings_class_${cls.class_id}" class="form-check-label" style="cursor: pointer; flex: 1;">${cls.display}</label>
+                    </div>
+                `).join('');
+            }
+            return classes;
+        })
+        .catch(error => {
+            console.error('Error loading classes:', error);
+            classCheckboxList.innerHTML = '<div class="p-3 text-danger">Error loading classes. Please try again.</div>';
+            throw error;
+        });
+}
+
+// Toggle Class Dropdown for Settings Modal
+function toggleClassDropdownSettings(event) {
+    event.preventDefault();
+    
+    const dropdown = document.getElementById('settingsClassDropdownList');
+    const subjectSelect = document.getElementById('settingsSubjectSelect');
+    const subjectId = subjectSelect.value;
+    
+    if (!subjectId) {
+        alert('Please select a subject first');
+        return;
+    }
+    
+    if (dropdown.style.display === 'none') {
+        dropdown.style.display = 'block';
+        const searchInput = document.getElementById('settingsClassSearchInput');
+        if (searchInput) searchInput.focus();
+    } else {
+        dropdown.style.display = 'none';
+    }
+}
+
+// Update Selected Classes for Settings Modal
+function updateSelectedClassesSettings() {
+    const checkboxes = document.querySelectorAll('#settingsClassCheckboxList input[type="checkbox"]:checked');
+    const selectedClassesText = document.getElementById('settingsSelectedClassesText');
+    const selectedClassesInput = document.getElementById('settingsSelectedClassesInput');
+    
+    const selectedClasses = Array.from(checkboxes).map(cb => cb.value);
+    const count = selectedClasses.length;
+    
+    // Update hidden input value
+    selectedClassesInput.value = selectedClasses.join(',');
+    
+    // Update display text
+    if (count === 0) {
+        selectedClassesText.textContent = 'Select Classes';
+    } else {
+        selectedClassesText.textContent = `${count} Class${count > 1 ? 'es' : ''} Selected`;
+    }
+}
+
+// Filter Classes for Settings Modal
+function filterClassesSettings(input) {
+    const filter = input.value.toLowerCase();
+    const items = document.querySelectorAll('#settingsClassCheckboxList .class-item');
+    
+    items.forEach(item => {
+        const text = item.textContent.toLowerCase();
+        item.style.display = text.includes(filter) ? '' : 'none';
+    });
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(e) {
+    const dropdown = document.getElementById('settingsClassDropdownList');
+    if (dropdown && !e.target.closest('.class-dropdown')) {
+        dropdown.style.display = 'none';
+    }
+});
+
+// Handle Exam Settings Form Submit
+document.getElementById('examSettingsForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    if (isLocked) {
+        alert('Cannot edit exam settings while it is under approval or approved.');
+        return;
+    }
+    
+    const formData = new FormData(this);
+    const data = {
+        exam_title: formData.get('exam_title'),
+        exam_desc: formData.get('exam_desc'),
+        subject_id: formData.get('subject_id'),
+        term: formData.get('term'),
+        duration: formData.get('duration'),
+        schedule_start: formData.get('schedule_start'),
+        schedule_end: formData.get('schedule_end'),
+        class_ids: formData.get('class_ids')
+    };
+    
+    fetch(`/instructor/exams/${examId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify({
+            ...data,
+            _method: 'PUT'
+        })
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('examSettingsModal'));
+            modal.hide();
+            
+            // Update the title in the header
+            document.getElementById('examTitle').value = data.exam_title;
+            
+            // Show success message
+            alert('Exam settings updated successfully!');
+            
+            // Optionally reload to reflect all changes
+            location.reload();
+        } else {
+            alert('Error updating exam settings: ' + (result.message || result.error || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        console.error('Fetch error:', error);
+        alert('Failed to update exam settings: ' + error.message);
+    });
 });
 </script>
 @endpush

@@ -35,4 +35,9 @@ class Section extends Model
         return $this->hasMany(ExamItem::class, 'exam_section_id', 'section_id')
                     ->orderBy('order', 'asc');
     }
+
+     public function examItems()
+    {
+        return $this->hasMany(ExamItem::class, 'exam_section_id', 'section_id');
+    }
 }

@@ -1,392 +1,320 @@
-@extends('layouts.Instructor.app')
+@can('admin-access')
+    @extends('layouts.Admin.app') {{-- Siguraduhin na ito ang tamang layout --}}
 
-@section('content')
-<style>
-    body {
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-        background-color: #e8eef2;
-    }
-    
-    .exam-table-container {
-        padding: 24px;
-        background-color: #e8eef2;
-        min-height: 100vh;
-    }
-    
-    .exam-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 24px;
-    }
-    
-    .exam-title {
-        font-size: 1.75rem;
-        font-weight: 600;
-        color: #212529;
-    }
-    
-    .search-box {
-        position: relative;
-        width: 100%;
-        max-width: 800px;
-    }
-    
-    .search-box input {
-        width: 100%;
-        padding: 12px 50px 12px 16px;
-        border: 1px solid #d1d5db;
-        border-radius: 8px;
-        font-size: 0.95rem;
-        background-color: white;
-        font-style: italic;
-        color: #9ca3af;
-    }
-    
-    .search-box input:focus {
-        outline: none;
-        border-color: #7ca5b8;
-        box-shadow: 0 0 0 3px rgba(124, 165, 184, 0.1);
-    }
-    
-    .search-icon {
-        position: absolute;
-        right: 16px;
-        top: 50%;
-        transform: translateY(-50%);
-        color: #6b7280;
-        font-size: 1.2rem;
-    }
-    
-    .exam-table-wrapper {
-        background-color: white;
-        border-radius: 12px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        overflow: hidden;
-    }
-    
-    .exam-table {
-        width: 100%;
-        margin: 0;
-    }
-    
-    .exam-table thead {
-        background-color: #e1ecf1;
-    }
-    
-    .exam-table thead th {
-        padding: 16px;
-        font-size: 0.875rem;
-        font-weight: 600;
-        color: #212529;
-        border: none;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-    
-    .exam-table thead th i {
-        margin-left: 4px;
-        font-size: 0.75rem;
-    }
-    
-    .exam-table tbody td {
-        padding: 20px 16px;
-        border-bottom: 1px solid #f1f3f5;
-        vertical-align: middle;
-        color: #212529;
-    }
-    
-    .exam-table tbody tr:last-child td {
-        border-bottom: none;
-    }
-    
-    .exam-table tbody tr:hover {
-        background-color: #f9fafb;
-    }
-    
-    .checkbox-cell {
-        width: 50px;
-    }
-    
-    .checkbox-cell input[type="checkbox"] {
-        width: 18px;
-        height: 18px;
-        cursor: pointer;
-        border: 2px solid #d1d5db;
-        border-radius: 4px;
-    }
-    
-    .exam-name-cell {
-        min-width: 250px;
-    }
-    
-    .exam-name {
-        font-size: 0.95rem;
-        font-weight: 600;
-        color: #212529;
-        margin-bottom: 4px;
-    }
-    
-    .teacher-name {
-        font-size: 0.8rem;
-        color: #9ca3af;
-        font-style: italic;
-    }
-    
-    .subject-cell {
-        font-size: 0.9rem;
-        color: #212529;
-        min-width: 200px;
-    }
-    
-    .classes-cell {
-        font-size: 0.9rem;
-        color: #6b7280;
-        min-width: 150px;
-    }
-    
-    .status-badge {
-        display: inline-block;
-        padding: 6px 14px;
-        border-radius: 6px;
-        font-size: 0.85rem;
-        font-weight: 600;
-        text-transform: capitalize;
-    }
-    
-    .status-ongoing {
-        background-color: #fff3e0;
-        color: #e65100;
-    }
-    
-    .status-approved {
-        background-color: #fff9c4;
-        color: #f57f17;
-    }
-    
-    .status-responses {
-        background-color: #e8f5e9;
-        color: #2e7d32;
-    }
-    
-    .actions-cell {
-        min-width: 200px;
-    }
-    
-    .action-btn {
-        background: transparent;
-        border: none;
-        color: #6b7280;
-        font-size: 0.9rem;
-        cursor: pointer;
-        padding: 6px 12px;
-        margin-right: 8px;
-        transition: color 0.2s;
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-    }
-    
-    .action-btn:hover {
-        color: #374151;
-    }
-    
-    .action-btn i {
-        font-size: 1rem;
-    }
-    
-    .pagination-wrapper {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        gap: 8px;
-        margin-top: 24px;
-        padding: 20px;
-    }
-    
-    .pagination-btn {
-        padding: 8px 16px;
-        background-color: white;
-        border: 1px solid #d1d5db;
-        border-radius: 6px;
-        color: #374151;
-        font-size: 0.9rem;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
-    
-    .pagination-btn:hover:not(:disabled) {
-        background-color: #f9fafb;
-        border-color: #9ca3af;
-    }
-    
-    .pagination-btn:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-    }
-    
-    .pagination-btn.active {
-        background-color: #374151;
-        color: white;
-        border-color: #374151;
-    }
-    
-    .page-number {
-        padding: 8px 14px;
-        background-color: white;
-        border: 1px solid #d1d5db;
-        border-radius: 6px;
-        color: #374151;
-        font-size: 0.9rem;
-        cursor: pointer;
-        transition: all 0.2s;
-        min-width: 40px;
-        text-align: center;
-    }
-    
-    .page-number:hover {
-        background-color: #f9fafb;
-        border-color: #9ca3af;
-    }
-    
-    .page-number.active {
-        background-color: #374151;
-        color: white;
-        border-color: #374151;
-    }
-</style>
+    @section('content')
+        <style>
+            /* Base styles for the main content area */
+            .main {
+                margin-left: 60px; /* Adjust based on your sidebar width */
+                transition: margin-left 0.3s;
+                padding: 2rem;
+            }
+            .main.expanded {
+                margin-left: 220px; /* Adjust if sidebar expands */
+            }
 
-<div class="exam-table-container">
-    <div class="container-fluid">
-        <!-- Header -->
-        <div class="exam-header">
-            <h1 class="exam-title">Your Exams</h1>
-            <div class="search-box">
-                <input type="text" placeholder="Search for exams">
-                <i class="bi bi-search search-icon"></i>
+            /* Container for the whole section */
+            .approval-dashboard-container {
+                background-color: #fff;
+                border-radius: 8px;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                padding: 1.5rem;
+                margin-bottom: 2rem;
+            }
+
+            /* Header Section: Title and Search Bar */
+            .header-section {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 1.5rem;
+                flex-wrap: wrap; /* Para mag-adjust sa maliliit na screen */
+                gap: 1rem; /* Space between items if wrapped */
+            }
+            .header-section h2 {
+                margin: 0;
+                font-weight: 600;
+                color: #333;
+                font-size: 1.8rem;
+            }
+            .search-bar {
+                display: flex;
+                flex-grow: 1; /* Allow search bar to take available space */
+                max-width: 400px; /* Limit search bar width */
+                border: 1px solid #ced4da;
+                border-radius: 0.25rem;
+                overflow: hidden; /* Ensure button stays inside border */
+            }
+            .search-bar input {
+                border: none;
+                padding: 0.5rem 1rem;
+                flex-grow: 1;
+                outline: none;
+            }
+            .search-bar button {
+                background-color: #f8f9fa;
+                border: none;
+                padding: 0.5rem 1rem;
+                cursor: pointer;
+                color: #495057;
+                transition: background-color 0.2s;
+            }
+            .search-bar button:hover {
+                background-color: #e2e6ea;
+            }
+
+            /* Table specific styles */
+            .exams-table {
+                width: 100%;
+                border-collapse: collapse;
+            }
+            .exams-table th,
+            .exams-table td {
+                padding: 12px 15px;
+                border-bottom: 1px solid #e0e0e0;
+                vertical-align: middle;
+            }
+            .exams-table thead th {
+                background-color: #f8f9fa;
+                color: #495057;
+                text-align: left;
+                font-weight: 600;
+                cursor: pointer; /* Indicate sortable columns */
+                position: sticky;
+                top: 0;
+                z-index: 1;
+            }
+            .exams-table tbody tr:hover {
+                background-color: #f2f2f2;
+            }
+
+            /* Exam Name Column */
+            .exam-info .title {
+                font-weight: 500;
+                color: #333;
+            }
+            .exam-info .author {
+                font-size: 0.85em;
+                color: #6c757d;
+                margin-top: 2px;
+            }
+
+            /* Approval Status Badges/Spans */
+            .status-badge {
+                padding: 5px 10px;
+                border-radius: 5px;
+                font-size: 0.85em;
+                font-weight: 600;
+                display: inline-block;
+            }
+            .status-pending { background-color: #ffeeba; color: #856404; } /* yellow */
+            .status-approved { background-color: #d4edda; color: #155724; } /* green */
+            .status-rejected { background-color: #f8d7da; color: #721c24; } /* red (if applicable) */
+
+            /* Actions Column */
+            .action-buttons button {
+                background: none;
+                border: none;
+                color: #6c757d;
+                font-size: 1.1em;
+                padding: 5px 8px;
+                cursor: pointer;
+                transition: color 0.2s ease;
+            }
+            .action-buttons button:hover {
+                color: #007bff;
+            }
+            .action-buttons button.text-success:hover {
+                color: #28a745;
+            }
+            .action-buttons button.text-danger:hover {
+                color: #dc3545;
+            }
+            .action-buttons .btn-icon-text {
+                display: inline-flex; /* Use flexbox for icon and text alignment */
+                align-items: center;
+                gap: 5px; /* Space between icon and text */
+            }
+
+            /* Pagination Styles */
+            .pagination-container {
+                display: flex;
+                justify-content: flex-end; /* Align to the right */
+                align-items: center;
+                padding-top: 1rem;
+                margin-top: 1rem;
+            }
+            .pagination-container .pagination {
+                margin: 0;
+                display: flex;
+                list-style: none;
+                padding: 0;
+            }
+            .pagination-container .page-item {
+                margin: 0 5px;
+            }
+            .pagination-container .page-link {
+                display: block;
+                padding: 8px 12px;
+                border: 1px solid #dee2e6;
+                border-radius: 5px;
+                color: #007bff;
+                text-decoration: none;
+                transition: background-color 0.2s, color 0.2s;
+            }
+            .pagination-container .page-link:hover {
+                background-color: #e9ecef;
+                color: #0056b3;
+            }
+            .pagination-container .page-item.active .page-link {
+                background-color: #007bff;
+                color: #fff;
+                border-color: #007bff;
+            }
+            .pagination-container .page-item.disabled .page-link {
+                color: #6c757d;
+                pointer-events: none;
+                background-color: #fff;
+            }
+        </style>
+
+        <div id="mainContent" class="main">
+            <div class="approval-dashboard-container">
+                <div class="header-section">
+                    <h2>Exams for Approval</h2>
+                    <div class="search-bar">
+                        <input type="text" placeholder="Search for exams" id="examSearchInput">
+                        <button type="button"><i class="bi bi-search"></i></button>
+                    </div>
+                </div>
+
+                <table class="exams-table">
+                    <thead>
+                        <tr>
+                            <th><input type="checkbox" id="selectAllExams"></th>
+                            <th>EXAM NAME <i class="bi bi-caret-down-fill ms-1"></i></th>
+                            <th>SUBJECT <i class="bi bi-caret-down-fill ms-1"></i></th>
+                            <th>APPROVAL STATUS <i class="bi bi-caret-down-fill ms-1"></i></th>
+                            <th>ACTIONS</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse ($exams as $exam)
+                            <tr>
+                                <td><input type="checkbox" class="exam-checkbox" value="{{ $exam->exam_id }}"></td>
+                                <td>
+                                    <div class="exam-info">
+                                        <div class="title">{{ $exam->exam_title }}</div>
+                                        <div class="author">{{ $exam->author_names ?? 'Author Name, 1 other' }}</div>
+                                    </div>
+                                </td>
+                                <td>{{ $exam->subject_name }}</td>
+                                <td>
+                                    @php
+                                        $statusClass = '';
+                                        switch (strtolower($exam->approval_status)) {
+                                            case 'pending':
+                                                $statusClass = 'status-pending';
+                                                break;
+                                            case 'approved':
+                                                $statusClass = 'status-approved';
+                                                break;
+                                            case 'rejected': // Add 'rejected' if applicable
+                                                $statusClass = 'status-rejected';
+                                                break;
+                                            default:
+                                                $statusClass = '';
+                                                break;
+                                        }
+                                    @endphp
+                                    <span class="status-badge {{ $statusClass }}">{{ ucfirst($exam->approval_status) }}</span>
+                                </td>
+                                <td>
+                                    <div class="action-buttons">
+                                        @if (strtolower($exam->approval_status) === 'pending')
+                                            <button title="Approve Exam" class="text-success btn-icon-text"><i class="bi bi-check2-circle"></i> Approve</button>
+                                            <button title="Revise Exam" class="text-danger btn-icon-text"><i class="bi bi-x-circle"></i> Revise</button>
+                                        @elseif (strtolower($exam->approval_status) === 'approved')
+                                            <button title="Rescind Approval" class="btn-icon-text"><i class="bi bi-arrow-counterclockwise"></i> Rescind</button>
+                                            <button title="Edit Settings" class="btn-icon-text"><i class="bi bi-pencil-square"></i> Edit Settings</button>
+                                        @endif
+                                        <a href="{{ route('admin.monitoring', ['id' => $exam->exam_id]) }}" title="View Exam" class="btn-icon-text" style="color: #6c757d; text-decoration: none;"><i class="bi bi-eye"></i> View</a>
+                                    </div>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="5" class="text-center py-4">No exams for approval found.</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+
+                {{-- Pagination Links --}}
+                <div class="pagination-container">
+                    {{ $exams->links('vendor.pagination.simple-bootstrap-4') }} {{-- You might need to adjust the pagination view path --}}
+                </div>
             </div>
         </div>
-        
-        <!-- Table -->
-        <div class="exam-table-wrapper">
-            <table class="exam-table">
-                <thead>
-                    <tr>
-                        <th class="checkbox-cell">
-                            <input type="checkbox">
-                        </th>
-                        <th class="exam-name-cell">
-                            EXAM NAME <i class="bi bi-caret-down-fill"></i>
-                        </th>
-                        <th class="subject-cell">
-                            SUBJECT <i class="bi bi-caret-down-fill"></i>
-                        </th>
-                        <th class="classes-cell">
-                            CLASSES <i class="bi bi-caret-down-fill"></i>
-                        </th>
-                        <th>
-                            EXAM STATUS <i class="bi bi-caret-down-fill"></i>
-                        </th>
-                        <th class="actions-cell">
-                            ACTIONS
-                        </th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <!-- Row 1 -->
-                    <tr>
-                        <td class="checkbox-cell">
-                            <input type="checkbox">
-                        </td>
-                        <td class="exam-name-cell">
-                            <div class="exam-name">Midterm Computer Programming</div>
-                            <div class="teacher-name">Teacher Name</div>
-                        </td>
-                        <td class="subject-cell">
-                            Computer Programming 1
-                        </td>
-                        <td class="classes-cell">
-                            1A and more...
-                        </td>
-                        <td>
-                            <span class="status-badge status-ongoing">Ongoing</span>
-                        </td>
-                        <td class="actions-cell">
-                            <a href="{{ route('instructor.exam-statistics.show') }}">
-                            <button class="action-btn">
-                                <i class="bi bi-search"></i> View
-                            </button>
-                            </a>
-                        </td>
-                    </tr>
-                    
-                    <!-- Row 2 -->
-                    <tr>
-                        <td class="checkbox-cell">
-                            <input type="checkbox">
-                        </td>
-                        <td class="exam-name-cell">
-                            <div class="exam-name">Midterm Advanced Python</div>
-                            <div class="teacher-name">Teacher Name</div>
-                        </td>
-                        <td class="subject-cell">
-                            Advanced Python
-                        </td>
-                        <td class="classes-cell">
-                            1A and more...
-                        </td>
-                        <td>
-                            <span class="status-badge status-approved">Approved</span>
-                        </td>
-                        <td class="actions-cell">
-                            <button class="action-btn">
-                                <i class="bi bi-search"></i> View
-                            </button>
-                        </td>
-                    </tr>
-                    
-                    <!-- Row 3 -->
-                    <tr>
-                        <td class="checkbox-cell">
-                            <input type="checkbox">
-                        </td>
-                        <td class="exam-name-cell">
-                            <div class="exam-name">Midterm System Administration</div>
-                            <div class="teacher-name">Teacher Name</div>
-                        </td>
-                        <td class="subject-cell">
-                            System Administration and Management
-                        </td>
-                        <td class="classes-cell">
-                            1A and more...
-                        </td>
-                        <td>
-                            <span class="status-badge status-responses">Responses Gathered</span>
-                        </td>
-                        <td class="actions-cell">
-                            <button class="action-btn">
-                                <i class="bi bi-search"></i> View
-                            </button>
-                            <button class="action-btn">
-                                <i class="bi bi-bar-chart-fill"></i> See Stats
-                            </button>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-        
-        <!-- Pagination -->
-        <div class="pagination-wrapper">
-            <button class="pagination-btn" disabled>Prev</button>
-            <div class="page-number active">1</div>
-            <div class="page-number">2</div>
-            <div class="page-number">3</div>
-            <div class="page-number">4</div>
-            <div class="page-number">5</div>
-            <button class="pagination-btn">Next</button>
-        </div>
-    </div>
-</div>
 
-@endsection
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                // Select All Checkbox Logic
+                const selectAll = document.getElementById('selectAllExams');
+                const examCheckboxes = document.querySelectorAll('.exam-checkbox');
+
+                if (selectAll) {
+                    selectAll.addEventListener('change', function() {
+                        examCheckboxes.forEach(checkbox => {
+                            checkbox.checked = selectAll.checked;
+                        });
+                    });
+                }
+
+                examCheckboxes.forEach(checkbox => {
+                    checkbox.addEventListener('change', function() {
+                        if (!this.checked) {
+                            if (selectAll) selectAll.checked = false;
+                        } else {
+                            const allChecked = Array.from(examCheckboxes).every(cb => cb.checked);
+                            if (selectAll) selectAll.checked = allChecked;
+                        }
+                    });
+                });
+
+                // Basic Search Functionality (Client-side, for demo. For real use, use AJAX/server-side search)
+                const searchInput = document.getElementById('examSearchInput');
+                searchInput.addEventListener('keyup', function() {
+                    const filter = searchInput.value.toLowerCase();
+                    const table = document.querySelector('.exams-table tbody');
+                    const rows = table.querySelectorAll('tr');
+
+                    rows.forEach(row => {
+                        const examName = row.querySelector('.exam-info .title')?.textContent.toLowerCase() || '';
+                        const subjectName = row.children[2]?.textContent.toLowerCase() || ''; // Subject column
+
+                        if (examName.includes(filter) || subjectName.includes(filter)) {
+                            row.style.display = '';
+                        } else {
+                            row.style.display = 'none';
+                        }
+                    });
+                });
+
+                // Optional: Add logic for Approve, Revise, Rescind, Edit Settings buttons (e.g., AJAX calls)
+                // Example:
+                document.querySelectorAll('.action-buttons button').forEach(button => {
+                    button.addEventListener('click', function() {
+                        const examId = this.closest('tr').querySelector('.exam-checkbox').value;
+                        const action = this.textContent.trim();
+                        alert(`Action: ${action} for Exam ID: ${examId}`);
+                        // Implement AJAX call or form submission here
+                    });
+                });
+
+                 // Ensure Bootstrap Icons (bi-*) are loaded if used
+                 // <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+            });
+        </script>
+    @endsection
+@endcan

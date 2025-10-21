@@ -8,11 +8,9 @@
                 margin-left: 60px;
                 transition: margin-left 0.3s;
                 padding: 2rem;
-                background-color: #e8f0f5;
             }
 
             .users-container {
-                background-color: #fff;
                 border-radius: 12px;
                 box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
                 overflow: hidden;
@@ -63,8 +61,8 @@
 
             .search-bar input:focus {
                 outline: none;
-                border-color: #667eea;
-                box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.15);
+                border-color: #6ba5bb;
+                box-shadow: 0 0 0 0.2rem rgba(107, 165, 187, 0.15);
             }
 
             .search-bar .search-icon {
@@ -141,7 +139,7 @@
                 width: 18px;
                 height: 18px;
                 cursor: pointer;
-                accent-color: #667eea;
+                accent-color: #6ba5bb;
             }
 
             .user-info {
@@ -151,8 +149,8 @@
             }
 
             .user-icon {
-                width: 36px;
-                height: 36px;
+                width: 40px;
+                height: 40px;
                 background-color: #2c3e50;
                 border-radius: 50%;
                 display: flex;
@@ -162,7 +160,7 @@
             }
 
             .user-icon i {
-                font-size: 1.3rem;
+                font-size: 1.4rem;
                 color: #fff;
             }
 
@@ -173,8 +171,9 @@
 
             .user-name {
                 font-size: 0.95rem;
-                font-weight: 500;
+                font-weight: 600;
                 color: #2c3e50;
+                margin-bottom: 2px;
             }
 
             .user-email {
@@ -209,19 +208,99 @@
                 background-color: #e74c3c;
             }
 
+            /* Status Cell with Dropdown */
+            .status-cell {
+                position: relative;
+            }
+
+            .status-trigger {
+                cursor: pointer;
+                display: inline-block;
+                font-weight: 600;
+            }
+
             .status-active {
                 color: #27ae60;
-                font-weight: 600;
             }
 
             .status-inactive {
                 color: #e74c3c;
-                font-weight: 600;
             }
 
+            .status-dropdown {
+                position: absolute;
+                top: 100%;
+                left: 0;
+                background: white;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                min-width: 220px;
+                z-index: 1000;
+                display: none;
+                margin-top: 0.5rem;
+            }
+
+            .status-dropdown.show {
+                display: block;
+                animation: dropdownFadeIn 0.2s ease-out;
+            }
+
+            @keyframes dropdownFadeIn {
+                from {
+                    opacity: 0;
+                    transform: translateY(-10px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+
+            .dropdown-item-custom {
+                padding: 0.75rem 1rem;
+                display: flex;
+                align-items: center;
+                gap: 0.75rem;
+                color: #2c3e50;
+                text-decoration: none;
+                transition: background-color 0.2s;
+                cursor: pointer;
+                border: none;
+                background: none;
+                width: 100%;
+                text-align: left;
+                font-size: 0.9rem;
+            }
+
+            .dropdown-item-custom:first-child {
+                border-radius: 8px 8px 0 0;
+            }
+
+            .dropdown-item-custom:last-child {
+                border-radius: 0 0 8px 8px;
+            }
+
+            .dropdown-item-custom:hover {
+                background-color: #f8f9fa;
+            }
+
+            .dropdown-item-custom i {
+                font-size: 1.1rem;
+                color: #95a5a6;
+            }
+
+            .dropdown-item-custom.delete {
+                color: #e74c3c;
+            }
+
+            .dropdown-item-custom.delete i {
+                color: #e74c3c;
+            }
+
+            /* Action Buttons */
             .action-buttons {
                 display: flex;
-                gap: 1.5rem;
+                gap: 1rem;
                 align-items: center;
             }
 
@@ -239,8 +318,12 @@
                 transition: color 0.2s;
             }
 
-            .action-btn:hover {
-                color: #667eea;
+            .action-btn i {
+                font-size: 1.1rem;
+            }
+
+            .action-btn.reset:hover {
+                color: #6ba5bb;
             }
 
             .action-btn.delete:hover {
@@ -259,19 +342,48 @@
                 opacity: 0.3;
             }
 
-            /* Add User Options Modal Styles */
-            #addUserOptionsModal .btn:hover {
-                background: #5a94aa !important;
-                transform: translateY(-2px);
-                box-shadow: 0 4px 12px rgba(107, 165, 187, 0.3);
+            /* View Details Modal */
+            .detail-row {
+                display: flex;
+                padding: 1rem 0;
+                border-bottom: 1px solid #e8ecef;
             }
 
-            #addUserOptionsModal .btn i {
-                transition: transform 0.3s;
+            .detail-row:last-child {
+                border-bottom: none;
             }
 
-            #addUserOptionsModal .btn:hover i {
-                transform: scale(1.1);
+            .detail-label {
+                font-weight: 600;
+                color: #2c3e50;
+                width: 150px;
+                flex-shrink: 0;
+            }
+
+            .detail-value {
+                color: #5a6c7d;
+                flex: 1;
+            }
+
+            /* Modal Header Custom */
+            .modal-header-custom {
+                background-color: #6ba5bb;
+                color: white;
+                padding: 1.5rem 2rem;
+                border-radius: 15px 15px 0 0;
+                display: flex;
+                align-items: center;
+                gap: 15px;
+            }
+
+            .modal-header-custom i {
+                font-size: 1.5rem;
+            }
+
+            .modal-header-custom h5 {
+                font-size: 1.25rem;
+                font-weight: 600;
+                margin: 0;
             }
         </style>
 
@@ -312,7 +424,7 @@
                     <thead>
                         <tr>
                             <th style="width: 5%;">
-                                <input type="checkbox" id="selectAllUsers">
+                                <input type="checkbox" id="selectAllUsers" class="user-checkbox">
                             </th>
                             <th style="width: 35%;">NAME</th>
                             <th style="width: 20%;">ROLE</th>
@@ -346,6 +458,20 @@
 
                                 $userStatus = $user->status ?? 'Active';
                                 $statusClass = (strtolower($userStatus) === 'active' || strtolower($userStatus) === 'enrolled') ? 'status-active' : 'status-inactive';
+                                
+                                // Prepare user data for modal
+                                $userData = [
+                                    'id' => $userId,
+                                    'name' => $userName,
+                                    'email' => $userEmail,
+                                    'role' => $userRole,
+                                    'status' => $userStatus,
+                                    'first_name' => $user->first_name ?? '',
+                                    'last_name' => $user->last_name ?? '',
+                                    'middle_name' => $user->middle_name ?? '',
+                                    'username' => $user->username ?? '',
+                                    'id_number' => $user->id_number ?? 'N/A'
+                                ];
                             @endphp
                             <tr data-user-id="{{ $userId }}" data-user-role="{{ $userRole }}">
                                 <td>
@@ -368,20 +494,40 @@
                                     </span>
                                 </td>
                                 <td>
-                                    <span class="{{ $statusClass }}">{{ $userStatus }}</span>
+                                    <div class="status-cell">
+                                        <span class="status-trigger {{ $statusClass }}" onclick="toggleStatusDropdown(event, {{ $userId }})">
+                                            {{ $userStatus }}
+                                        </span>
+                                        <div class="status-dropdown" id="status-dropdown-{{ $userId }}">
+                                            <button class="dropdown-item-custom" onclick="openEditUserModal({{ $userId }})">
+                                                <i class="bi bi-pencil"></i>
+                                                <span>Edit User</span>
+                                            </button>
+                                            <button class="dropdown-item-custom" onclick='viewUserDetails(@json($userData))'>
+                                                <i class="bi bi-eye"></i>
+                                                <span>View User Details</span>
+                                            </button>
+                                            <button class="dropdown-item-custom" onclick="resetUserPassword({{ $userId }}, '{{ $userName }}')">
+                                                <i class="bi bi-arrow-clockwise"></i>
+                                                <span>Reset User Password</span>
+                                            </button>
+                                            <button class="dropdown-item-custom delete" onclick="deleteUser({{ $userId }}, '{{ $userName }}')">
+                                                <i class="bi bi-trash"></i>
+                                                <span>Delete User</span>
+                                            </button>
+                                        </div>
+                                    </div>
                                 </td>
                                 <td>
                                     <div class="action-buttons">
-                                        <button class="action-btn edit-btn" onclick="openEditUserModal({{ $userId }})" title="Edit User">
-                                            <i class="bi bi-pencil"></i> Edit
+                                        <button class="action-btn reset" onclick="resetUserPassword({{ $userId }}, '{{ $userName }}')" title="Reset Password">
+                                            <i class="bi bi-arrow-clockwise"></i>
+                                            <span>Reset Password</span>
                                         </button>
-                                        <form action="{{ route('admin.users.destroy', $userId) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this user?');">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="action-btn delete" title="Delete User">
-                                                <i class="bi bi-trash"></i> Delete
-                                            </button>
-                                        </form>
+                                        <button class="action-btn delete" onclick="deleteUser({{ $userId }}, '{{ $userName }}')" title="Delete User">
+                                            <i class="bi bi-trash"></i>
+                                            <span>Delete User</span>
+                                        </button>
                                     </div>
                                 </td>
                             </tr>
@@ -400,21 +546,38 @@
             </div>
         </div>
 
-        <!-- Add User Options Modal (First Modal) -->
-        <div class="modal fade" id="addUserOptionsModal" tabindex="-1" aria-labelledby="addUserOptionsModalLabel" aria-hidden="true">
+        <!-- View User Details Modal -->
+        <div class="modal fade" id="viewUserDetailsModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-lg">
+                <div class="modal-content" style="border-radius: 15px; border: none;">
+                    <div class="modal-header-custom">
+                        <i class="bi bi-person-circle"></i>
+                        <h5>User Details</h5>
+                        <button type="button" class="btn-close btn-close-white ms-auto" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body" style="padding: 2rem;">
+                        <div id="userDetailsContent">
+                            <!-- User details will be populated here -->
+                        </div>
+                    </div>
+                    <div class="modal-footer" style="border-top: 1px solid #e8ecef; padding: 1rem 2rem;">
+                        <button type="button" class="btn" style="background-color: #6ba5bb; color: white; padding: 0.6rem 1.5rem; border-radius: 8px;" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add User Options Modal -->
+        <div class="modal fade" id="addUserOptionsModal" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered" style="max-width: 500px;">
                 <div class="modal-content" style="border-radius: 15px; border: none; overflow: hidden;">
-                    <!-- Header -->
-                    <div class="modal-header" style="background: #6ba5bb; color: white; border: none; padding: 1.5rem 2rem;">
-                        <h5 class="modal-title d-flex align-items-center" id="addUserOptionsModalLabel" style="font-size: 1.25rem; font-weight: 600;">
-                            <i class="bi bi-person-plus-fill me-2" style="font-size: 1.5rem;"></i> Add User
-                        </h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <div class="modal-header-custom">
+                        <i class="bi bi-person-plus-fill"></i>
+                        <h5>Add User</h5>
+                        <button type="button" class="btn-close btn-close-white ms-auto" data-bs-dismiss="modal"></button>
                     </div>
                     
-                    <!-- Body -->
                     <div class="modal-body" style="padding: 2rem;">
-                        <!-- Add One Button -->
                         <button class="btn w-100 mb-3 d-flex align-items-center justify-content-start" 
                                 onclick="openAddUserModal()"
                                 style="background: #6ba5bb; color: white; border: none; border-radius: 10px; padding: 1.2rem 1.5rem; font-size: 1rem; font-weight: 500; transition: all 0.3s;">
@@ -422,7 +585,6 @@
                             <span>Add One</span>
                         </button>
                         
-                        <!-- Import File Button -->
                         <button class="btn w-100 d-flex align-items-center justify-content-start" 
                                 onclick="openImportModal()"
                                 style="background: #6ba5bb; color: white; border: none; border-radius: 10px; padding: 1.2rem 1.5rem; font-size: 1rem; font-weight: 500; transition: all 0.3s;">
@@ -440,30 +602,183 @@
         @include('admin.users.partials.import-users-modal')
 
         <script>
+            // Toggle Status Dropdown (when clicking Active/Inactive)
+            function toggleStatusDropdown(event, userId) {
+                event.stopPropagation();
+                
+                // Close all other dropdowns
+                document.querySelectorAll('.status-dropdown').forEach(dropdown => {
+                    if (dropdown.id !== `status-dropdown-${userId}`) {
+                        dropdown.classList.remove('show');
+                    }
+                });
+                
+                // Toggle current dropdown
+                const dropdown = document.getElementById(`status-dropdown-${userId}`);
+                dropdown.classList.toggle('show');
+            }
+
+            // Close dropdowns when clicking outside
+            document.addEventListener('click', function(event) {
+                if (!event.target.closest('.status-cell')) {
+                    document.querySelectorAll('.status-dropdown').forEach(dropdown => {
+                        dropdown.classList.remove('show');
+                    });
+                }
+            });
+
+            // View User Details
+            function viewUserDetails(userData) {
+                console.log('User data:', userData);
+                
+                const content = document.getElementById('userDetailsContent');
+                
+                const roleDisplay = userData.role === 'programchair' ? 'Program Chair' : 
+                                   userData.role.charAt(0).toUpperCase() + userData.role.slice(1);
+                
+                content.innerHTML = `
+                    <div class="detail-row">
+                        <div class="detail-label">User ID:</div>
+                        <div class="detail-value">${userData.id}</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Full Name:</div>
+                        <div class="detail-value">${userData.name}</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">First Name:</div>
+                        <div class="detail-value">${userData.first_name || 'N/A'}</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Last Name:</div>
+                        <div class="detail-value">${userData.last_name || 'N/A'}</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Middle Name:</div>
+                        <div class="detail-value">${userData.middle_name || 'N/A'}</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Email:</div>
+                        <div class="detail-value">${userData.email}</div>
+                    </div>
+                    ${userData.username ? `
+                    <div class="detail-row">
+                        <div class="detail-label">Username:</div>
+                        <div class="detail-value">${userData.username}</div>
+                    </div>
+                    ` : ''}
+                    ${userData.id_number && userData.id_number !== 'N/A' ? `
+                    <div class="detail-row">
+                        <div class="detail-label">ID Number:</div>
+                        <div class="detail-value">${userData.id_number}</div>
+                    </div>
+                    ` : ''}
+                    <div class="detail-row">
+                        <div class="detail-label">Role:</div>
+                        <div class="detail-value">
+                            <span class="role-badge role-${userData.role}">${roleDisplay}</span>
+                        </div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Status:</div>
+                        <div class="detail-value">
+                            <span class="${userData.status.toLowerCase() === 'active' || userData.status.toLowerCase() === 'enrolled' ? 'status-active' : 'status-inactive'}">
+                                ${userData.status}
+                            </span>
+                        </div>
+                    </div>
+                `;
+                
+                // Close dropdown
+                document.querySelectorAll('.status-dropdown').forEach(dropdown => {
+                    dropdown.classList.remove('show');
+                });
+                
+                // Show modal
+                const modal = new bootstrap.Modal(document.getElementById('viewUserDetailsModal'));
+                modal.show();
+            }
+
+            // Reset User Password
+            function resetUserPassword(userId, userName) {
+                // Close dropdown
+                document.querySelectorAll('.status-dropdown').forEach(dropdown => {
+                    dropdown.classList.remove('show');
+                });
+                
+                if (confirm(`Are you sure you want to reset the password for ${userName}?`)) {
+                    fetch(`/admin/users/${userId}/reset-password`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert(data.message || 'Password reset successfully');
+                        } else {
+                            alert('Error: ' + (data.message || 'Failed to reset password'));
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('An error occurred while resetting the password');
+                    });
+                }
+            }
+
+            // Delete User
+            function deleteUser(userId, userName) {
+                // Close dropdown
+                document.querySelectorAll('.status-dropdown').forEach(dropdown => {
+                    dropdown.classList.remove('show');
+                });
+                
+                if (confirm(`Are you sure you want to delete ${userName}? This action cannot be undone.`)) {
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = `/admin/users/${userId}`;
+                    
+                    const csrfToken = document.createElement('input');
+                    csrfToken.type = 'hidden';
+                    csrfToken.name = '_token';
+                    csrfToken.value = '{{ csrf_token() }}';
+                    
+                    const methodField = document.createElement('input');
+                    methodField.type = 'hidden';
+                    methodField.name = '_method';
+                    methodField.value = 'DELETE';
+                    
+                    form.appendChild(csrfToken);
+                    form.appendChild(methodField);
+                    document.body.appendChild(form);
+                    form.submit();
+                }
+            }
+
             // Function to open Add User Modal from Options Modal
             function openAddUserModal() {
-                // Close the options modal
                 const optionsModal = bootstrap.Modal.getInstance(document.getElementById('addUserOptionsModal'));
                 if (optionsModal) {
                     optionsModal.hide();
                 }
                 
-                // Wait for the options modal to fully close, then open add user modal
                 setTimeout(() => {
                     const addUserModal = new bootstrap.Modal(document.getElementById('addUserModal'));
                     addUserModal.show();
                 }, 300);
             }
 
-            // Function to open Import Modal (placeholder for now)
+            // Function to open Import Modal
             function openImportModal() {
-                // Close the options modal
                 const optionsModal = bootstrap.Modal.getInstance(document.getElementById('addUserOptionsModal'));
                 if (optionsModal) {
                     optionsModal.hide();
                 }
                 
-                // Wait for the options modal to fully close, then open import modal
                 setTimeout(() => {
                     const importModal = new bootstrap.Modal(document.getElementById('importUsersModal'));
                     importModal.show();
@@ -473,7 +788,7 @@
             document.addEventListener('DOMContentLoaded', function() {
                 // Select All Checkbox
                 const selectAll = document.getElementById('selectAllUsers');
-                const userCheckboxes = document.querySelectorAll('.user-checkbox');
+                const userCheckboxes = document.querySelectorAll('.user-checkbox:not(#selectAllUsers)');
 
                 if (selectAll) {
                     selectAll.addEventListener('change', function() {
