@@ -24,6 +24,7 @@ class DashboardController extends Controller
             $totalSubjects = Subject::count();
             $totalActiveUsers = User::count();
             $recentExams = Exam::with('user', 'subject')
+                ->where('status', 'ongoing')
                 ->orderBy('created_at', 'desc')
                 ->limit(5)
                 ->get();

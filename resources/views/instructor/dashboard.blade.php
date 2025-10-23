@@ -704,10 +704,10 @@
         @endif
 
         <!-- Search Bar -->
-        <form action="{{ route('instructor.exams.index') }}" method="GET" class="search-bar">
+        <div class="search-bar">
             <i class="bi bi-search" style="color: #9ca3af;"></i>
-            <input type="text" name="search" placeholder="Search for exams" value="{{ request('search') }}">
-        </form>
+            <input type="text" id="examSearchInput" placeholder="Search for exams" value="{{ request('search') }}">
+        </div>
          <!-- Main Content Row -->
         <div class="row">
             <!-- Left Section - Exam Cards -->
@@ -2050,6 +2050,68 @@
 
     // Date validation functions
     document.addEventListener('DOMContentLoaded', function() {
+        // Live search functionality
+        const searchInput = document.getElementById('examSearchInput');
+        let searchTimeout;
+        
+        if (searchInput) {
+            searchInput.addEventListener('input', function() {
+                clearTimeout(searchTimeout);
+                const searchTerm = this.value.trim();
+                
+                // Debounce search by 300ms
+                searchTimeout = setTimeout(() => {
+                    performSearch(searchTerm);
+                }, 300);
+            });
+        }
+        
+        function performSearch(searchTerm) {
+            const url = new URL('{{ route('instructor.exams.index') }}', window.location.origin);
+            if (searchTerm) {
+                url.searchParams.set('search', searchTerm);
+            }
+            
+            // Show loading state
+            const examCardsContainer = document.querySelector('.col-lg-8 .row');
+            if (examCardsContainer) {
+                examCardsContainer.innerHTML = '<div class="col-12 text-center p-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+            }
+            
+            fetch(url, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.text())
+            .then(html => {
+                // Parse the HTML response
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                
+                // Extract the exam cards section
+                const newExamCards = doc.querySelector('.col-lg-8 .row');
+                if (newExamCards && examCardsContainer) {
+                    examCardsContainer.innerHTML = newExamCards.innerHTML;
+                }
+                
+                // Update URL without reload
+                const newUrl = new URL(window.location.href);
+                if (searchTerm) {
+                    newUrl.searchParams.set('search', searchTerm);
+                } else {
+                    newUrl.searchParams.delete('search');
+                }
+                window.history.pushState({}, '', newUrl);
+            })
+            .catch(error => {
+                console.error('Search error:', error);
+                if (examCardsContainer) {
+                    examCardsContainer.innerHTML = '<div class="col-12"><div class="alert alert-danger">Error loading exams. Please try again.</div></div>';
+                }
+            });
+        }
+        
         const submitButton = document.querySelector('#newExamForm button[type="submit"]');
         const startDateInput = document.getElementById('scheduleStart');
         const endDateInput = document.getElementById('scheduleEnd');

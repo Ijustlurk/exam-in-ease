@@ -147,12 +147,33 @@
     }
     
     /* Section Styles */
+    .section-wrapper {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 24px;
+        align-items: flex-start;
+    }
+    
     .section-card {
         background-color: white;
         border-radius: 12px;
-        margin-bottom: 24px;
+        flex: 1;
         box-shadow: 0 2px 4px rgba(0,0,0,0.08);
         overflow: hidden;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border: 2px solid transparent;
+    }
+    
+    .section-card:hover {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        border-color: #cbd5e1;
+    }
+    
+    .section-card.active {
+        border-color: #7ca5b8;
+        box-shadow: 0 4px 12px rgba(124,165,184,0.3);
+        background-color: #f0f9ff;
     }
     
     .section-header {
@@ -229,6 +250,7 @@
         gap: 12px;
         margin-bottom: 20px;
         position: relative;
+        min-height: 60px; /* Ensure minimum drop target size */
     }
     
     .question-card {
@@ -372,6 +394,82 @@
         color: #374151;
     }
     
+    /* Drag Handle */
+    .drag-handle {
+        background-color: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        padding: 8px;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        cursor: grab;
+        color: #7ca5b8;
+        font-size: 1.2rem;
+        min-width: 40px;
+        transition: all 0.2s;
+    }
+    
+    .drag-handle:hover {
+        background-color: #f0f4f6;
+        color: #5a8399;
+    }
+    
+    .drag-handle:active {
+        cursor: grabbing;
+    }
+    
+    /* Show drag handle when question card is active */
+    .question-wrapper:has(.question-card.active) .drag-handle {
+        display: flex;
+    }
+    
+    /* Dragging states */
+    .question-wrapper.dragging {
+        opacity: 0.4;
+        transform: scale(0.95);
+        transition: all 0.2s;
+    }
+    
+    .question-wrapper.drag-over-top {
+        margin-top: 80px;
+        transition: margin-top 0.3s ease;
+    }
+    
+    .question-wrapper.drag-over-bottom {
+        margin-bottom: 80px;
+        transition: margin-bottom 0.3s ease;
+    }
+    
+    .drag-placeholder {
+        height: 80px;
+        background: linear-gradient(135deg, rgba(124,165,184,0.1) 0%, rgba(124,165,184,0.2) 100%);
+        border: 2px dashed #7ca5b8;
+        border-radius: 12px;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #7ca5b8;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        pointer-events: none; /* Allow drag events to pass through to parent */
+    }
+    
+    .exam-section {
+        position: relative;
+        min-height: 100px; /* Ensure section has droppable area */
+    }
+    
+    .drag-ghost {
+        position: fixed;
+        pointer-events: none;
+        z-index: 10000;
+        opacity: 0.8;
+        transform: rotate(-2deg);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    }
+    
     /* Floating Action Pane */
     .floating-action-pane {
         background-color: white;
@@ -381,10 +479,38 @@
         display: none;
         flex-direction: column;
         gap: 4px;
+        min-width: fit-content;
     }
     
-    .question-card.active + .floating-action-pane {
+    /* Show floating pane when question card is active */
+    .question-wrapper:has(.question-card.active) .floating-action-pane {
         display: flex;
+    }
+    
+    /* Show floating pane when section card is active */
+    .section-wrapper:has(.section-card.active) .floating-action-pane {
+        display: flex;
+    }
+    
+    /* Floating Question Dropdown */
+    .floating-question-dropdown {
+        position: absolute;
+        right: 60px;
+        top: 0;
+        background-color: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        min-width: 200px;
+        z-index: 1001;
+    }
+    
+    .question-wrapper:has(.question-card.active) .floating-question-dropdown {
+        /* Positioned relative to question-wrapper */
+    }
+    
+    .section-wrapper:has(.section-card.active) .floating-question-dropdown {
+        /* Positioned relative to section-wrapper */
     }
     
     .floating-btn {
@@ -448,11 +574,30 @@
         box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         min-width: 220px;
         display: none;
-        z-index: 100;
+        z-index: 1000;
     }
     
     .add-dropdown.show {
         display: block;
+    }
+    
+    /* Dynamic positioning classes */
+    .add-dropdown.position-top {
+        top: auto;
+        bottom: 100%;
+        margin-top: 0;
+        margin-bottom: 8px;
+    }
+    
+    .add-dropdown.position-left {
+        left: 0;
+        transform: translateX(0);
+    }
+    
+    .add-dropdown.position-right {
+        left: auto;
+        right: 0;
+        transform: translateX(0);
     }
     
     .dropdown-item {
@@ -634,7 +779,7 @@
                        class="exam-title-input" 
                        value="{{ $exam->exam_title }}" 
                        id="examTitle"
-                       @if($exam->status === 'for approval' || $exam->status === 'approved')
+                       @if($exam->status === 'for approval' || $exam->status === 'approved' || $exam->status === 'archived')
                        readonly
                        style="cursor: not-allowed;"
                        @else
@@ -642,7 +787,7 @@
                        @endif>
                 <span class="exam-subtitle" id="examSubtitle">{{ $exam->subject->subject_name ?? 'Edit Exam.' }}</span>
             </div>
-            @if($exam->status !== 'for approval' && $exam->status !== 'approved')
+            @if($exam->status !== 'for approval' && $exam->status !== 'approved' && $exam->status !== 'archived')
             <button class="header-icon-btn" title="Edit Title">
                 <i class="bi bi-pencil"></i>
             </button>
@@ -659,7 +804,7 @@
             <button class="header-icon-btn" title="Settings" onclick="openExamSettings()">
                 <i class="bi bi-gear"></i>
             </button>
-            <button class="header-icon-btn" title="Download">
+            <button class="header-icon-btn" title="Download" onclick="showDownloadNotAvailable()">
                 <i class="bi bi-download"></i>
             </button>
             <button class="approval-btn" id="approvalBtn">Request for Approval</button>
@@ -684,51 +829,127 @@
             </div>
         </div>
     </div>
+    @elseif($exam->status === 'archived')
+    <div class="container-fluid" style="max-width: 1400px; margin-bottom: 20px;">
+        <div class="alert alert-secondary d-flex align-items-center" role="alert">
+            <i class="bi bi-archive-fill me-2"></i>
+            <div>
+                <strong>Archived:</strong> This exam has been archived and is now read-only. No changes can be made to archived exams.
+            </div>
+        </div>
+    </div>
     @endif
     
     <div class="container-fluid" style="max-width: 1400px;">
         @forelse($exam->sections as $section)
-        <!-- Section Card -->
-        <div class="section-card" data-section-id="{{ $section->section_id }}">
-            <div class="section-header">
-                <h3 class="section-title">Section {{ $loop->iteration }} of {{ $exam->sections->count() }}</h3>
-                @if($exam->status !== 'for approval' && $exam->status !== 'approved')
-                <button class="section-delete-btn" onclick="deleteSection({{ $section->section_id }})">
-                    <i class="bi bi-trash"></i>
+        <!-- Section Container -->
+        <div class="exam-section" data-section-id="{{ $section->section_id }}">
+        <!-- Section Wrapper -->
+        <div class="section-wrapper">
+            <!-- Section Card -->
+            <div class="section-card" 
+                 data-section-id="{{ $section->section_id }}"
+                 onclick="setActiveSection(this, {{ $section->section_id }})">
+                <div class="section-header">
+                    <h3 class="section-title">Section {{ $loop->iteration }} of {{ $exam->sections->count() }}</h3>
+                    @if($exam->status !== 'for approval' && $exam->status !== 'approved' && $exam->status !== 'archived')
+                    <button class="section-delete-btn" onclick="event.stopPropagation(); deleteSection({{ $section->section_id }})">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                    @endif
+                </div>
+                <div class="section-body">
+                    <input type="text" 
+                           class="section-title-input" 
+                           placeholder="(Write your exam title here or exam section title: eg. Part I)"
+                           value="{{ $section->section_title ?? '' }}"
+                           @if($exam->status === 'for approval' || $exam->status === 'approved' || $exam->status === 'archived')
+                           readonly
+                           style="cursor: not-allowed; color: #6b7280;"
+                           @else
+                           onclick="event.stopPropagation();"
+                           onchange="updateSection({{ $section->section_id }}, 'section_title', this.value)"
+                           @endif>
+                    <textarea class="section-directions" 
+                              placeholder="You can put your directions here."
+                              @if($exam->status === 'for approval' || $exam->status === 'approved' || $exam->status === 'archived')
+                              readonly
+                              style="cursor: not-allowed; color: #6b7280;"
+                              @else
+                              onclick="event.stopPropagation();"
+                              onchange="updateSection({{ $section->section_id }}, 'section_directions', this.value)"
+                              @endif>{{ $section->section_directions ?? '' }}</textarea>
+                </div>
+            </div>
+
+            <!-- Floating Action Pane for Section -->
+            @if($exam->status !== 'for approval' && $exam->status !== 'approved' && $exam->status !== 'archived')
+            <div class="floating-action-pane">
+                <button class="floating-btn" title="Add Question" onclick="event.stopPropagation(); toggleFloatingSectionDropdown(this, {{ $section->section_id }})">
+                    <i class="bi bi-plus-lg"></i>
                 </button>
-                @endif
+                <button class="floating-btn" title="Duplicate Section" onclick="event.stopPropagation(); duplicateSection({{ $exam->exam_id }}, {{ $section->section_id }})">
+                    <i class="bi bi-files"></i>
+                </button>
+                <button class="floating-btn" 
+                        title="Move Up" 
+                        onclick="event.stopPropagation(); moveSection({{ $section->section_id }}, 'up')"
+                        @if($exam->sections->count() <= 1 || $loop->first)
+                        disabled
+                        style="opacity: 0.4; cursor: not-allowed;"
+                        @endif>
+                    <i class="bi bi-arrow-up"></i>
+                </button>
+                <button class="floating-btn" 
+                        title="Move Down" 
+                        onclick="event.stopPropagation(); moveSection({{ $section->section_id }}, 'down')"
+                        @if($exam->sections->count() <= 1 || $loop->last)
+                        disabled
+                        style="opacity: 0.4; cursor: not-allowed;"
+                        @endif>
+                    <i class="bi bi-arrow-down"></i>
+                </button>
             </div>
-            <div class="section-body">
-                <input type="text" 
-                       class="section-title-input" 
-                       placeholder="(Write your exam title here or exam section title: eg. Part I)"
-                       value="{{ $section->section_title ?? '' }}"
-                       @if($exam->status === 'for approval' || $exam->status === 'approved')
-                       readonly
-                       style="cursor: not-allowed; color: #6b7280;"
-                       @else
-                       onchange="updateSection({{ $section->section_id }}, 'section_title', this.value)"
-                       @endif>
-                <textarea class="section-directions" 
-                          placeholder="You can put your directions here."
-                          @if($exam->status === 'for approval' || $exam->status === 'approved')
-                          readonly
-                          style="cursor: not-allowed; color: #6b7280;"
-                          @else
-                          onchange="updateSection({{ $section->section_id }}, 'section_directions', this.value)"
-                          @endif>{{ $section->section_directions ?? '' }}</textarea>
+            <!-- Floating dropdown for section add button -->
+            <div class="floating-question-dropdown" id="floatingSectionDropdown_{{ $section->section_id }}" style="display: none;">
+                <button class="dropdown-item" onclick="event.stopPropagation(); openQuestionModal('mcq', {{ $section->section_id }})">
+                    <i class="bi bi-ui-radios"></i>
+                    <span>New MCQ</span>
+                </button>
+                <button class="dropdown-item" onclick="event.stopPropagation(); openQuestionModal('torf', {{ $section->section_id }})">
+                    <i class="bi bi-toggle-on"></i>
+                    <span>New True or False</span>
+                </button>
+                <button class="dropdown-item" onclick="event.stopPropagation(); openQuestionModal('iden', {{ $section->section_id }})">
+                    <i class="bi bi-pencil-square"></i>
+                    <span>New Identification</span>
+                </button>
+                <button class="dropdown-item" onclick="event.stopPropagation(); openQuestionModal('enum', {{ $section->section_id }})">
+                    <i class="bi bi-list-ol"></i>
+                    <span>New Enumeration</span>
+                </button>
+                <button class="dropdown-item" onclick="event.stopPropagation(); openQuestionModal('essay', {{ $section->section_id }})">
+                    <i class="bi bi-textarea-t"></i>
+                    <span>New Essay</span>
+                </button>
             </div>
+            @endif
         </div>
 
         <!-- Question Cards -->
         @forelse($section->items->sortBy('order') as $item)
-        <div class="question-wrapper">
+        <div class="question-wrapper" data-item-id="{{ $item->item_id }}">
+            @if($exam->status !== 'for approval' && $exam->status !== 'approved' && $exam->status !== 'archived')
+            <div class="drag-handle" draggable="true" title="Drag to reorder">
+                <i class="bi bi-grip-vertical"></i>
+            </div>
+            @endif
             <div class="question-card" 
                  data-item-id="{{ $item->item_id }}"
                  onclick="setActiveQuestion(this)">
                 <div class="question-header">
                     <h4 class="question-header-title">Exam Item {{ $loop->iteration }}</h4>
-                    @if($exam->status !== 'for approval' && $exam->status !== 'approved')
+                    @if($exam->status !== 'for approval' && $exam->status !== 'approved' && $exam->status !== 'archived')
                     <div class="question-header-actions">
                         <button class="question-header-btn" onclick="event.stopPropagation(); editQuestion({{ $item->item_id }})" title="Edit">
                             <i class="bi bi-pencil"></i>
@@ -829,9 +1050,9 @@
                 </div>
             </div>
             
-            @if($exam->status !== 'for approval' && $exam->status !== 'approved')
+            @if($exam->status !== 'for approval' && $exam->status !== 'approved' && $exam->status !== 'archived')
             <div class="floating-action-pane">
-                <button class="floating-btn" title="Add Question" onclick="event.stopPropagation(); openQuestionModal('mcq', {{ $section->section_id }})">
+                <button class="floating-btn" title="Add Question" onclick="event.stopPropagation(); toggleFloatingDropdown(this, {{ $section->section_id }}, {{ $item->item_id }})">
                     <i class="bi bi-plus-lg"></i>
                 </button>
                 <button class="floating-btn" title="Duplicate" onclick="event.stopPropagation(); duplicateQuestion({{ $exam->exam_id }}, {{ $item->item_id }})">
@@ -844,14 +1065,46 @@
                     <i class="bi bi-arrow-down"></i>
                 </button>
             </div>
+            <!-- Floating dropdown for add button -->
+            <div class="floating-question-dropdown" id="floatingDropdown_{{ $item->item_id }}" style="display: none;">
+                <button class="dropdown-item" onclick="event.stopPropagation(); openQuestionModalAfter('mcq', {{ $section->section_id }}, {{ $item->item_id }})">
+                    <i class="bi bi-ui-radios"></i>
+                    <span>New MCQ</span>
+                </button>
+                <button class="dropdown-item" onclick="event.stopPropagation(); openQuestionModalAfter('torf', {{ $section->section_id }}, {{ $item->item_id }})">
+                    <i class="bi bi-toggle-on"></i>
+                    <span>New True or False</span>
+                </button>
+                <button class="dropdown-item" onclick="event.stopPropagation(); openQuestionModalAfter('iden', {{ $section->section_id }}, {{ $item->item_id }})">
+                    <i class="bi bi-pencil-square"></i>
+                    <span>New Identification</span>
+                </button>
+                <button class="dropdown-item" onclick="event.stopPropagation(); openQuestionModalAfter('enum', {{ $section->section_id }}, {{ $item->item_id }})">
+                    <i class="bi bi-list-ol"></i>
+                    <span>New Enumeration</span>
+                </button>
+                <button class="dropdown-item" onclick="event.stopPropagation(); openQuestionModalAfter('essay', {{ $section->section_id }}, {{ $item->item_id }})">
+                    <i class="bi bi-textarea-t"></i>
+                    <span>New Essay</span>
+                </button>
+            </div>
             @endif
         </div>
         @empty
+        @php
+            // Check if exam has any questions at all
+            $hasAnyQuestions = $exam->sections->sum(function($s) {
+                return $s->items->count();
+            }) > 0;
+        @endphp
+        @if(!$hasAnyQuestions)
         <div class="no-questions-yet">
             <i class="bi bi-question-circle"></i>
             <p>No questions yet. Click "Add" below to create your first question!</p>
         </div>
+        @endif
         @endforelse
+        </div><!-- End exam-section -->
         @empty
         <div class="no-questions-yet">
             <i class="bi bi-folder2-open"></i>
@@ -860,7 +1113,7 @@
         @endforelse
         
         <!-- Add Section -->
-        @if($exam->status !== 'for approval' && $exam->status !== 'approved')
+        @if($exam->status !== 'for approval' && $exam->status !== 'approved' && $exam->status !== 'archived')
         <div class="add-section">
             <div class="add-dropdown-wrapper">
                 <button class="add-main-btn" onclick="toggleAddDropdown()">
@@ -874,23 +1127,23 @@
                         <i class="bi bi-file-earmark-plus"></i>
                         <span>New Section</span>
                     </button>
-                    <button class="dropdown-item" onclick="openQuestionModal('mcq', {{ $exam->sections->first()->section_id }})">
+                    <button class="dropdown-item" onclick="openQuestionModal('mcq', activeSectionId)">
                         <i class="bi bi-ui-radios"></i>
                         <span>New MCQ</span>
                     </button>
-                    <button class="dropdown-item" onclick="openQuestionModal('torf', {{ $exam->sections->first()->section_id }})">
+                    <button class="dropdown-item" onclick="openQuestionModal('torf', activeSectionId)">
                         <i class="bi bi-toggle-on"></i>
                         <span>New True or False</span>
                     </button>
-                    <button class="dropdown-item" onclick="openQuestionModal('iden', {{ $exam->sections->first()->section_id }})">
+                    <button class="dropdown-item" onclick="openQuestionModal('iden', activeSectionId)">
                         <i class="bi bi-pencil-square"></i>
                         <span>New Identification</span>
                     </button>
-                    <button class="dropdown-item" onclick="openQuestionModal('enum', {{ $exam->sections->first()->section_id }})">
+                    <button class="dropdown-item" onclick="openQuestionModal('enum', activeSectionId)">
                         <i class="bi bi-list-ol"></i>
                         <span>New Enumeration</span>
                     </button>
-                    <button class="dropdown-item" onclick="openQuestionModal('essay', {{ $exam->sections->first()->section_id }})">
+                    <button class="dropdown-item" onclick="openQuestionModal('essay', activeSectionId)">
                         <i class="bi bi-textarea-t"></i>
                         <span>New Essay</span>
                     </button>
@@ -1007,6 +1260,44 @@
     </div>
 </div>
 
+<!-- Download/Preview Modal -->
+<div class="modal fade" id="downloadPreviewModal" tabindex="-1" aria-labelledby="downloadPreviewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content" style="border-radius: 12px; border: none; max-height: 90vh; display: flex; flex-direction: column;">
+            <div class="modal-header-custom">
+                <div class="modal-title-custom">
+                    <i class="bi bi-file-earmark-text-fill"></i>
+                    <span>Exam Preview & Download</span>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" style="padding: 0; flex: 1; overflow: hidden; display: flex; flex-direction: column;">
+                <!-- Preview Area -->
+                <div id="examPreviewContent" style="flex: 1; overflow-y: auto; background: #f9fafb; display: flex; justify-content: center; align-items: flex-start; padding: 20px;">
+                    <!-- Content will be loaded here -->
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-3 text-muted">Loading exam preview...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="padding: 20px 24px; background-color: #f8f9fa; border-top: 1px solid #dee2e6;">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="border-radius: 8px; padding: 10px 24px;">
+                    Close
+                </button>
+                <button type="button" class="btn btn-primary" onclick="downloadExam('pdf')" style="border-radius: 8px; padding: 10px 24px; background-color: #dc3545; border-color: #dc3545;">
+                    <i class="bi bi-file-pdf"></i> Download as PDF
+                </button>
+                <button type="button" class="btn btn-primary" onclick="downloadExam('word')" style="border-radius: 8px; padding: 10px 24px; background-color: #2b5797; border-color: #2b5797;">
+                    <i class="bi bi-file-word"></i> Download as Word
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @include('instructor.exam.question-modal')
 
 @endsection
@@ -1015,7 +1306,7 @@
 <script>
 const examId = {{ $exam->exam_id }};
 let approvalStatus = '{{ $exam->status }}';
-const isLocked = (approvalStatus === 'for approval' || approvalStatus === 'approved');
+const isLocked = (approvalStatus === 'for approval' || approvalStatus === 'approved' || approvalStatus === 'archived');
 
 // Header Scroll Behavior
 let lastScrollTop = 0;
@@ -1051,20 +1342,171 @@ window.addEventListener('scroll', function() {
 // Set Active Question
 function setActiveQuestion(card) {
     if (isLocked) return;
+    // Remove active from all cards (sections and questions)
+    document.querySelectorAll('.section-card').forEach(c => c.classList.remove('active'));
     document.querySelectorAll('.question-card').forEach(c => c.classList.remove('active'));
+    // Set active question
     card.classList.add('active');
+}
+
+// Set Active Section
+// Track the currently active section ID
+let activeSectionId = {{ $exam->sections->last()->section_id ?? 'null' }};
+
+function setActiveSection(card, sectionId) {
+    if (isLocked) return;
+    event.stopPropagation(); // Prevent event bubbling
+    // Remove active from all cards (sections and questions)
+    document.querySelectorAll('.section-card').forEach(c => c.classList.remove('active'));
+    document.querySelectorAll('.question-card').forEach(c => c.classList.remove('active'));
+    // Set active section
+    card.classList.add('active');
+    // Update the active section ID
+    activeSectionId = sectionId;
 }
 
 // Toggle Add Dropdown
 function toggleAddDropdown() {
     if (isLocked) return;
-    document.getElementById('addDropdown').classList.toggle('show');
+    
+    const dropdown = document.getElementById('addDropdown');
+    const isShowing = dropdown.classList.contains('show');
+    
+    if (isShowing) {
+        // Close dropdown
+        dropdown.classList.remove('show');
+        dropdown.classList.remove('position-top', 'position-left', 'position-right');
+    } else {
+        // Open dropdown and calculate position
+        dropdown.classList.add('show');
+        
+        // Get dropdown and button dimensions
+        const wrapper = dropdown.closest('.add-dropdown-wrapper');
+        const wrapperRect = wrapper.getBoundingClientRect();
+        const dropdownRect = dropdown.getBoundingClientRect();
+        
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        
+        // Reset position classes
+        dropdown.classList.remove('position-top', 'position-left', 'position-right');
+        
+        // Check vertical space
+        const spaceBelow = viewportHeight - wrapperRect.bottom;
+        const spaceAbove = wrapperRect.top;
+        const dropdownHeight = dropdownRect.height;
+        
+        // Position vertically - show above if not enough space below
+        if (spaceBelow < dropdownHeight + 20 && spaceAbove > dropdownHeight + 20) {
+            dropdown.classList.add('position-top');
+        }
+        
+        // Check horizontal space
+        const spaceRight = viewportWidth - wrapperRect.left;
+        const spaceLeft = wrapperRect.right;
+        const dropdownWidth = dropdownRect.width;
+        
+        // Position horizontally - align to edges if dropdown would overflow
+        if (spaceRight < dropdownWidth / 2 + wrapperRect.width / 2) {
+            // Not enough space on right, align to right edge
+            dropdown.classList.add('position-right');
+        } else if (spaceLeft < dropdownWidth / 2 + wrapperRect.width / 2) {
+            // Not enough space on left, align to left edge
+            dropdown.classList.add('position-left');
+        }
+        // Otherwise keep centered (default)
+    }
 }
 
 // Close dropdown when clicking outside
 document.addEventListener('click', function(e) {
     if (!e.target.closest('.add-dropdown-wrapper')) {
-        document.getElementById('addDropdown').classList.remove('show');
+        const dropdown = document.getElementById('addDropdown');
+        dropdown.classList.remove('show');
+        dropdown.classList.remove('position-top', 'position-left', 'position-right');
+    }
+    
+    // Close floating dropdowns when clicking outside
+    if (!e.target.closest('.floating-action-pane') && !e.target.closest('.floating-question-dropdown')) {
+        document.querySelectorAll('.floating-question-dropdown').forEach(dropdown => {
+            dropdown.style.display = 'none';
+        });
+    }
+});
+
+// Toggle floating dropdown for add button in floating action pane
+let currentAfterItemId = null;
+
+function toggleFloatingDropdown(button, sectionId, itemId) {
+    if (isLocked) return;
+    
+    const wrapper = button.closest('.question-wrapper');
+    const dropdown = wrapper.querySelector('.floating-question-dropdown');
+    
+    // Close all other floating dropdowns
+    document.querySelectorAll('.floating-question-dropdown').forEach(d => {
+        if (d !== dropdown) {
+            d.style.display = 'none';
+        }
+    });
+    
+    // Toggle this dropdown
+    if (dropdown.style.display === 'block') {
+        dropdown.style.display = 'none';
+    } else {
+        dropdown.style.display = 'block';
+        currentAfterItemId = itemId;
+    }
+}
+
+// Toggle floating dropdown for section's add button
+function toggleFloatingSectionDropdown(button, sectionId) {
+    if (isLocked) return;
+    
+    const wrapper = button.closest('.section-wrapper');
+    const dropdown = wrapper.querySelector('.floating-question-dropdown');
+    
+    if (!dropdown) {
+        console.error('Dropdown not found for section:', sectionId);
+        return;
+    }
+    
+    // Close all other floating dropdowns
+    document.querySelectorAll('.floating-question-dropdown').forEach(d => {
+        if (d !== dropdown) {
+            d.style.display = 'none';
+        }
+    });
+    
+    // Toggle this dropdown
+    if (dropdown.style.display === 'block') {
+        dropdown.style.display = 'none';
+    } else {
+        dropdown.style.display = 'block';
+        currentAfterItemId = null; // Section doesn't need after_item_id
+    }
+}
+
+// Open question modal and insert after specific item
+function openQuestionModalAfter(type, sectionId, afterItemId) {
+    currentAfterItemId = afterItemId;
+    
+    // Close the floating dropdown
+    document.querySelectorAll('.floating-question-dropdown').forEach(dropdown => {
+        dropdown.style.display = 'none';
+    });
+    
+    // Call the existing openQuestionModal but we'll modify the backend to handle afterItemId
+    openQuestionModal(type, sectionId, afterItemId);
+}
+
+// Recalculate dropdown position on window resize
+window.addEventListener('resize', function() {
+    const dropdown = document.getElementById('addDropdown');
+    if (dropdown.classList.contains('show')) {
+        // Re-trigger positioning logic
+        dropdown.classList.remove('show');
+        setTimeout(() => toggleAddDropdown(), 0);
     }
 });
 
@@ -1128,7 +1570,13 @@ function deleteSection(sectionId) {
         .then(result => {
             if (result.success) {
                 location.reload();
+            } else {
+                alert('Error deleting section: ' + (result.error || 'Unknown error'));
             }
+        })
+        .catch(error => {
+            console.error('Error deleting section:', error);
+            alert('Failed to delete section. Please try again.');
         });
     }
 }
@@ -1200,6 +1648,492 @@ function moveQuestion(itemId, direction) {
     });
 }
 
+// Drag and Drop Functionality
+let draggedItem = null;
+let placeholder = null;
+let lastDropTarget = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    initDragAndDrop();
+});
+
+function initDragAndDrop() {
+    const dragHandles = document.querySelectorAll('.drag-handle');
+    console.log('Initializing drag and drop for', dragHandles.length, 'handles');
+    
+    dragHandles.forEach((handle, index) => {
+        // Remove existing listeners to avoid duplicates
+        const newHandle = handle.cloneNode(true);
+        handle.parentNode.replaceChild(newHandle, handle);
+        
+        newHandle.addEventListener('dragstart', handleDragStart);
+        newHandle.addEventListener('dragend', handleDragEnd);
+        newHandle.addEventListener('drag', handleDrag);
+        
+        console.log('Initialized drag handle', index);
+    });
+    
+    const questionWrappers = document.querySelectorAll('.question-wrapper');
+    console.log('Setting up drop zones for', questionWrappers.length, 'wrappers');
+    
+    questionWrappers.forEach((wrapper, index) => {
+        wrapper.addEventListener('dragover', handleDragOver);
+        wrapper.addEventListener('dragenter', handleDragEnter);
+        wrapper.addEventListener('drop', handleDrop);
+        
+        // Verify wrapper has necessary data
+        if (!wrapper.dataset.itemId) {
+            console.warn('Wrapper missing item-id at index', index);
+        }
+        
+        const examSection = wrapper.closest('.exam-section');
+        if (!examSection || !examSection.dataset.sectionId) {
+            console.warn('Wrapper missing section context at index', index);
+        }
+    });
+    
+    // Also set up drop zones on exam sections (parent containers)
+    const examSections = document.querySelectorAll('.exam-section');
+    examSections.forEach(section => {
+        section.addEventListener('dragover', handleSectionDragOver);
+        section.addEventListener('drop', handleSectionDrop);
+    });
+    
+    console.log('Drag and drop initialization complete');
+}
+
+function handleDragStart(e) {
+    if (isLocked) {
+        e.preventDefault();
+        return;
+    }
+    
+    const wrapper = e.target.closest('.question-wrapper');
+    if (!wrapper) {
+        console.error('Could not find question-wrapper');
+        return;
+    }
+    
+    const examSection = wrapper.closest('.exam-section');
+    const sectionId = examSection ? examSection.dataset.sectionId : null;
+    
+    if (!sectionId) {
+        console.error('Could not find section ID');
+        e.preventDefault();
+        return;
+    }
+    
+    draggedItem = {
+        wrapper: wrapper,
+        itemId: wrapper.dataset.itemId,
+        sectionId: sectionId
+    };
+    
+    console.log('Drag started:', draggedItem);
+    
+    // Add dragging class
+    wrapper.classList.add('dragging');
+    
+    // Create a custom drag image (clone of the whole question wrapper)
+    const dragGhost = wrapper.cloneNode(true);
+    dragGhost.classList.add('drag-ghost');
+    dragGhost.style.position = 'fixed';
+    dragGhost.style.left = '-9999px';
+    dragGhost.style.width = wrapper.offsetWidth + 'px';
+    document.body.appendChild(dragGhost);
+    
+    try {
+        e.dataTransfer.setDragImage(dragGhost, e.offsetX || 0, e.offsetY || 0);
+    } catch (err) {
+        console.warn('Could not set drag image:', err);
+    }
+    
+    // Remove the ghost after a moment
+    setTimeout(() => {
+        if (document.body.contains(dragGhost)) {
+            document.body.removeChild(dragGhost);
+        }
+    }, 0);
+    
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', draggedItem.itemId); // Better compatibility
+    
+    // Create placeholder
+    placeholder = document.createElement('div');
+    placeholder.className = 'drag-placeholder';
+    placeholder.innerHTML = '<i class="bi bi-arrow-down-up"></i> Drop here';
+    
+    // Insert placeholder after the dragged item
+    wrapper.parentNode.insertBefore(placeholder, wrapper.nextSibling);
+}
+
+function handleDrag(e) {
+    // Update visual feedback during drag
+    if (draggedItem && draggedItem.wrapper) {
+        draggedItem.wrapper.style.opacity = '0.4';
+    }
+}
+
+function handleDragEnter(e) {
+    if (!draggedItem) return;
+    
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const targetWrapper = e.currentTarget;
+    
+    // Only handle if it's a different wrapper
+    if (targetWrapper === draggedItem.wrapper) {
+        return;
+    }
+    
+    const examSection = targetWrapper.closest('.exam-section');
+    const targetSectionId = examSection ? examSection.dataset.sectionId : null;
+    
+    if (!targetSectionId || targetSectionId !== draggedItem.sectionId) {
+        return;
+    }
+    
+    // Move placeholder to new position
+    updatePlaceholderPosition(targetWrapper, e.clientY);
+}
+
+function updatePlaceholderPosition(targetWrapper, mouseY) {
+    if (!placeholder || !placeholder.parentNode) {
+        return;
+    }
+    
+    const rect = targetWrapper.getBoundingClientRect();
+    const targetY = rect.top + rect.height / 2;
+    
+    try {
+        if (mouseY < targetY) {
+            // Insert before target
+            targetWrapper.parentNode.insertBefore(placeholder, targetWrapper);
+        } else {
+            // Insert after target
+            const nextSibling = targetWrapper.nextSibling;
+            if (nextSibling) {
+                targetWrapper.parentNode.insertBefore(placeholder, nextSibling);
+            } else {
+                targetWrapper.parentNode.appendChild(placeholder);
+            }
+        }
+    } catch (err) {
+        console.error('Error moving placeholder:', err);
+    }
+}
+
+function handleDragOver(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!draggedItem) {
+        return false;
+    }
+    
+    const targetWrapper = e.currentTarget;
+    
+    // Only handle if it's a different wrapper
+    if (targetWrapper === draggedItem.wrapper) {
+        e.dataTransfer.dropEffect = 'none';
+        return false;
+    }
+    
+    const examSection = targetWrapper.closest('.exam-section');
+    const targetSectionId = examSection ? examSection.dataset.sectionId : null;
+    
+    if (!targetSectionId || targetSectionId !== draggedItem.sectionId) {
+        e.dataTransfer.dropEffect = 'none';
+        return false;
+    }
+    
+    e.dataTransfer.dropEffect = 'move';
+    lastDropTarget = targetWrapper;
+    
+    // Update placeholder position as we drag over
+    updatePlaceholderPosition(targetWrapper, e.clientY);
+    
+    return false;
+}
+
+function handleSectionDragOver(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!draggedItem) {
+        return false;
+    }
+    
+    const section = e.currentTarget;
+    const sectionId = section.dataset.sectionId;
+    
+    if (sectionId !== draggedItem.sectionId) {
+        e.dataTransfer.dropEffect = 'none';
+        return false;
+    }
+    
+    e.dataTransfer.dropEffect = 'move';
+    
+    // Find the closest question wrapper to the mouse position
+    const wrappers = section.querySelectorAll('.question-wrapper');
+    let closestWrapper = null;
+    let closestDistance = Infinity;
+    
+    wrappers.forEach(wrapper => {
+        if (wrapper === draggedItem.wrapper) return;
+        
+        const rect = wrapper.getBoundingClientRect();
+        const distance = Math.abs(e.clientY - (rect.top + rect.height / 2));
+        
+        if (distance < closestDistance) {
+            closestDistance = distance;
+            closestWrapper = wrapper;
+        }
+    });
+    
+    if (closestWrapper) {
+        updatePlaceholderPosition(closestWrapper, e.clientY);
+    }
+    
+    return false;
+}
+
+function handleSectionDrop(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!draggedItem) {
+        return false;
+    }
+    
+    console.log('Drop on section detected');
+    
+    // If we have a lastDropTarget from hovering over a wrapper, use that
+    if (lastDropTarget) {
+        handleDrop.call(lastDropTarget, e);
+    }
+    
+    return false;
+}
+
+function handleDragEnd(e) {
+    const wrapper = e.target.closest('.question-wrapper');
+    if (wrapper) {
+        wrapper.classList.remove('dragging');
+        wrapper.style.opacity = '1';
+    }
+    
+    // Remove placeholder
+    if (placeholder && placeholder.parentNode) {
+        try {
+            placeholder.parentNode.removeChild(placeholder);
+        } catch (err) {
+            console.error('Error removing placeholder:', err);
+        }
+        placeholder = null;
+    }
+    
+    // Clear state
+    lastDropTarget = null;
+    console.log('Drag ended');
+}
+
+function handleDrop(e) {
+    e.stopPropagation();
+    e.preventDefault();
+    
+    console.log('Drop event triggered on wrapper');
+    
+    if (!draggedItem) {
+        console.error('No dragged item');
+        return false;
+    }
+    
+    let targetWrapper = e.currentTarget;
+    
+    // If target is the placeholder, find the nearest question wrapper
+    if (targetWrapper.classList && targetWrapper.classList.contains('drag-placeholder')) {
+        console.log('Dropped on placeholder, finding nearest wrapper');
+        const prevElement = targetWrapper.previousElementSibling;
+        const nextElement = targetWrapper.nextElementSibling;
+        
+        if (prevElement && prevElement.classList.contains('question-wrapper')) {
+            targetWrapper = prevElement;
+        } else if (nextElement && nextElement.classList.contains('question-wrapper')) {
+            targetWrapper = nextElement;
+        } else {
+            console.error('Could not find target wrapper near placeholder');
+            return false;
+        }
+    }
+    
+    if (targetWrapper === draggedItem.wrapper) {
+        console.log('Dropped on self, ignoring');
+        return false;
+    }
+    
+    // Check if in same section
+    const examSection = targetWrapper.closest('.exam-section');
+    const targetSectionId = examSection ? examSection.dataset.sectionId : null;
+    
+    if (!targetSectionId || targetSectionId !== draggedItem.sectionId) {
+        alert('Cannot move questions between different sections');
+        return false;
+    }
+    
+    // Get target item ID
+    const targetItemId = targetWrapper.dataset.itemId;
+    if (!targetItemId) {
+        console.error('Target wrapper has no item ID');
+        return false;
+    }
+    
+    // Determine insert position based on placeholder position
+    let insertBefore = true;
+    if (placeholder && placeholder.parentNode) {
+        // Check if placeholder is before or after target
+        const placeholderIndex = Array.from(targetWrapper.parentNode.children).indexOf(placeholder);
+        const targetIndex = Array.from(targetWrapper.parentNode.children).indexOf(targetWrapper);
+        insertBefore = placeholderIndex < targetIndex;
+    } else {
+        // Fallback to mouse position
+        const rect = targetWrapper.getBoundingClientRect();
+        const mouseY = e.clientY;
+        const targetY = rect.top + rect.height / 2;
+        insertBefore = mouseY < targetY;
+    }
+    
+    console.log('Drop position:', { insertBefore, targetItemId });
+    
+    // Visual feedback: move the dragged element immediately for instant response
+    try {
+        if (placeholder && placeholder.parentNode) {
+            // Replace placeholder with dragged item
+            placeholder.parentNode.insertBefore(draggedItem.wrapper, placeholder);
+            placeholder.parentNode.removeChild(placeholder);
+            placeholder = null;
+        } else if (insertBefore) {
+            // Drop above target
+            targetWrapper.parentNode.insertBefore(draggedItem.wrapper, targetWrapper);
+        } else {
+            // Drop below target
+            const nextSibling = targetWrapper.nextSibling;
+            if (nextSibling) {
+                targetWrapper.parentNode.insertBefore(draggedItem.wrapper, nextSibling);
+            } else {
+                targetWrapper.parentNode.appendChild(draggedItem.wrapper);
+            }
+        }
+        
+        console.log('Calling API with:', {
+            draggedItemId: draggedItem.itemId,
+            targetItemId: targetItemId,
+            insertBefore: insertBefore
+        });
+        
+        // Call API to persist the change
+        reorderQuestionByDrag(draggedItem.itemId, targetItemId, insertBefore);
+    } catch (err) {
+        console.error('Error in handleDrop:', err);
+        alert('Error reordering questions. Page will reload.');
+        location.reload();
+    }
+    
+    return false;
+}
+
+function reorderQuestionByDrag(draggedItemId, targetItemId, insertBefore = true) {
+    fetch(`/instructor/exams/${examId}/questions/reorder-drag`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify({ 
+            dragged_item_id: draggedItemId, 
+            target_item_id: targetItemId,
+            insert_before: insertBefore
+        })
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            // Reload to ensure database and UI are in sync
+            location.reload();
+        } else {
+            alert('Error reordering questions: ' + (result.error || 'Unknown error'));
+            location.reload(); // Reload to restore correct order
+        }
+    })
+    .catch(error => {
+        console.error('Error reordering questions:', error);
+        alert('Failed to reorder questions. Please try again.');
+        location.reload(); // Reload to restore correct order
+    });
+}
+
+// Duplicate Section
+function duplicateSection(examId, sectionId) {
+    if (isLocked) {
+        alert('Cannot duplicate sections while exam is under approval or approved.');
+        return;
+    }
+    
+    if (!confirm('This will duplicate the section and all its questions. Continue?')) {
+        return;
+    }
+    
+    fetch(`/instructor/exams/${examId}/sections/${sectionId}/duplicate`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+        }
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            location.reload();
+        } else {
+            alert('Error duplicating section: ' + (result.error || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        console.error('Error duplicating section:', error);
+        alert('Failed to duplicate section. Please try again.');
+    });
+}
+
+// Move Section
+function moveSection(sectionId, direction) {
+    if (isLocked) {
+        alert('Cannot reorder sections while exam is under approval or approved.');
+        return;
+    }
+    
+    fetch(`/instructor/exams/${examId}/sections/reorder`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify({ section_id: sectionId, direction: direction })
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            location.reload();
+        } else {
+            alert('Error moving section: ' + (result.error || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        console.error('Error moving section:', error);
+        alert('Failed to move section. Please try again.');
+    });
+}
+
 // Add New Section
 function addNewSection() {
     if (isLocked) {
@@ -1222,7 +2156,13 @@ function addNewSection() {
     .then(result => {
         if (result.success) {
             location.reload();
+        } else {
+            alert('Error creating section: ' + (result.error || 'Unknown error'));
         }
+    })
+    .catch(error => {
+        console.error('Error creating section:', error);
+        alert('Failed to create section. Please try again.');
     });
     
     document.getElementById('addDropdown').classList.remove('show');
@@ -1505,5 +2445,83 @@ document.getElementById('examSettingsForm').addEventListener('submit', function(
         alert('Failed to update exam settings: ' + error.message);
     });
 });
+
+// Download/Preview Modal Functions
+function openDownloadModal() {
+    const modal = new bootstrap.Modal(document.getElementById('downloadPreviewModal'));
+    modal.show();
+    
+    // Load exam preview
+    loadExamPreview();
+}
+
+function loadExamPreview() {
+    const previewContainer = document.getElementById('examPreviewContent');
+    
+    fetch(`/instructor/exams/${examId}/preview`, {
+        headers: {
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Create a wrapper for the paper with proper 8.5 x 11 inch styling
+            previewContainer.innerHTML = `
+                <div style="width: 8.5in; min-height: 11in; background: white; padding: 0.5in; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin: 20px auto;">
+                    ${data.html}
+                </div>
+            `;
+        } else {
+            previewContainer.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle-fill"></i> 
+                    Error loading preview: ${data.message || 'Unknown error'}
+                </div>
+            `;
+        }
+    })
+    .catch(error => {
+        console.error('Error loading preview:', error);
+        previewContainer.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="bi bi-exclamation-triangle-fill"></i> 
+                Failed to load preview. Please try again.
+            </div>
+        `;
+    });
+}
+
+function downloadExam(format) {
+    const btn = event.target;
+    const originalText = btn.innerHTML;
+    
+    // Show loading state
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Generating...';
+    
+    // Create download URL
+    const url = `/instructor/exams/${examId}/download/${format}`;
+    
+    // Create a temporary link and trigger download
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = '';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    // Reset button after a delay
+    setTimeout(() => {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }, 2000);
+}
+
+// Temporary function for download feature
+function showDownloadNotAvailable() {
+    alert('Download feature is not yet available. This feature is currently under development.');
+}
 </script>
 @endpush

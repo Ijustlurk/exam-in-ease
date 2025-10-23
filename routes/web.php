@@ -201,9 +201,19 @@ Route::
         Route::delete('/exams/{examId}/questions/{itemId}', [ExamController::class, 'deleteQuestion'])->name('exams.questions.delete');
         Route::post('/exams/{examId}/questions/{itemId}/duplicate', [ExamController::class, 'duplicateQuestion'])->name('exams.questions.duplicate');
         Route::post('/exams/{examId}/questions/reorder', [ExamController::class, 'reorderQuestions'])->name('exams.questions.reorder');
+        Route::post('/exams/{examId}/questions/reorder-drag', [ExamController::class, 'reorderQuestionsByDrag'])->name('exams.questions.reorder.drag');
 
         // Sections
+        Route::post('/exams/{examId}/sections', [ExamController::class, 'addSection'])->name('exams.sections.add');
         Route::put('/exams/{examId}/sections/{sectionId}', [ExamController::class, 'updateSection'])->name('exams.sections.update');
+        Route::delete('/exams/{examId}/sections/{sectionId}', [ExamController::class, 'deleteSection'])->name('exams.sections.delete');
+        Route::post('/exams/{examId}/sections/{sectionId}/duplicate', [ExamController::class, 'duplicateSection'])->name('exams.sections.duplicate');
+        Route::post('/exams/{examId}/sections/reorder', [ExamController::class, 'reorderSections'])->name('exams.sections.reorder');
+        
+        // Preview and Download
+        Route::get('/exams/{examId}/preview', [ExamController::class, 'preview'])->name('exams.preview');
+        Route::get('/exams/{examId}/download/{format}', [ExamController::class, 'download'])->name('exams.download');
+        
         Route::get('/api/exams/{id}/details', [ExamController::class, 'getExamDetails'])->name('exams.details');
         Route::get('/api/teachers/search', [ExamController::class, 'searchTeachers'])->name('teachers.search');
         Route::post('/exams/{examId}/collaborators', [ExamController::class, 'addCollaborators'])->name('exams.collaborators.add');

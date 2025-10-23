@@ -16,13 +16,18 @@
         border-radius: 12px 12px 0 0;
         display: flex;
         justify-content: space-between;
-        align-items: center;
+        align-items: flex-start;
+        gap: 2rem;
     }
 
     .exam-title {
         font-size: 24px;
         font-weight: 600;
         margin: 0;
+    }
+
+    .exam-header i {
+        margin-right: 0.5rem;
     }
 
     .approve-btn {
@@ -167,7 +172,37 @@
     <div style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);">
         <!-- Exam Header -->
         <div class="exam-header">
-            <h1 class="exam-title">{{ $exam->exam_title }}</h1>
+            <div>
+                <h1 class="exam-title">{{ $exam->exam_title }}</h1>
+                @php
+                    // Calculate actual item count and total points from exam items (not sections)
+                    $totalItems = 0;
+                    $totalPoints = 0;
+                    foreach ($exam->sections as $section) {
+                        $totalItems += $section->examItems->count();
+                        $totalPoints += $section->examItems->sum('points_awarded');
+                    }
+                @endphp
+                <div style="display: flex; gap: 2rem; margin-top: 0.75rem; font-size: 0.95rem; opacity: 0.95;">
+                    <div>
+                        <i class="fas fa-list-ol"></i>
+                        <strong>Items:</strong> {{ $totalItems }}
+                    </div>
+                    <div>
+                        <i class="fas fa-star"></i>
+                        <strong>Total Points:</strong> {{ $totalPoints }}
+                    </div>
+                    <div>
+                        <i class="fas fa-user"></i>
+                        <strong>Author:</strong> 
+                        @if($exam->teacher)
+                            {{ $exam->teacher->first_name }} {{ $exam->teacher->last_name }}
+                        @else
+                            Unknown
+                        @endif
+                    </div>
+                </div>
+            </div>
             @if($exam->status === 'draft' || $exam->status === 'pending')
             <button class="approve-btn" onclick="approveExam({{ $exam->exam_id }})">
                 Approve Exam
@@ -208,23 +243,57 @@
 
                                 @if($item->item_type === 'mcq')
                                     @php
-                                        $options = is_array($item->options_array) ? $item->options_array : [];
-                                        $correctAnswer = is_array($item->answer_array) && isset($item->answer_array['correct']) 
-                                            ? $item->answer_array['correct'] 
-                                            : null;
+                                        // Get options and answer data
+                                        $options = $item->options_array ?? $item->options ?? [];
+                                        $answerData = $item->answer_array ?? $item->answer ?? [];
+                                        
+                                        // Convert string to array if needed
+                                        if (is_string($options)) {
+                                            $options = json_decode($options, true) ?? [];
+                                        }
+                                        if (is_string($answerData)) {
+                                            $answerData = json_decode($answerData, true) ?? [];
+                                        }
+                                        
+                                        // Handle correct answers - can be multiple
+                                        $correctAnswers = [];
+                                        if (is_array($answerData)) {
+                                            // Check if it's a simple array of indices [2, 4] or has 'correct' key
+                                            if (isset($answerData['correct'])) {
+                                                // Format: {"correct": [2, 4]} or {"correct": 2}
+                                                $correctAnswers = is_array($answerData['correct']) 
+                                                    ? $answerData['correct'] 
+                                                    : [$answerData['correct']];
+                                            } else {
+                                                // Format: [2, 4] - direct array of indices
+                                                $correctAnswers = $answerData;
+                                            }
+                                        } elseif (is_numeric($answerData)) {
+                                            $correctAnswers = [$answerData];
+                                        }
                                     @endphp
 
-                                    @foreach($options as $key => $option)
-                                        <div class="answer-option {{ strtolower($correctAnswer) === strtolower($key) ? 'correct' : '' }}">
-                                            {{ $key }}. {{ $option }}
+                                    @if(is_array($options) && count($options) > 0)
+                                        @foreach($options as $key => $option)
+                                            <div class="answer-option {{ in_array($key, $correctAnswers ?? []) ? 'correct' : '' }}">
+                                               <b>{{ chr(65 + $key) }}. {{ $option }}</b>
+                                            </div>
+                                        @endforeach
+                                    @else
+                                        <div class="answer-option" style="border-radius: 10px; padding: 15px;">
+                                            <em>No options available</em>
                                         </div>
-                                    @endforeach
+                                    @endif
 
                                 @elseif($item->item_type === 'torf')
                                     @php
-                                        $correctAnswer = is_array($item->answer_array) && isset($item->answer_array['correct']) 
-                                            ? strtolower($item->answer_array['correct']) 
-                                            : null;
+                                        // Handle both array and decoded answer
+                                        $answerData = $item->answer_array ?? $item->answer ?? [];
+                                        if (is_string($answerData)) {
+                                            $answerData = json_decode($answerData, true) ?? [];
+                                        }
+                                        
+                                        $correctAnswer = isset($answerData['correct']) ? strtolower($answerData['correct']) : null;
                                     @endphp
 
                                     <div class="answer-option {{ $correctAnswer === 'true' ? 'correct' : '' }}">

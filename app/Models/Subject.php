@@ -14,7 +14,8 @@ class Subject extends Model
 
     protected $fillable = [
         'subject_code',
-        'subject_name'
+        'subject_name',
+        'semester'
     ];
 
     // Relationship with Classes

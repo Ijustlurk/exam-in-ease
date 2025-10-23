@@ -9,12 +9,20 @@
                     <i class="bi bi-ui-radios"></i>
                     <span>Multiple Choice Question</span>
                 </h5>
+                <select class="question-type-dropdown" onchange="switchQuestionType(this.value, 'mcq')">
+                    <option value="mcq" selected>MCQ</option>
+                    <option value="torf">True/False</option>
+                    <option value="iden">Identification</option>
+                    <option value="enum">Enumeration</option>
+                    <option value="essay">Essay</option>
+                </select>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body" style="padding: 24px;">
                 <form id="mcqForm">
                     <input type="hidden" id="mcq_section_id" name="section_id">
                     <input type="hidden" id="mcq_item_id" name="item_id">
+                    <input type="hidden" id="mcq_after_item_id" name="after_item_id">
                     
                     <div class="mb-4">
                         <label class="form-label-custom">Question</label>
@@ -26,18 +34,30 @@
                         <div class="option-input-group">
                             <input type="text" class="form-control-custom" placeholder="Option A" name="options[]" required>
                             <input type="checkbox" class="correct-checkbox" name="correct[]" value="0" title="Mark as correct">
+                            <button type="button" class="btn-remove-option" onclick="removeMCQOption(this)" title="Remove option">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
                         </div>
                         <div class="option-input-group">
                             <input type="text" class="form-control-custom" placeholder="Option B" name="options[]" required>
                             <input type="checkbox" class="correct-checkbox" name="correct[]" value="1" title="Mark as correct">
+                            <button type="button" class="btn-remove-option" onclick="removeMCQOption(this)" title="Remove option">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
                         </div>
                         <div class="option-input-group">
                             <input type="text" class="form-control-custom" placeholder="Option C" name="options[]" required>
                             <input type="checkbox" class="correct-checkbox" name="correct[]" value="2" title="Mark as correct">
+                            <button type="button" class="btn-remove-option" onclick="removeMCQOption(this)" title="Remove option">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
                         </div>
                         <div class="option-input-group">
                             <input type="text" class="form-control-custom" placeholder="Option D" name="options[]" required>
                             <input type="checkbox" class="correct-checkbox" name="correct[]" value="3" title="Mark as correct">
+                            <button type="button" class="btn-remove-option" onclick="removeMCQOption(this)" title="Remove option">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
                         </div>
                     </div>
 
@@ -69,12 +89,20 @@
                     <i class="bi bi-toggle-on"></i>
                     <span>True or False</span>
                 </h5>
+                <select class="question-type-dropdown" onchange="switchQuestionType(this.value, 'torf')">
+                    <option value="mcq">MCQ</option>
+                    <option value="torf" selected>True/False</option>
+                    <option value="iden">Identification</option>
+                    <option value="enum">Enumeration</option>
+                    <option value="essay">Essay</option>
+                </select>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body" style="padding: 24px;">
                 <form id="torfForm">
                     <input type="hidden" id="torf_section_id" name="section_id">
                     <input type="hidden" id="torf_item_id" name="item_id">
+                    <input type="hidden" id="torf_after_item_id" name="after_item_id">
                     
                     <div class="mb-4">
                         <label class="form-label-custom">Question</label>
@@ -123,12 +151,20 @@
                     <i class="bi bi-pencil-square"></i>
                     <span>Identification</span>
                 </h5>
+                <select class="question-type-dropdown" onchange="switchQuestionType(this.value, 'iden')">
+                    <option value="mcq">MCQ</option>
+                    <option value="torf">True/False</option>
+                    <option value="iden" selected>Identification</option>
+                    <option value="enum">Enumeration</option>
+                    <option value="essay">Essay</option>
+                </select>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body" style="padding: 24px;">
                 <form id="idenForm">
                     <input type="hidden" id="iden_section_id" name="section_id">
                     <input type="hidden" id="iden_item_id" name="item_id">
+                    <input type="hidden" id="iden_after_item_id" name="after_item_id">
                     
                     <div class="mb-4">
                         <label class="form-label-custom">Question</label>
@@ -164,12 +200,20 @@
                     <i class="bi bi-list-ol"></i>
                     <span>Enumeration</span>
                 </h5>
+                <select class="question-type-dropdown" onchange="switchQuestionType(this.value, 'enum')">
+                    <option value="mcq">MCQ</option>
+                    <option value="torf">True/False</option>
+                    <option value="iden">Identification</option>
+                    <option value="enum" selected>Enumeration</option>
+                    <option value="essay">Essay</option>
+                </select>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body" style="padding: 24px;">
                 <form id="enumForm">
                     <input type="hidden" id="enum_section_id" name="section_id">
                     <input type="hidden" id="enum_item_id" name="item_id">
+                    <input type="hidden" id="enum_after_item_id" name="after_item_id">
                     <input type="hidden" id="enum_type" name="enum_type" value="ordered">
                     
                     <div class="mb-4" style="display: flex; justify-content: space-between; align-items: flex-start; gap: 16px;">
@@ -192,11 +236,17 @@
                             <span class="enum-number" style="font-weight: 600; margin-right: 8px; min-width: 24px;">1.</span>
                             <input type="text" class="form-control-custom" placeholder="Answer 1" name="answers[]" required>
                             <span class="enum-drag-handle" style="display: none; color: #9ca3af; font-size: 1rem; cursor: move; margin-left: 8px;"><i class="bi bi-grip-vertical"></i></span>
+                            <button type="button" class="btn-remove-option" onclick="removeEnumAnswer(this)" title="Remove answer">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
                         </div>
                         <div class="option-input-group">
                             <span class="enum-number" style="font-weight: 600; margin-right: 8px; min-width: 24px;">2.</span>
                             <input type="text" class="form-control-custom" placeholder="Answer 2" name="answers[]" required>
                             <span class="enum-drag-handle" style="display: none; color: #9ca3af; font-size: 1rem; cursor: move; margin-left: 8px;"><i class="bi bi-grip-vertical"></i></span>
+                            <button type="button" class="btn-remove-option" onclick="removeEnumAnswer(this)" title="Remove answer">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
                         </div>
                     </div>
 
@@ -228,12 +278,20 @@
                     <i class="bi bi-textarea-t"></i>
                     <span>Essay Question</span>
                 </h5>
+                <select class="question-type-dropdown" onchange="switchQuestionType(this.value, 'essay')">
+                    <option value="mcq">MCQ</option>
+                    <option value="torf">True/False</option>
+                    <option value="iden">Identification</option>
+                    <option value="enum">Enumeration</option>
+                    <option value="essay" selected>Essay</option>
+                </select>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body" style="padding: 24px;">
                 <form id="essayForm">
                     <input type="hidden" id="essay_section_id" name="section_id">
                     <input type="hidden" id="essay_item_id" name="item_id">
+                    <input type="hidden" id="essay_after_item_id" name="after_item_id">
                     
                     <div class="mb-4">
                         <label class="form-label-custom">Question</label>
@@ -260,7 +318,7 @@ let currentSectionId = null;
 let editingItemId = null;
 
 // Open Question Modal (for creating new questions)
-function openQuestionModal(type, sectionId) {
+function openQuestionModal(type, sectionId, afterItemId = null) {
     // Check if exam is locked
     if (typeof isLocked !== 'undefined' && isLocked) {
         alert('Cannot add or edit questions while exam is under approval or approved.');
@@ -289,6 +347,12 @@ function openQuestionModal(type, sectionId) {
     // Set section ID
     document.getElementById(modalType + '_section_id').value = sectionId;
     
+    // Set after_item_id if provided
+    const afterItemIdField = document.getElementById(modalType + '_after_item_id');
+    if (afterItemIdField) {
+        afterItemIdField.value = afterItemId || '';
+    }
+    
     // Update submit button text
     document.getElementById(modalType + '_submit_btn').textContent = 'Save Question';
     
@@ -296,21 +360,34 @@ function openQuestionModal(type, sectionId) {
     if (modalType === 'mcq') {
         const container = document.getElementById('mcq_options');
         container.innerHTML = `
+            <label class="form-label-custom">Options</label>
             <div class="option-input-group">
                 <input type="text" class="form-control-custom" placeholder="Option A" name="options[]" required>
                 <input type="checkbox" class="correct-checkbox" name="correct[]" value="0" title="Mark as correct">
+                <button type="button" class="btn-remove-option" onclick="removeMCQOption(this)" title="Remove option">
+                    <i class="bi bi-x-lg"></i>
+                </button>
             </div>
             <div class="option-input-group">
                 <input type="text" class="form-control-custom" placeholder="Option B" name="options[]" required>
                 <input type="checkbox" class="correct-checkbox" name="correct[]" value="1" title="Mark as correct">
+                <button type="button" class="btn-remove-option" onclick="removeMCQOption(this)" title="Remove option">
+                    <i class="bi bi-x-lg"></i>
+                </button>
             </div>
             <div class="option-input-group">
                 <input type="text" class="form-control-custom" placeholder="Option C" name="options[]" required>
                 <input type="checkbox" class="correct-checkbox" name="correct[]" value="2" title="Mark as correct">
+                <button type="button" class="btn-remove-option" onclick="removeMCQOption(this)" title="Remove option">
+                    <i class="bi bi-x-lg"></i>
+                </button>
             </div>
             <div class="option-input-group">
                 <input type="text" class="form-control-custom" placeholder="Option D" name="options[]" required>
                 <input type="checkbox" class="correct-checkbox" name="correct[]" value="3" title="Mark as correct">
+                <button type="button" class="btn-remove-option" onclick="removeMCQOption(this)" title="Remove option">
+                    <i class="bi bi-x-lg"></i>
+                </button>
             </div>
         `;
     }
@@ -328,13 +405,22 @@ function openQuestionModal(type, sectionId) {
                 <span class="enum-number" style="font-weight: 600; margin-right: 8px; min-width: 24px;">1.</span>
                 <input type="text" class="form-control-custom" placeholder="Answer 1" name="answers[]" required>
                 <span class="enum-drag-handle" style="display: none; color: #9ca3af; font-size: 1rem; cursor: move; margin-left: 8px;"><i class="bi bi-grip-vertical"></i></span>
+                <button type="button" class="btn-remove-option" onclick="removeEnumAnswer(this)" title="Remove answer">
+                    <i class="bi bi-x-lg"></i>
+                </button>
             </div>
             <div class="option-input-group">
                 <span class="enum-number" style="font-weight: 600; margin-right: 8px; min-width: 24px;">2.</span>
                 <input type="text" class="form-control-custom" placeholder="Answer 2" name="answers[]" required>
                 <span class="enum-drag-handle" style="display: none; color: #9ca3af; font-size: 1rem; cursor: move; margin-left: 8px;"><i class="bi bi-grip-vertical"></i></span>
+                <button type="button" class="btn-remove-option" onclick="removeEnumAnswer(this)" title="Remove answer">
+                    <i class="bi bi-x-lg"></i>
+                </button>
             </div>
         `;
+        
+        // Make draggable after adding
+        setTimeout(() => makeEnumAnswersDraggable(), 100);
     }
     
     // Open appropriate modal
@@ -398,7 +484,7 @@ function populateModalForEdit(item) {
         const correctAnswers = JSON.parse(item.answer);
         
         const container = document.getElementById('mcq_options');
-        container.innerHTML = '';
+        container.innerHTML = '<label class="form-label-custom">Options</label>';
         
         Object.keys(options).forEach((key, index) => {
             const div = document.createElement('div');
@@ -409,6 +495,9 @@ function populateModalForEdit(item) {
             div.innerHTML = `
                 <input type="text" class="form-control-custom" placeholder="Option ${letter}" name="options[]" value="${options[key]}" required>
                 <input type="checkbox" class="correct-checkbox" name="correct[]" value="${index}" title="Mark as correct" ${isCorrect ? 'checked' : ''}>
+                <button type="button" class="btn-remove-option" onclick="removeMCQOption(this)" title="Remove option">
+                    <i class="bi bi-x-lg"></i>
+                </button>
             `;
             container.appendChild(div);
         });
@@ -445,12 +534,18 @@ function populateModalForEdit(item) {
                     <span class="enum-number" style="font-weight: 600; margin-right: 8px; min-width: 24px;">${index + 1}.</span>
                     <input type="text" class="form-control-custom" placeholder="Answer ${index + 1}" name="answers[]" value="${answer}" required>
                     <span class="enum-drag-handle" style="display: none; color: #9ca3af; font-size: 1rem; cursor: move; margin-left: 8px;"><i class="bi bi-grip-vertical"></i></span>
+                    <button type="button" class="btn-remove-option" onclick="removeEnumAnswer(this)" title="Remove answer">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
                 `;
             } else {
                 div.innerHTML = `
                     <span class="enum-number" style="display: none; font-weight: 600; margin-right: 8px; min-width: 24px;">${index + 1}.</span>
                     <input type="text" class="form-control-custom" placeholder="Answer ${index + 1}" name="answers[]" value="${answer}" required>
                     <span class="enum-drag-handle" style="display: inline-block; color: #9ca3af; font-size: 1rem; cursor: move; margin-left: 8px;"><i class="bi bi-grip-vertical"></i></span>
+                    <button type="button" class="btn-remove-option" onclick="removeEnumAnswer(this)" title="Remove answer">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
                 `;
             }
             container.appendChild(div);
@@ -462,6 +557,12 @@ function populateModalForEdit(item) {
     // Open the appropriate modal
     const modal = new bootstrap.Modal(document.getElementById(type + 'Modal'));
     modal.show();
+    
+    // Update the dropdown to reflect current question type
+    const dropdown = document.querySelector(`#${type}Modal .question-type-dropdown`);
+    if (dropdown) {
+        dropdown.value = type;
+    }
 }
 
 // Handle MCQ Form Submit
@@ -620,8 +721,37 @@ function addMCQOption() {
     div.innerHTML = `
         <input type="text" class="form-control-custom" placeholder="Option ${letter}" name="options[]" required>
         <input type="checkbox" class="correct-checkbox" name="correct[]" value="${optionCount}" title="Mark as correct">
+        <button type="button" class="btn-remove-option" onclick="removeMCQOption(this)" title="Remove option">
+            <i class="bi bi-x-lg"></i>
+        </button>
     `;
     container.appendChild(div);
+}
+
+// Remove MCQ Option
+function removeMCQOption(button) {
+    const container = document.getElementById('mcq_options');
+    const optionGroups = container.querySelectorAll('.option-input-group');
+    
+    // Don't allow removing if only 2 options left (minimum for MCQ)
+    if (optionGroups.length <= 2) {
+        alert('A multiple choice question must have at least 2 options.');
+        return;
+    }
+    
+    // Remove the option group
+    button.closest('.option-input-group').remove();
+    
+    // Update checkbox values to maintain proper indexing
+    const updatedGroups = container.querySelectorAll('.option-input-group');
+    updatedGroups.forEach((group, index) => {
+        const checkbox = group.querySelector('.correct-checkbox');
+        checkbox.value = index;
+        
+        const input = group.querySelector('input[type="text"]');
+        const letter = String.fromCharCode(65 + index);
+        input.placeholder = `Option ${letter}`;
+    });
 }
 
 // Add Enum Answer
@@ -638,17 +768,124 @@ function addEnumAnswer() {
             <span class="enum-number" style="font-weight: 600; margin-right: 8px; min-width: 24px;">${answerCount}.</span>
             <input type="text" class="form-control-custom" placeholder="Answer ${answerCount}" name="answers[]" required>
             <span class="enum-drag-handle" style="display: none; color: #9ca3af; font-size: 1rem; cursor: move; margin-left: 8px;"><i class="bi bi-grip-vertical"></i></span>
+            <button type="button" class="btn-remove-option" onclick="removeEnumAnswer(this)" title="Remove answer">
+                <i class="bi bi-x-lg"></i>
+            </button>
         `;
     } else {
         div.innerHTML = `
             <span class="enum-number" style="display: none; font-weight: 600; margin-right: 8px; min-width: 24px;">${answerCount}.</span>
             <input type="text" class="form-control-custom" placeholder="Answer ${answerCount}" name="answers[]" required>
             <span class="enum-drag-handle" style="display: inline-block; color: #9ca3af; font-size: 1rem; cursor: move; margin-left: 8px;"><i class="bi bi-grip-vertical"></i></span>
+            <button type="button" class="btn-remove-option" onclick="removeEnumAnswer(this)" title="Remove answer">
+                <i class="bi bi-x-lg"></i>
+            </button>
         `;
     }
     
     container.appendChild(div);
+    
+    // Make the new element draggable
+    makeEnumAnswersDraggable();
 }
+
+// Remove Enum Answer
+function removeEnumAnswer(button) {
+    const container = document.getElementById('enum_answers');
+    const answerGroups = container.querySelectorAll('.option-input-group');
+    
+    // Don't allow removing if only 2 answers left (minimum for enumeration)
+    if (answerGroups.length <= 2) {
+        alert('An enumeration question must have at least 2 answers.');
+        return;
+    }
+    
+    // Remove the answer group
+    button.closest('.option-input-group').remove();
+    
+    // Update numbering for ordered type
+    const enumType = document.getElementById('enumTypeSelect').value;
+    if (enumType === 'ordered') {
+        const updatedGroups = container.querySelectorAll('.option-input-group');
+        updatedGroups.forEach((group, index) => {
+            const number = group.querySelector('.enum-number');
+            if (number) {
+                number.textContent = `${index + 1}.`;
+            }
+            const input = group.querySelector('input[type="text"]');
+            input.placeholder = `Answer ${index + 1}`;
+        });
+    }
+}
+
+// Drag and Drop for Enumeration Answers
+let draggedElement = null;
+
+// Make enum answers draggable
+function makeEnumAnswersDraggable() {
+    const container = document.getElementById('enum_answers');
+    const optionGroups = container.querySelectorAll('.option-input-group');
+    
+    optionGroups.forEach(group => {
+        // Remove existing listeners to avoid duplicates
+        group.draggable = true;
+        
+        group.ondragstart = function(e) {
+            draggedElement = this;
+            this.style.opacity = '0.5';
+            e.dataTransfer.effectAllowed = 'move';
+        };
+        
+        group.ondragend = function(e) {
+            this.style.opacity = '';
+        };
+        
+        group.ondragover = function(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            
+            if (draggedElement !== this) {
+                const allGroups = Array.from(container.querySelectorAll('.option-input-group'));
+                const draggedIndex = allGroups.indexOf(draggedElement);
+                const targetIndex = allGroups.indexOf(this);
+                
+                if (draggedIndex < targetIndex) {
+                    this.parentNode.insertBefore(draggedElement, this.nextSibling);
+                } else {
+                    this.parentNode.insertBefore(draggedElement, this);
+                }
+            }
+        };
+        
+        group.ondrop = function(e) {
+            e.preventDefault();
+            // Update numbering after drop
+            const enumType = document.getElementById('enumTypeSelect').value;
+            if (enumType === 'ordered') {
+                updateEnumNumbering();
+            }
+        };
+    });
+}
+
+// Update enumeration numbering
+function updateEnumNumbering() {
+    const container = document.getElementById('enum_answers');
+    const groups = container.querySelectorAll('.option-input-group');
+    groups.forEach((group, index) => {
+        const number = group.querySelector('.enum-number');
+        if (number) {
+            number.textContent = `${index + 1}.`;
+        }
+        const input = group.querySelector('input[type="text"]');
+        input.placeholder = `Answer ${index + 1}`;
+    });
+}
+
+// Call this whenever enum answers are added or modal is opened
+document.getElementById('enumModal').addEventListener('shown.bs.modal', function() {
+    makeEnumAnswersDraggable();
+});
 
 // Toggle Enumeration Type
 function toggleEnumType() {
@@ -675,4 +912,177 @@ function toggleEnumType() {
         pointsLabel.textContent = 'Point per correct answer:';
     }
 }
+
+// Switch Question Type
+function switchQuestionType(newType, currentType) {
+    // Store current section ID and item ID
+    const sectionId = document.getElementById(currentType + '_section_id').value;
+    const itemId = document.getElementById(currentType + '_item_id').value;
+    
+    // Close current modal
+    const currentModal = bootstrap.Modal.getInstance(document.getElementById(currentType + 'Modal'));
+    if (currentModal) {
+        currentModal.hide();
+    }
+    
+    // Small delay to allow modal to close smoothly
+    setTimeout(() => {
+        if (itemId) {
+            // In edit mode: Open blank form of new type but maintain edit context
+            // Reset the new type's form first
+            document.getElementById(newType + 'Form').reset();
+            
+            // Set the section ID and item ID (to maintain edit mode)
+            document.getElementById(newType + '_section_id').value = sectionId;
+            document.getElementById(newType + '_item_id').value = itemId;
+            
+            // Update button text to indicate updating
+            document.getElementById(newType + '_submit_btn').textContent = 'Update Question';
+            
+            // Reset MCQ options to default 4 if switching to MCQ
+            if (newType === 'mcq') {
+                const container = document.getElementById('mcq_options');
+                container.innerHTML = `
+                    <label class="form-label-custom">Options</label>
+                    <div class="option-input-group">
+                        <input type="text" class="form-control-custom" placeholder="Option A" name="options[]" required>
+                        <input type="checkbox" class="correct-checkbox" name="correct[]" value="0" title="Mark as correct">
+                        <button type="button" class="btn-remove-option" onclick="removeMCQOption(this)" title="Remove option">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                    <div class="option-input-group">
+                        <input type="text" class="form-control-custom" placeholder="Option B" name="options[]" required>
+                        <input type="checkbox" class="correct-checkbox" name="correct[]" value="1" title="Mark as correct">
+                        <button type="button" class="btn-remove-option" onclick="removeMCQOption(this)" title="Remove option">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                    <div class="option-input-group">
+                        <input type="text" class="form-control-custom" placeholder="Option C" name="options[]" required>
+                        <input type="checkbox" class="correct-checkbox" name="correct[]" value="2" title="Mark as correct">
+                        <button type="button" class="btn-remove-option" onclick="removeMCQOption(this)" title="Remove option">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                    <div class="option-input-group">
+                        <input type="text" class="form-control-custom" placeholder="Option D" name="options[]" required>
+                        <input type="checkbox" class="correct-checkbox" name="correct[]" value="3" title="Mark as correct">
+                        <button type="button" class="btn-remove-option" onclick="removeMCQOption(this)" title="Remove option">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                `;
+            }
+            
+            // Reset enum answers to default 2 if switching to enum
+            if (newType === 'enum') {
+                const container = document.getElementById('enum_answers');
+                container.innerHTML = `
+                    <div class="option-input-group">
+                        <span class="enum-number" style="font-weight: 600; margin-right: 8px; min-width: 24px;">1.</span>
+                        <input type="text" class="form-control-custom" placeholder="Answer 1" name="answers[]" required>
+                        <span class="enum-drag-handle" style="display: none; color: #9ca3af; font-size: 1rem; cursor: move; margin-left: 8px;"><i class="bi bi-grip-vertical"></i></span>
+                        <button type="button" class="btn-remove-option" onclick="removeEnumAnswer(this)" title="Remove answer">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                    <div class="option-input-group">
+                        <span class="enum-number" style="font-weight: 600; margin-right: 8px; min-width: 24px;">2.</span>
+                        <input type="text" class="form-control-custom" placeholder="Answer 2" name="answers[]" required>
+                        <span class="enum-drag-handle" style="display: none; color: #9ca3af; font-size: 1rem; cursor: move; margin-left: 8px;"><i class="bi bi-grip-vertical"></i></span>
+                        <button type="button" class="btn-remove-option" onclick="removeEnumAnswer(this)" title="Remove answer">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                `;
+                // Reset enum type to ordered
+                document.getElementById('enumTypeSelect').value = 'ordered';
+                document.getElementById('enum_type').value = 'ordered';
+                
+                // Make draggable after adding
+                setTimeout(() => makeEnumAnswersDraggable(), 100);
+            }
+            
+            // Open the new modal
+            const newModal = new bootstrap.Modal(document.getElementById(newType + 'Modal'));
+            newModal.show();
+        } else {
+            // If creating new question, open the new type modal normally
+            openQuestionModal(newType, sectionId);
+        }
+    }, 300);
+}
 </script>
+
+<style>
+.question-type-dropdown {
+    background-color: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 6px;
+    color: white;
+    padding: 6px 12px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    outline: none;
+    margin-left: auto;
+    margin-right: 12px;
+    transition: all 0.2s ease;
+}
+
+.question-type-dropdown:hover {
+    background-color: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+.question-type-dropdown:focus {
+    background-color: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.6);
+}
+
+.question-type-dropdown option {
+    background-color: #7ca5b8;
+    color: white;
+}
+
+.btn-remove-option {
+    background: transparent;
+    border: none;
+    color: #ef4444;
+    padding: 6px;
+    cursor: pointer;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    margin-left: 8px;
+}
+
+.btn-remove-option:hover {
+    background-color: #fee2e2;
+    color: #dc2626;
+}
+
+.btn-remove-option i {
+    font-size: 0.85rem;
+}
+
+.option-input-group[draggable="true"] {
+    cursor: move;
+}
+
+.option-input-group[draggable="true"]:hover {
+    background-color: #f9fafb;
+}
+
+.enum-drag-handle {
+    cursor: grab;
+    user-select: none;
+}
+
+.enum-drag-handle:active {
+    cursor: grabbing;
+}
+</style>

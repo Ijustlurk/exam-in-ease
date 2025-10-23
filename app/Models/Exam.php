@@ -169,6 +169,37 @@ class Exam extends Model
         return $latestApproval ? $latestApproval->status : 'pending';
     }
 
+    /**
+     * Check if the exam schedule has ended
+     */
+    public function hasScheduleEnded()
+    {
+        if (!$this->schedule_end) {
+            return false;
+        }
+        return now()->isAfter($this->schedule_end);
+    }
+
+    /**
+     * Check if the exam should be archived
+     */
+    public function shouldBeArchived()
+    {
+        return in_array($this->status, ['ongoing', 'approved']) 
+            && $this->hasScheduleEnded();
+    }
+
+    /**
+     * Archive this exam
+     */
+    public function archive()
+    {
+        if ($this->shouldBeArchived()) {
+            return $this->update(['status' => 'archived']);
+        }
+        return false;
+    }
+
     public function examAssignments()
     {
         return $this->hasMany(ExamAssignment::class, 'exam_id', 'exam_id');

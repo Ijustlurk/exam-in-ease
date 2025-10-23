@@ -15,6 +15,10 @@
                 box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
                 overflow: hidden;
                 border: 1px solid #e0e0e0;
+                display: flex;
+                flex-direction: column;
+                height: calc(100vh - 6rem);
+                max-height: calc(100vh - 6rem);
             }
 
             .users-header {
@@ -24,12 +28,119 @@
                 align-items: center;
                 border-bottom: 1px solid #e0e0e0;
                 background-color: #fff;
+                gap: 1rem;
+                flex-shrink: 0;
             }
 
             .users-title-section {
                 display: flex;
                 align-items: center;
                 gap: 1.5rem;
+            }
+
+            .role-filter-wrapper {
+                position: relative;
+            }
+
+            .role-filter-btn {
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+                padding: 0.7rem 1.2rem;
+                background-color: #f8f9fa;
+                border: 1px solid #dee2e6;
+                border-radius: 8px;
+                cursor: pointer;
+                font-size: 0.95rem;
+                font-weight: 500;
+                color: #2c3e50;
+                transition: all 0.2s;
+                min-width: 160px;
+            }
+
+            .role-filter-btn:hover {
+                background-color: #e9ecef;
+                border-color: #6ba5bb;
+            }
+
+            .role-filter-btn i {
+                font-size: 0.85rem;
+                color: #95a5a6;
+            }
+
+            .role-filter-dropdown {
+                position: fixed;
+                background: white;
+                border: 1px solid #dee2e6;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                min-width: 200px;
+                z-index: 1000;
+                display: none;
+                overflow: hidden;
+            }
+
+            .role-filter-dropdown.show {
+                display: block;
+                animation: dropdownFadeIn 0.2s ease-out;
+            }
+
+            .role-filter-item {
+                padding: 0.75rem 1rem;
+                display: flex;
+                align-items: center;
+                gap: 0.75rem;
+                color: #2c3e50;
+                cursor: pointer;
+                transition: background-color 0.2s;
+                border: none;
+                background: none;
+                width: 100%;
+                text-align: left;
+                font-size: 0.9rem;
+            }
+
+            .role-filter-item:hover {
+                background-color: #f8f9fa;
+            }
+
+            .role-filter-item.active {
+                background-color: #e3f2fd;
+                color: #6ba5bb;
+                font-weight: 600;
+            }
+
+            .role-filter-item i {
+                font-size: 1rem;
+                color: #95a5a6;
+            }
+
+            .role-filter-item.active i {
+                color: #6ba5bb;
+            }
+
+            .table-scroll-container {
+                flex: 1;
+                overflow-y: auto;
+                overflow-x: hidden;
+                background-color: #fff;
+            }
+
+            .table-scroll-container::-webkit-scrollbar {
+                width: 10px;
+            }
+
+            .table-scroll-container::-webkit-scrollbar-track {
+                background: #f1f1f1;
+            }
+
+            .table-scroll-container::-webkit-scrollbar-thumb {
+                background: #c1c1c1;
+                border-radius: 5px;
+            }
+
+            .table-scroll-container::-webkit-scrollbar-thumb:hover {
+                background: #a8a8a8;
             }
 
             .users-title {
@@ -108,6 +219,30 @@
                 font-size: 0.875rem;
                 text-transform: uppercase;
                 letter-spacing: 0.5px;
+                position: sticky;
+                top: 0;
+                z-index: 10;
+            }
+
+            .users-table thead th.sortable {
+                cursor: pointer;
+                user-select: none;
+                transition: background-color 0.2s;
+            }
+
+            .users-table thead th.sortable:hover {
+                background-color: #c5d9e3 !important;
+            }
+
+            .users-table thead th.sortable i {
+                margin-left: 8px;
+                font-size: 0.75rem;
+                color: #6b7280;
+                transition: transform 0.2s;
+            }
+
+            .users-table thead th.sortable.asc i {
+                transform: rotate(180deg);
             }
 
             .users-table thead th:first-child {
@@ -405,8 +540,37 @@
             <div class="users-container">
                 <div class="users-header">
                     <div class="users-title-section">
-                        <h4 class="users-title">All Users</h4>
-                        <span class="users-count">{{ number_format($users->count() ?? 0) }}</span>
+                        <h4 class="users-title" id="usersTitle">All Users</h4>
+                        <span class="users-count" id="usersCount">{{ number_format($users->count() ?? 0) }}</span>
+                    </div>
+
+                    <div class="role-filter-wrapper">
+                        <button class="role-filter-btn" id="roleFilterBtn" onclick="toggleRoleFilter()">
+                            <span id="roleFilterText">All Roles</span>
+                            <i class="bi bi-chevron-down"></i>
+                        </button>
+                        <div class="role-filter-dropdown" id="roleFilterDropdown">
+                            <button class="role-filter-item active" onclick="filterByRole('all')">
+                                <i class="bi bi-people-fill"></i>
+                                <span>All Roles</span>
+                            </button>
+                            <button class="role-filter-item" onclick="filterByRole('instructor')">
+                                <i class="bi bi-person-badge"></i>
+                                <span>Instructor</span>
+                            </button>
+                            <button class="role-filter-item" onclick="filterByRole('student')">
+                                <i class="bi bi-person"></i>
+                                <span>Student</span>
+                            </button>
+                            <button class="role-filter-item" onclick="filterByRole('programchair')">
+                                <i class="bi bi-briefcase"></i>
+                                <span>Program Chair</span>
+                            </button>
+                            <button class="role-filter-item" onclick="filterByRole('admin')">
+                                <i class="bi bi-shield-fill-check"></i>
+                                <span>Admin</span>
+                            </button>
+                        </div>
                     </div>
 
                     <div class="search-bar">
@@ -420,19 +584,23 @@
                     </button>
                 </div>
 
-                <table class="users-table">
-                    <thead>
-                        <tr>
-                            <th style="width: 5%;">
-                                <input type="checkbox" id="selectAllUsers" class="user-checkbox">
-                            </th>
-                            <th style="width: 35%;">NAME</th>
-                            <th style="width: 20%;">ROLE</th>
-                            <th style="width: 15%;">STATUS</th>
-                            <th style="width: 25%;">ACTIONS</th>
-                        </tr>
-                    </thead>
-                    <tbody>
+                <div class="table-scroll-container">
+                    <table class="users-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 5%;">
+                                    <input type="checkbox" id="selectAllUsers" class="user-checkbox">
+                                </th>
+                                <th style="width: 35%;" class="sortable" onclick="sortByName()">
+                                    NAME
+                                    <i class="bi bi-chevron-down" id="nameSortIcon"></i>
+                                </th>
+                                <th style="width: 20%;">ROLE</th>
+                                <th style="width: 15%;">STATUS</th>
+                                <th style="width: 25%;">ACTIONS</th>
+                            </tr>
+                        </thead>
+                        <tbody>
                         @forelse ($users ?? [] as $user)
                             @php
                                 $userId = $user->user_id ?? 0;
@@ -543,6 +711,7 @@
                         @endforelse
                     </tbody>
                 </table>
+                </div>
             </div>
         </div>
 
@@ -602,6 +771,137 @@
         @include('admin.users.partials.import-users-modal')
 
         <script>
+            let currentRoleFilter = 'all';
+            let nameSortOrder = 'asc'; // Track current sort order
+
+            // Sort users by name
+            function sortByName() {
+                const tbody = document.querySelector('.users-table tbody');
+                const rows = Array.from(tbody.querySelectorAll('tr:not(.empty-state)'));
+                const sortIcon = document.getElementById('nameSortIcon');
+                const sortHeader = document.querySelector('.sortable');
+                
+                // Toggle sort order
+                nameSortOrder = nameSortOrder === 'asc' ? 'desc' : 'asc';
+                
+                // Update header class for icon rotation
+                if (nameSortOrder === 'asc') {
+                    sortHeader.classList.remove('asc');
+                } else {
+                    sortHeader.classList.add('asc');
+                }
+                
+                // Sort rows
+                rows.sort((a, b) => {
+                    const nameA = a.querySelector('.user-name')?.textContent.trim().toLowerCase() || '';
+                    const nameB = b.querySelector('.user-name')?.textContent.trim().toLowerCase() || '';
+                    
+                    if (nameSortOrder === 'asc') {
+                        return nameA.localeCompare(nameB);
+                    } else {
+                        return nameB.localeCompare(nameA);
+                    }
+                });
+                
+                // Re-append sorted rows
+                rows.forEach(row => tbody.appendChild(row));
+            }
+
+            // Toggle Role Filter Dropdown
+            function toggleRoleFilter() {
+                const dropdown = document.getElementById('roleFilterDropdown');
+                const button = document.getElementById('roleFilterBtn');
+                
+                if (dropdown.classList.contains('show')) {
+                    dropdown.classList.remove('show');
+                } else {
+                    // Position the dropdown relative to the button
+                    const rect = button.getBoundingClientRect();
+                    dropdown.style.top = (rect.bottom + 8) + 'px';
+                    dropdown.style.left = rect.left + 'px';
+                    dropdown.classList.add('show');
+                }
+            }
+
+            // Filter users by role
+            function filterByRole(role) {
+                currentRoleFilter = role;
+                
+                // Update active state in dropdown
+                document.querySelectorAll('.role-filter-item').forEach(item => {
+                    item.classList.remove('active');
+                });
+                event.target.closest('.role-filter-item').classList.add('active');
+                
+                // Update filter button text
+                const roleText = {
+                    'all': 'All Roles',
+                    'instructor': 'Instructor',
+                    'student': 'Student',
+                    'programchair': 'Program Chair',
+                    'admin': 'Admin'
+                };
+                document.getElementById('roleFilterText').textContent = roleText[role] || 'All Roles';
+                
+                // Update title
+                const titleText = {
+                    'all': 'All Users',
+                    'instructor': 'Instructors',
+                    'student': 'Students',
+                    'programchair': 'Program Chairs',
+                    'admin': 'Admins'
+                };
+                document.getElementById('usersTitle').textContent = titleText[role] || 'All Users';
+                
+                // Close dropdown
+                document.getElementById('roleFilterDropdown').classList.remove('show');
+                
+                // Apply filter
+                applyFilters();
+            }
+
+            // Apply both role and search filters
+            function applyFilters() {
+                const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+                const rows = document.querySelectorAll('.users-table tbody tr');
+                let visibleCount = 0;
+
+                rows.forEach(row => {
+                    if (row.querySelector('.empty-state')) return;
+                    
+                    const userRole = row.getAttribute('data-user-role');
+                    const name = row.querySelector('.user-name')?.textContent.toLowerCase() || '';
+                    const email = row.querySelector('.user-email')?.textContent.toLowerCase() || '';
+                    const role = row.querySelector('.role-badge')?.textContent.toLowerCase() || '';
+
+                    // Check role filter
+                    const matchesRole = currentRoleFilter === 'all' || userRole === currentRoleFilter;
+                    
+                    // Check search filter
+                    const matchesSearch = searchTerm === '' || 
+                                         name.includes(searchTerm) || 
+                                         email.includes(searchTerm) || 
+                                         role.includes(searchTerm);
+
+                    if (matchesRole && matchesSearch) {
+                        row.style.display = '';
+                        visibleCount++;
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+
+                // Update count
+                document.getElementById('usersCount').textContent = visibleCount.toLocaleString();
+            }
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', function(event) {
+                if (!event.target.closest('.role-filter-wrapper')) {
+                    document.getElementById('roleFilterDropdown').classList.remove('show');
+                }
+            });
+
             // Toggle Status Dropdown (when clicking Active/Inactive)
             function toggleStatusDropdown(event, userId) {
                 event.stopPropagation();
@@ -802,22 +1102,7 @@
                 const searchInput = document.getElementById('searchInput');
                 if (searchInput) {
                     searchInput.addEventListener('input', function() {
-                        const searchTerm = this.value.toLowerCase();
-                        const rows = document.querySelectorAll('.users-table tbody tr');
-
-                        rows.forEach(row => {
-                            if (row.querySelector('.empty-state')) return;
-                            
-                            const name = row.querySelector('.user-name')?.textContent.toLowerCase() || '';
-                            const email = row.querySelector('.user-email')?.textContent.toLowerCase() || '';
-                            const role = row.querySelector('.role-badge')?.textContent.toLowerCase() || '';
-
-                            if (name.includes(searchTerm) || email.includes(searchTerm) || role.includes(searchTerm)) {
-                                row.style.display = '';
-                            } else {
-                                row.style.display = 'none';
-                            }
-                        });
+                        applyFilters();
                     });
                 }
             });

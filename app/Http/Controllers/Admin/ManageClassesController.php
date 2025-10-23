@@ -437,72 +437,48 @@ class ManageClassesController extends Controller
                 ]);
             }
 
-            $addedCount = 0;
-            $skippedCount = 0;
-            $errors = [];
+            // Get current class members to filter out duplicates
+            $currentMembers = DB::table('class_enrolment')
+                ->where('class_id', $id)
+                ->where('status', 'Active')
+                ->pluck('student_id')
+                ->toArray();
 
-            foreach ($sourceStudents as $studentId) {
-                \Log::info("Processing student ID: {$studentId}");
+            // Filter out students who are already enrolled
+            $studentsToAdd = array_diff($sourceStudents, $currentMembers);
 
-                try {
-                    // Check if already enrolled
-                    $existing = DB::table('class_enrolment')
-                        ->where('class_id', $id)
-                        ->where('student_id', $studentId)
-                        ->first();
-
-                    if (!$existing) {
-                        // Insert new enrollment
-                        DB::table('class_enrolment')->insert([
-                            'class_id' => $id,
-                            'student_id' => $studentId,
-                            'status' => 'Active'
-                        ]);
-                        $addedCount++;
-                        \Log::info("Added student {$studentId}");
-                    } elseif ($existing->status == 'Archived') {
-                        // Update to Active
-                        DB::table('class_enrolment')
-                            ->where('class_id', $id)
-                            ->where('student_id', $studentId)
-                            ->update(['status' => 'Active']);
-                        $addedCount++;
-                        \Log::info("Reactivated student {$studentId}");
-                    } else {
-                        $skippedCount++;
-                        \Log::info("Skipped student {$studentId} - already enrolled and active");
-                    }
-                } catch (\Exception $e) {
-                    $errors[] = "Error processing student {$studentId}: " . $e->getMessage();
-                    \Log::error("Error processing student {$studentId}: " . $e->getMessage());
-                }
+            if (empty($studentsToAdd)) {
+                DB::rollBack();
+                \Log::info("No new students to copy - all are already enrolled");
+                
+                return response()->json([
+                    'success' => false,
+                    'message' => 'All students from the source class are already enrolled in this class',
+                    'students' => []
+                ]);
             }
+
+            // Get full student details for the frontend
+            $studentDetails = UserStudent::whereIn('user_id', $studentsToAdd)
+                ->get()
+                ->map(function ($student) {
+                    return [
+                        'user_id' => $student->user_id,
+                        'name' => $student->first_name . ' ' . $student->last_name,
+                        'id_number' => $student->id_number
+                    ];
+                });
 
             DB::commit();
 
-            \Log::info("COPY COMPLETED");
-            \Log::info("Added: {$addedCount}");
-            \Log::info("Skipped: {$skippedCount}");
-            \Log::info("Errors: " . count($errors));
+            \Log::info("COPY PREPARATION COMPLETED");
+            \Log::info("Students ready to copy: " . count($studentDetails));
             \Log::info("==========================================");
-
-            $message = $addedCount > 0
-                ? "{$addedCount} student(s) copied successfully"
-                : "All students are already enrolled in this class";
-
-            if ($skippedCount > 0 && $addedCount > 0) {
-                $message .= " ({$skippedCount} already enrolled)";
-            }
 
             return response()->json([
                 'success' => true,
-                'message' => $message,
-                'stats' => [
-                    'added' => $addedCount,
-                    'skipped' => $skippedCount,
-                    'total_processed' => count($sourceStudents),
-                    'errors' => $errors
-                ]
+                'message' => count($studentDetails) . ' student(s) ready to be added',
+                'students' => $studentDetails
             ]);
 
         } catch (\Exception $e) {

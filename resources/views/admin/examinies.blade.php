@@ -10,6 +10,7 @@
             grid-template-columns: 2fr 1fr;
             gap: 1rem;
             padding: 1rem;
+            height: calc(100vh - 80px);
         }
 
         .left-panel,
@@ -18,6 +19,8 @@
             border-radius: .5rem;
             padding: 1rem;
             box-shadow: 0 0 8px rgba(0, 0, 0, 0.05);
+            display: flex;
+            flex-direction: column;
         }
 
         .search-box {
@@ -28,6 +31,7 @@
             border: 1px solid #dee2e6;
             border-radius: .5rem;
             padding: .25rem .5rem;
+            flex-shrink: 0;
         }
 
         .search-box input {
@@ -41,16 +45,39 @@
         .recents-title {
             font-weight: 500;
             margin-bottom: .5rem;
+            flex-shrink: 0;
         }
 
         .exam-cards {
             display: flex;
             gap: 1rem;
             flex-wrap: wrap;
+            overflow-y: auto;
+            flex: 1;
+            align-content: flex-start;
+        }
+
+        .exam-cards::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .exam-cards::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        .exam-cards::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 4px;
+        }
+
+        .exam-cards::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
         }
 
         .exam-card {
             width: 100px;
+            height: 110px;
             text-align: center;
             background: #fff;
             border: 1px solid transparent;
@@ -58,6 +85,7 @@
             padding: .5rem;
             cursor: pointer;
             transition: .2s;
+            flex-shrink: 0;
         }
 
         .exam-card:hover,

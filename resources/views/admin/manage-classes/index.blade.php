@@ -3,8 +3,10 @@
 @section('content')
     <style>
         .classes-container {
-            min-height: 100vh;
             padding: 30px;
+            height: calc(100vh - 60px);
+            display: flex;
+            flex-direction: column;
         }
 
         .header-section {
@@ -12,6 +14,7 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 30px;
+            flex-shrink: 0;
         }
 
         .header-left {
@@ -103,6 +106,32 @@
             border-radius: 15px;
             overflow: hidden;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .table-scroll-wrapper {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        .table-scroll-wrapper::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        .table-scroll-wrapper::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        .table-scroll-wrapper::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 5px;
+        }
+
+        .table-scroll-wrapper::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
         }
 
         .classes-table {
@@ -112,6 +141,9 @@
 
         .classes-table thead {
             background-color: #d4e5ea;
+            position: sticky;
+            top: 0;
+            z-index: 10;
         }
 
         .classes-table thead th {
@@ -500,17 +532,18 @@
 
         <!-- Table Section -->
         <div class="table-container">
-            <table class="classes-table">
-                <thead>
-                    <tr>
-                        <th>NAME</th>
-                        <th>TEACHER</th>
-                        <th>SUBJECT</th>
-                        <th>NO. OF STUDENTS</th>
-                        <th>ACTIONS</th>
-                    </tr>
-                </thead>
-                <tbody id="classesTableBody">
+            <div class="table-scroll-wrapper">
+                <table class="classes-table">
+                    <thead>
+                        <tr>
+                            <th>NAME</th>
+                            <th>TEACHER</th>
+                            <th>SUBJECT</th>
+                            <th>NO. OF STUDENTS</th>
+                            <th>ACTIONS</th>
+                        </tr>
+                    </thead>
+                    <tbody id="classesTableBody">
                     @forelse($classes as $class)
                         <tr class="{{ $class->status == 'Archived' ? 'archived' : '' }}" data-status="{{ $class->status }}">
                             <td class="class-name">{{ $class->title }}</td>
@@ -546,6 +579,7 @@
                     @endforelse
                 </tbody>
             </table>
+            </div>
         </div>
 
         <!-- New Class Modal -->
@@ -823,6 +857,7 @@
         let currentClassName = null;
         let availableStudents = [];
         let classMembers = [];
+        let pendingStudents = []; // Students selected but not yet saved
         let selectedStudentIds = [];
         let selectedSourceClassId = null;
 
@@ -909,6 +944,7 @@
             currentClassId = classId;
             currentClassName = className;
             selectedStudentIds = [];
+            pendingStudents = []; // Reset pending students
 
             document.getElementById('modalClassTitle').textContent = className;
 
@@ -970,19 +1006,27 @@
         function renderStudentPool() {
             const tbody = document.getElementById('studentPoolBody');
 
-            if (availableStudents.length === 0) {
+            // Filter out students who are already in pending or class members
+            const pendingIds = pendingStudents.map(s => s.user_id);
+            const memberIds = classMembers.map(m => m.user_id);
+            const excludedIds = [...pendingIds, ...memberIds];
+            
+            const filteredStudents = availableStudents.filter(s => !excludedIds.includes(s.user_id));
+
+            if (filteredStudents.length === 0) {
                 tbody.innerHTML =
                     '<tr><td colspan="3" style="text-align: center; padding: 40px; color: #9ca3af; font-style: italic;">No available students</td></tr>';
                 return;
             }
 
-            tbody.innerHTML = availableStudents.map(student => `
+            tbody.innerHTML = filteredStudents.map(student => `
             <tr>
                 <td>
                     <input type="checkbox" 
                            class="student-checkbox" 
                            value="${student.user_id}"
-                           onchange="toggleStudentSelection(${student.user_id}, this.checked)">
+                           data-student='${JSON.stringify(student)}'
+                           onchange="toggleStudentSelection(${student.user_id}, this.checked, this)">
                 </td>
                 <td>${student.name}</td>
                 <td>${student.id_number}</td>
@@ -993,40 +1037,73 @@
         function renderClassMembers() {
             const tbody = document.getElementById('classMembersBody');
 
-            if (classMembers.length === 0) {
+            // Combine saved class members with pending students
+            const allMembers = [...classMembers, ...pendingStudents];
+
+            if (allMembers.length === 0) {
                 tbody.innerHTML =
                     '<tr><td colspan="3" style="text-align: center; padding: 40px; color: #9ca3af; font-style: italic;">No students enrolled</td></tr>';
                 return;
             }
 
-            tbody.innerHTML = classMembers.map(member => `
-            <tr>
-                <td>${member.name}</td>
-                <td>${member.id_number}</td>
-                <td>
-                    <i class="fas fa-times remove-student-btn" 
-                       onclick="removeStudentFromClass(${member.user_id})"
-                       title="Remove student"></i>
-                </td>
-            </tr>
-        `).join('');
+            tbody.innerHTML = allMembers.map(member => {
+                const isPending = pendingStudents.some(p => p.user_id === member.user_id);
+                return `
+                <tr${isPending ? ' style="background-color: #fef3c7;"' : ''}>
+                    <td>${member.name}${isPending ? ' <span style="color: #f59e0b; font-size: 12px; font-weight: 600;">(Pending)</span>' : ''}</td>
+                    <td>${member.id_number}</td>
+                    <td>
+                        <i class="fas fa-times remove-student-btn" 
+                           onclick="${isPending ? 'removePendingStudent' : 'removeStudentFromClass'}(${member.user_id})"
+                           title="Remove student"></i>
+                    </td>
+                </tr>
+            `;
+            }).join('');
         }
 
-        function toggleStudentSelection(studentId, isChecked) {
+        function toggleStudentSelection(studentId, isChecked, checkboxElement) {
             if (isChecked) {
-                if (!selectedStudentIds.includes(studentId)) {
-                    selectedStudentIds.push(studentId);
+                // Get student data from checkbox
+                const studentData = JSON.parse(checkboxElement.getAttribute('data-student'));
+                
+                // Add to pending students (move to class members column)
+                if (!pendingStudents.some(s => s.user_id === studentId)) {
+                    pendingStudents.push(studentData);
                 }
-            } else {
-                selectedStudentIds = selectedStudentIds.filter(id => id !== studentId);
+                
+                // Uncheck the checkbox
+                checkboxElement.checked = false;
+                
+                // Re-render both lists
+                renderStudentPool();
+                renderClassMembers();
             }
+        }
+
+        function removePendingStudent(studentId) {
+            // Remove from pending students array
+            pendingStudents = pendingStudents.filter(s => s.user_id !== studentId);
+            
+            // Re-render both lists
+            renderStudentPool();
+            renderClassMembers();
         }
 
         function addSelectedStudents() {
-            if (selectedStudentIds.length === 0) {
-                alert('Please select at least one student');
+            if (pendingStudents.length === 0) {
+                alert('Please select at least one student from the pool');
                 return;
             }
+
+            // Get IDs of pending students
+            const studentIds = pendingStudents.map(s => s.user_id);
+
+            // Show loading state
+            const btn = event ? event.target : document.querySelector('.student-management-footer .btn-primary-custom');
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = 'Adding Students...';
 
             fetch(`/admin/manage-classes/${currentClassId}/add-students`, {
                     method: 'POST',
@@ -1036,15 +1113,21 @@
                         'Accept': 'application/json'
                     },
                     body: JSON.stringify({
-                        student_ids: selectedStudentIds
+                        student_ids: studentIds
                     })
                 })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        selectedStudentIds = [];
-                        loadAvailableStudents();
-                        loadClassMembers();
+                        // Move pending students to class members
+                        classMembers = [...classMembers, ...pendingStudents];
+                        pendingStudents = [];
+                        
+                        // Re-render lists
+                        renderStudentPool();
+                        renderClassMembers();
+                        
+                        alert('Students added successfully!');
                     } else {
                         alert('Error: ' + data.message);
                     }
@@ -1052,6 +1135,11 @@
                 .catch(error => {
                     console.error('Error:', error);
                     alert('An error occurred while adding students');
+                })
+                .finally(() => {
+                    // Restore button state
+                    btn.disabled = false;
+                    btn.textContent = originalText;
                 });
         }
 
@@ -1233,14 +1321,26 @@
                         console.log('Parsed JSON response:', data);
 
                         if (data.success) {
-                            alert(data.message);
+                            // Instead of immediately saving, add to pending students
+                            if (data.students && data.students.length > 0) {
+                                // Add copied students to pending list
+                                data.students.forEach(student => {
+                                    if (!pendingStudents.some(s => s.user_id === student.user_id) &&
+                                        !classMembers.some(m => m.user_id === student.user_id)) {
+                                        pendingStudents.push(student);
+                                    }
+                                });
+                                
+                                alert(`${data.students.length} student(s) added to pending list. Click "Add Students" to save.`);
+                            } else {
+                                alert('No new students to copy from selected class');
+                            }
+                            
                             closeCopyClassesModal();
 
-                            // Reload student lists after short delay
-                            setTimeout(() => {
-                                loadAvailableStudents();
-                                loadClassMembers();
-                            }, 300);
+                            // Re-render lists
+                            renderStudentPool();
+                            renderClassMembers();
 
                             selectedSourceClassId = null;
                         } else {

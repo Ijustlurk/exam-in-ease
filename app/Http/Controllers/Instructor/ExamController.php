@@ -175,6 +175,11 @@ class ExamController extends Controller
                 return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
             }
 
+            // Prevent editing archived exams
+            if ($exam->status === 'archived') {
+                return response()->json(['success' => false, 'message' => 'Cannot edit archived exams'], 403);
+            }
+
             // Log incoming request for debugging
             \Log::info('Update Exam Request', [
                 'exam_id' => $id,
@@ -309,6 +314,11 @@ class ExamController extends Controller
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
+        // Prevent editing archived exams
+        if ($exam->status === 'archived') {
+            return response()->json(['error' => 'Cannot edit archived exams'], 403);
+        }
+
         $validated = $request->validate([
             'section_id' => 'required|exists:sections,section_id',
             'question' => 'required|string',
@@ -317,12 +327,44 @@ class ExamController extends Controller
             'options' => 'nullable|string',
             'answer' => 'nullable|string',
             'expected_answer' => 'nullable|string',
-            'enum_type' => 'nullable|in:ordered,unordered'
+            'enum_type' => 'nullable|in:ordered,unordered',
+            'after_item_id' => 'nullable|exists:exam_items,item_id'
         ]);
 
         DB::beginTransaction();
         try {
-            $maxOrder = ExamItem::where('exam_id', $examId)->max('order') ?? 0;
+            $newOrder = 0;
+            
+            // If after_item_id is provided, insert after that item
+            if (!empty($validated['after_item_id'])) {
+                $afterItem = ExamItem::where('item_id', $validated['after_item_id'])
+                    ->where('exam_section_id', $validated['section_id'])
+                    ->first();
+                
+                if ($afterItem) {
+                    // Get the order of the item we want to insert after
+                    $afterOrder = $afterItem->order;
+                    
+                    // Increment order of all items after this one
+                    ExamItem::where('exam_section_id', $validated['section_id'])
+                        ->where('order', '>', $afterOrder)
+                        ->increment('order');
+                    
+                    // Set new item's order to be right after the specified item
+                    $newOrder = $afterOrder + 1;
+                } else {
+                    // Fallback: add to start of section
+                    ExamItem::where('exam_section_id', $validated['section_id'])
+                        ->increment('order');
+                    $newOrder = 1;
+                }
+            } else {
+                // No after_item_id: add to start of section
+                // Increment all existing items' order
+                ExamItem::where('exam_section_id', $validated['section_id'])
+                    ->increment('order');
+                $newOrder = 1;
+            }
 
             $item = ExamItem::create([
                 'exam_id' => $examId,
@@ -334,7 +376,7 @@ class ExamController extends Controller
                 'answer' => $validated['answer'] ?? null,
                 'expected_answer' => $validated['expected_answer'] ?? null,
                 'enum_type' => $validated['enum_type'] ?? null,
-                'order' => $maxOrder + 1
+                'order' => $newOrder
             ]);
 
             $exam->increment('no_of_items');
@@ -388,6 +430,11 @@ class ExamController extends Controller
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
+        // Prevent editing archived exams
+        if ($exam->status === 'archived') {
+            return response()->json(['error' => 'Cannot edit archived exams'], 403);
+        }
+
         $validated = $request->validate([
             'question' => 'required|string',
             'item_type' => 'required|in:mcq,torf,enum,iden,essay',
@@ -434,6 +481,11 @@ class ExamController extends Controller
         
         if (!$hasAccess) {
             return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        // Prevent editing archived exams
+        if ($exam->status === 'archived') {
+            return response()->json(['error' => 'Cannot edit archived exams'], 403);
         }
 
         DB::beginTransaction();
@@ -587,6 +639,189 @@ class ExamController extends Controller
         }
     }
 
+    public function reorderQuestionsByDrag(Request $request, $examId)
+    {
+        \Log::info('Reorder Questions by Drag called', [
+            'exam_id' => $examId,
+            'dragged_item_id' => $request->dragged_item_id,
+            'target_item_id' => $request->target_item_id,
+            'insert_before' => $request->insert_before
+        ]);
+        
+        $exam = Exam::findOrFail($examId);
+        
+        // Check if exam is archived
+        if ($exam->status === 'archived') {
+            \Log::warning('Attempt to reorder archived exam', ['exam_id' => $examId]);
+            return response()->json(['error' => 'Cannot reorder questions in archived exams'], 403);
+        }
+        
+        $teacherId = Auth::id();
+        $hasAccess = $exam->teacher_id == $teacherId || 
+                     $exam->collaborations->contains('teacher_id', $teacherId);
+        
+        if (!$hasAccess) {
+            \Log::warning('Unauthorized reorder attempt', ['exam_id' => $examId, 'teacher_id' => $teacherId]);
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        try {
+            $draggedItemId = $request->dragged_item_id;
+            $targetItemId = $request->target_item_id;
+            
+            if (!$draggedItemId || !$targetItemId) {
+                \Log::error('Missing item IDs', ['dragged' => $draggedItemId, 'target' => $targetItemId]);
+                return response()->json(['error' => 'Missing item IDs'], 400);
+            }
+            
+            $draggedItem = ExamItem::findOrFail($draggedItemId);
+            $targetItem = ExamItem::findOrFail($targetItemId);
+            
+            \Log::info('Found items', [
+                'dragged' => ['id' => $draggedItem->item_id, 'section' => $draggedItem->exam_section_id, 'order' => $draggedItem->order],
+                'target' => ['id' => $targetItem->item_id, 'section' => $targetItem->exam_section_id, 'order' => $targetItem->order]
+            ]);
+            
+            // Check if both items are in the same section
+            if ($draggedItem->exam_section_id !== $targetItem->exam_section_id) {
+                \Log::warning('Attempt to move across sections', [
+                    'dragged_section' => $draggedItem->exam_section_id,
+                    'target_section' => $targetItem->exam_section_id
+                ]);
+                return response()->json([
+                    'error' => 'Cannot reorder items across different sections'
+                ], 400);
+            }
+            
+            // Get all items in the section ordered by 'order'
+            $items = ExamItem::where('exam_section_id', $draggedItem->exam_section_id)
+                ->orderBy('order')
+                ->get();
+            
+            \Log::info('Section items', [
+                'section_id' => $draggedItem->exam_section_id,
+                'total_items' => $items->count(),
+                'orders' => $items->pluck('order', 'item_id')->toArray()
+            ]);
+            
+            $draggedIndex = $items->search(function($i) use ($draggedItemId) {
+                return $i->item_id == $draggedItemId;
+            });
+            
+            $targetIndex = $items->search(function($i) use ($targetItemId) {
+                return $i->item_id == $targetItemId;
+            });
+            
+            if ($draggedIndex === false || $targetIndex === false) {
+                \Log::error('Item index not found', [
+                    'dragged_index' => $draggedIndex,
+                    'target_index' => $targetIndex
+                ]);
+                return response()->json(['error' => 'Item not found in section'], 404);
+            }
+            
+            \Log::info('Original indices', [
+                'dragged_index' => $draggedIndex,
+                'target_index' => $targetIndex
+            ]);
+            
+            // Remove dragged item from collection
+            $draggedItemObj = $items->pull($draggedIndex);
+            
+            // Re-index the collection
+            $items = $items->values();
+            
+            // Recalculate target index after removal
+            $newTargetIndex = $items->search(function($i) use ($targetItemId) {
+                return $i->item_id == $targetItemId;
+            });
+            
+            // Determine insert position based on insert_before flag
+            $insertBefore = $request->insert_before ?? true;
+            $insertPosition = $insertBefore ? $newTargetIndex : $newTargetIndex + 1;
+            
+            \Log::info('Insert position calculated', [
+                'new_target_index' => $newTargetIndex,
+                'insert_before' => $insertBefore,
+                'insert_position' => $insertPosition
+            ]);
+            
+            // Insert dragged item at the calculated position
+            $items->splice($insertPosition, 0, [$draggedItemObj]);
+            
+            // Update order for all items
+            $updatedOrders = [];
+            foreach ($items as $index => $item) {
+                $oldOrder = $item->order;
+                $item->order = $index + 1;
+                $item->save();
+                $updatedOrders[] = [
+                    'item_id' => $item->item_id,
+                    'old_order' => $oldOrder,
+                    'new_order' => $item->order
+                ];
+            }
+            
+            \Log::info('Items reordered successfully by drag', [
+                'updated_orders' => $updatedOrders
+            ]);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Questions reordered successfully',
+                'updated_count' => count($updatedOrders)
+            ]);
+            
+        } catch (\Exception $e) {
+            \Log::error('Reorder by drag error', ['message' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            return response()->json([
+                'error' => 'Failed to reorder questions: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function addSection(Request $request, $examId)
+    {
+        $exam = Exam::findOrFail($examId);
+        
+        $teacherId = Auth::id();
+        $hasAccess = $exam->teacher_id == $teacherId || 
+                     $exam->collaborations->contains('teacher_id', $teacherId);
+        
+        if (!$hasAccess) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        // Prevent editing archived exams
+        if ($exam->status === 'archived') {
+            return response()->json(['error' => 'Cannot edit archived exams'], 403);
+        }
+
+        try {
+            // Get the maximum order number for sections in this exam
+            $maxOrder = Section::where('exam_id', $examId)->max('section_order') ?? 0;
+
+            // Create new section
+            $section = Section::create([
+                'exam_id' => $examId,
+                'section_title' => $request->section_title ?? '',
+                'section_directions' => $request->section_directions ?? '',
+                'section_order' => $maxOrder + 1
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'section' => $section,
+                'message' => 'Section created successfully'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Failed to create section: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
     public function updateSection(Request $request, $examId, $sectionId)
     {
         $exam = Exam::findOrFail($examId);
@@ -598,6 +833,11 @@ class ExamController extends Controller
         
         if (!$hasAccess) {
             return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        // Prevent editing archived exams
+        if ($exam->status === 'archived') {
+            return response()->json(['error' => 'Cannot edit archived exams'], 403);
         }
 
         try {
@@ -612,6 +852,186 @@ class ExamController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'error' => 'Failed to update section: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function deleteSection($examId, $sectionId)
+    {
+        $exam = Exam::findOrFail($examId);
+        $section = Section::where('exam_id', $examId)->where('section_id', $sectionId)->firstOrFail();
+        
+        $teacherId = Auth::id();
+        $hasAccess = $exam->teacher_id == $teacherId || 
+                     $exam->collaborations->contains('teacher_id', $teacherId);
+        
+        if (!$hasAccess) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        // Prevent editing archived exams
+        if ($exam->status === 'archived') {
+            return response()->json(['error' => 'Cannot edit archived exams'], 403);
+        }
+
+        DB::beginTransaction();
+        try {
+            // Delete all items in this section and update exam points
+            $items = $section->items;
+            $totalPoints = $items->sum('points_awarded');
+            $totalItems = $items->count();
+
+            // Delete all items
+            $section->items()->delete();
+
+            // Update exam totals
+            $exam->decrement('no_of_items', $totalItems);
+            $exam->decrement('total_points', $totalPoints);
+
+            // Delete the section
+            $section->delete();
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Section and all its questions deleted successfully'
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'error' => 'Failed to delete section: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function duplicateSection($examId, $sectionId)
+    {
+        $exam = Exam::findOrFail($examId);
+        $section = Section::where('exam_id', $examId)->where('section_id', $sectionId)->firstOrFail();
+        
+        $teacherId = Auth::id();
+        $hasAccess = $exam->teacher_id == $teacherId || 
+                     $exam->collaborations->contains('teacher_id', $teacherId);
+        
+        if (!$hasAccess) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        DB::beginTransaction();
+        try {
+            // Get the highest section_order
+            $maxOrder = Section::where('exam_id', $examId)->max('section_order') ?? 0;
+            
+            // Create duplicate section
+            $newSection = Section::create([
+                'exam_id' => $examId,
+                'section_title' => $section->section_title . ' (Copy)',
+                'section_directions' => $section->section_directions,
+                'section_order' => $maxOrder + 1
+            ]);
+
+            // Duplicate all items in the section
+            $items = $section->items;
+            $totalPoints = 0;
+            $totalItems = 0;
+
+            foreach ($items as $item) {
+                ExamItem::create([
+                    'exam_id' => $examId,
+                    'exam_section_id' => $newSection->section_id,
+                    'question' => $item->question,
+                    'item_type' => $item->item_type,
+                    'options' => $item->options,
+                    'answer' => $item->answer,
+                    'expected_answer' => $item->expected_answer,
+                    'enum_type' => $item->enum_type,
+                    'points_awarded' => $item->points_awarded,
+                    'order' => $item->order
+                ]);
+                
+                $totalPoints += $item->points_awarded;
+                $totalItems++;
+            }
+
+            // Update exam totals
+            $exam->increment('no_of_items', $totalItems);
+            $exam->increment('total_points', $totalPoints);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Section duplicated successfully'
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'error' => 'Failed to duplicate section: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function reorderSections(Request $request, $examId)
+    {
+        $exam = Exam::findOrFail($examId);
+        
+        $teacherId = Auth::id();
+        $hasAccess = $exam->teacher_id == $teacherId || 
+                     $exam->collaborations->contains('teacher_id', $teacherId);
+        
+        if (!$hasAccess) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $sectionId = $request->input('section_id');
+        $direction = $request->input('direction'); // 'up' or 'down'
+
+        DB::beginTransaction();
+        try {
+            $section = Section::where('exam_id', $examId)
+                             ->where('section_id', $sectionId)
+                             ->firstOrFail();
+            
+            $currentOrder = $section->section_order;
+
+            if ($direction === 'up') {
+                // Find the section above (with lower order)
+                $adjacentSection = Section::where('exam_id', $examId)
+                                         ->where('section_order', '<', $currentOrder)
+                                         ->orderBy('section_order', 'desc')
+                                         ->first();
+            } else { // down
+                // Find the section below (with higher order)
+                $adjacentSection = Section::where('exam_id', $examId)
+                                         ->where('section_order', '>', $currentOrder)
+                                         ->orderBy('section_order', 'asc')
+                                         ->first();
+            }
+
+            if ($adjacentSection) {
+                // Swap section_order values
+                $tempOrder = $section->section_order;
+                $section->section_order = $adjacentSection->section_order;
+                $adjacentSection->section_order = $tempOrder;
+                
+                $section->save();
+                $adjacentSection->save();
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Section reordered successfully'
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'error' => 'Failed to reorder section: ' . $e->getMessage()
             ], 500);
         }
     }
@@ -890,5 +1310,340 @@ class ExamController extends Controller
                 'error' => 'Failed to delete exam: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Preview exam for download
+     */
+    public function preview($examId)
+    {
+        $exam = Exam::with(['sections.items', 'subject', 'teacher'])
+            ->findOrFail($examId);
+        
+        // Check access
+        $teacherId = Auth::id();
+        $hasAccess = $exam->teacher_id == $teacherId || 
+                     $exam->collaborations->contains('teacher_id', $teacherId);
+        
+        if (!$hasAccess) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized'
+            ], 403);
+        }
+
+        // Generate HTML preview
+        $html = view('instructor.exam.preview-template', compact('exam'))->render();
+        
+        return response()->json([
+            'success' => true,
+            'html' => $html
+        ]);
+    }
+
+    /**
+     * Download exam as PDF or Word
+     */
+    public function download($examId, $format)
+    {
+        $exam = Exam::with(['sections.items', 'subject', 'teacher'])
+            ->findOrFail($examId);
+        
+        // Check access
+        $teacherId = Auth::id();
+        $hasAccess = $exam->teacher_id == $teacherId || 
+                     $exam->collaborations->contains('teacher_id', $teacherId);
+        
+        if (!$hasAccess) {
+            abort(403, 'Unauthorized');
+        }
+
+        $filename = \Str::slug($exam->exam_title) . '_' . date('Y-m-d');
+
+        if ($format === 'pdf') {
+            return $this->downloadPDF($exam, $filename);
+        } elseif ($format === 'word') {
+            return $this->downloadWord($exam, $filename);
+        }
+
+        abort(400, 'Invalid format');
+    }
+
+    /**
+     * Generate PDF download
+     */
+    private function downloadPDF($exam, $filename)
+    {
+        $pdf = \PDF::loadView('instructor.exam.preview-template', compact('exam'));
+        
+        // Set paper size and orientation
+        $pdf->setPaper('letter', 'portrait');
+        
+        return $pdf->download($filename . '.pdf');
+    }
+
+    /**
+     * Generate Word document download
+     */
+    private function downloadWord($exam, $filename)
+    {
+        $phpWord = new \PhpOffice\PhpWord\PhpWord();
+        
+        // Set document properties
+        $properties = $phpWord->getDocInfo();
+        $properties->setCreator($exam->teacher->first_name . ' ' . $exam->teacher->last_name);
+        $properties->setTitle($exam->exam_title);
+        
+        // Add a section to the document with 0.5 inch margins (720 twips)
+        $section = $phpWord->addSection([
+            'marginLeft' => 720,   
+            'marginRight' => 720,
+            'marginTop' => 720,
+            'marginBottom' => 720,
+        ]);
+
+        // Add footer with page numbers
+        $footer = $section->addFooter();
+        $footer->addPreserveText(
+            'Page {PAGE} out of {NUMPAGES}',
+            ['name' => 'Century Gothic', 'size' => 10],
+            ['alignment' => \PhpOffice\PhpWord\SimpleType\Jc::CENTER]
+        );
+
+        // Font styles
+        $fontCentury = ['name' => 'Century Gothic', 'size' => 11];
+        $fontCenturyBold = ['name' => 'Century Gothic', 'size' => 11, 'bold' => true];
+        $fontCenturyItalic = ['name' => 'Century Gothic', 'size' => 11, 'italic' => true];
+
+        // Header Section - Term (Centered)
+        $section->addText(
+            strtoupper($exam->term ?? 'PRELIM'),
+            $fontCentury,
+            ['alignment' => \PhpOffice\PhpWord\SimpleType\Jc::CENTER, 'spaceAfter' => 0]
+        );
+        
+        // Semester and Academic Year (Centered)
+        $semester = 'First Semester';
+        $academicYear = '';
+        if ($exam->schedule_start) {
+            $year = $exam->schedule_start->format('Y');
+            $nextYear = $exam->schedule_start->copy()->addYear()->format('Y');
+            $academicYear = "A.Y. $year-$nextYear";
+        }
+        $section->addText(
+            "$semester, " . ($academicYear ?: 'A.Y.'),
+            $fontCentury,
+            ['alignment' => \PhpOffice\PhpWord\SimpleType\Jc::CENTER, 'spaceAfter' => 0]
+        );
+        
+        // Subject (Centered, Bold)
+        $section->addText(
+            strtoupper($exam->subject->subject_name ?? $exam->exam_title),
+            $fontCenturyBold,
+            ['alignment' => \PhpOffice\PhpWord\SimpleType\Jc::CENTER, 'spaceAfter' => 200]
+        );
+
+        // Student Info - Name and Score
+        $textRun1 = $section->addTextRun(['spaceAfter' => 0]);
+        $textRun1->addText('Name: ______________________________________________________________', $fontCentury);
+        $textRun1->addTab();
+        $textRun1->addText('Score: ________________', $fontCentury);
+        
+        $section->addTextBreak();
+
+        // Student Info - Year/Section and Date
+        $textRun2 = $section->addTextRun(['spaceAfter' => 0]);
+        $textRun2->addText('Year and Section: ___________________________________________________', $fontCentury);
+        $textRun2->addTab();
+        $textRun2->addText('Date: ________________', $fontCentury);
+        
+        $section->addTextBreak();
+
+        // Loop through sections and items
+        $questionNumber = 1;
+        $sectionNumber = 1;
+        
+        foreach ($exam->sections as $sectionModel) {
+            // Section Title (Roman numerals)
+            if ($sectionModel->section_title) {
+                $romanNumeral = ['I', 'II', 'III', 'IV', 'V'][$sectionNumber - 1] ?? $sectionNumber;
+                $section->addText(
+                    "$romanNumeral. " . $sectionModel->section_title,
+                    $fontCentury,
+                    ['spaceAfter' => 0]
+                );
+            }
+
+            // Section Directions
+            if ($sectionModel->section_directions) {
+                $section->addText(
+                    $sectionModel->section_directions,
+                    $fontCentury,
+                    ['spaceAfter' => 200]
+                );
+            } else {
+                $section->addTextBreak();
+            }
+
+            // Loop through items in this section
+            foreach ($sectionModel->items as $item) {
+                $questionText = strip_tags($item->question);
+
+                // Multiple Choice Questions - MCQ Format
+                if ($item->item_type === 'Multiple Choice' && $item->options) {
+                    // Format: _______[Question no.] [Question]
+                    $section->addText(
+                        "_______$questionNumber. $questionText",
+                        $fontCentury,
+                        ['spaceAfter' => 50]
+                    );
+
+                    // Options A, B, C, D, E (indented with tabs)
+                    $options = json_decode($item->options, true);
+                    if (is_array($options)) {
+                        foreach ($options as $key => $option) {
+                            $letter = chr(65 + $key);
+                            $optionRun = $section->addTextRun(['spaceAfter' => 50]);
+                            $optionRun->addTab();
+                            $optionRun->addTab();
+                            $optionRun->addText("$letter. " . strip_tags($option), $fontCentury);
+                        }
+                    }
+
+                // True or False - as MCQ with TRUE/FALSE options
+                } elseif ($item->item_type === 'True or False') {
+                    $section->addText(
+                        "_______$questionNumber. $questionText",
+                        $fontCentury,
+                        ['spaceAfter' => 50]
+                    );
+                    
+                    $optionRunA = $section->addTextRun(['spaceAfter' => 50]);
+                    $optionRunA->addTab();
+                    $optionRunA->addTab();
+                    $optionRunA->addText('A. TRUE', $fontCentury);
+                    
+                    $optionRunB = $section->addTextRun(['spaceAfter' => 50]);
+                    $optionRunB->addTab();
+                    $optionRunB->addTab();
+                    $optionRunB->addText('B. FALSE', $fontCentury);
+
+                // Identification / Short Answer Format
+                } elseif (in_array($item->item_type, ['Identification', 'Short Answer'])) {
+                    $section->addText(
+                        "$questionNumber. $questionText",
+                        $fontCentury,
+                        ['spaceAfter' => 50]
+                    );
+                    $section->addText(
+                        '(Answer in the blank) _______________________________',
+                        $fontCenturyItalic,
+                        ['spaceAfter' => 100]
+                    );
+
+                // Enumeration Questions
+                } elseif ($item->item_type === 'Enumeration') {
+                    $section->addText(
+                        "$questionNumber. $questionText",
+                        $fontCentury,
+                        ['spaceAfter' => 100]
+                    );
+
+                    $enumCount = $item->enum_type ?? 6;
+                    $isOrdered = true; // Default to ordered
+
+                    // Create 2-column table
+                    $table = $section->addTable([
+                        'borderSize' => 6,
+                        'borderColor' => '000000',
+                        'width' => 50 * 100, // 50% width in percentage
+                    ]);
+
+                    $rows = ceil($enumCount / 2);
+                    for ($i = 0; $i < $rows; $i++) {
+                        $table->addRow();
+                        
+                        if ($isOrdered) {
+                            // Ordered - with numbers
+                            $cell1 = $table->addCell(2500);
+                            $cell1->addText(($i * 2) + 1 . '.', $fontCentury);
+                            
+                            $cell2 = $table->addCell(2500);
+                            if (($i * 2) + 2 <= $enumCount) {
+                                $cell2->addText(($i * 2) + 2 . '.', $fontCentury);
+                            }
+                        } else {
+                            // Unordered - blank cells
+                            $table->addCell(2500)->addText('', $fontCentury);
+                            $table->addCell(2500)->addText('', $fontCentury);
+                        }
+                    }
+
+                // Essay - as Identification
+                } elseif ($item->item_type === 'Essay') {
+                    $section->addText(
+                        "$questionNumber. $questionText",
+                        $fontCentury,
+                        ['spaceAfter' => 50]
+                    );
+                    $section->addText(
+                        '(Answer in the blank) _______________________________',
+                        $fontCenturyItalic,
+                        ['spaceAfter' => 100]
+                    );
+
+                // Default format
+                } else {
+                    $section->addText(
+                        "$questionNumber. $questionText",
+                        $fontCentury,
+                        ['spaceAfter' => 100]
+                    );
+                }
+
+                $section->addTextBreak();
+                $questionNumber++;
+            }
+
+            $sectionNumber++;
+        }
+
+        // Add extra spacing before footer section
+        $section->addTextBreak();
+        $section->addTextBreak();
+        $section->addTextBreak();
+
+        // Footer - Prepared By and Checked By
+        $footerRun = $section->addTextRun(['spaceAfter' => 0]);
+        $footerRun->addText('Prepared By:', $fontCentury);
+        for ($i = 0; $i < 9; $i++) {
+            $footerRun->addTab();
+        }
+        $footerRun->addText('Checked by:', $fontCentury);
+
+        $section->addTextBreak();
+
+        // Names
+        $namesRun = $section->addTextRun(['spaceAfter' => 0]);
+        $authorName = strtoupper(($exam->teacher->first_name ?? '') . ' ' . ($exam->teacher->last_name ?? ''));
+        $namesRun->addText($authorName, $fontCenturyBold);
+        for ($i = 0; $i < 9; $i++) {
+            $namesRun->addTab();
+        }
+        $namesRun->addText('JULIETA B. BABAS, DIT', $fontCenturyBold);
+
+        // Titles
+        $titlesRun = $section->addTextRun(['spaceAfter' => 0]);
+        $titlesRun->addText('Faculty', $fontCenturyBold);
+        for ($i = 0; $i < 9; $i++) {
+            $titlesRun->addTab();
+        }
+        $titlesRun->addText('College Dean', $fontCenturyBold);
+
+        // Save to temporary file and send download
+        $tempFile = tempnam(sys_get_temp_dir(), 'exam_');
+        $phpWord->save($tempFile, 'Word2007');
+        
+        return response()->download($tempFile, $filename . '.docx')->deleteFileAfterSend(true);
     }
 }

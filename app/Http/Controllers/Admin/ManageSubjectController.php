@@ -43,7 +43,8 @@ class ManageSubjectController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'subject_code' => 'required|string|max:50|unique:subjects,subject_code',
-            'subject_name' => 'required|string|max:150'
+            'subject_name' => 'required|string|max:150',
+            'semester' => 'required|in:1st Semester,2nd Semester'
         ]);
 
         if ($validator->fails()) {
@@ -56,7 +57,8 @@ class ManageSubjectController extends Controller
         try {
             $subject = Subject::create([
                 'subject_code' => strtoupper($request->subject_code),
-                'subject_name' => $request->subject_name
+                'subject_name' => $request->subject_name,
+                'semester' => $request->semester
             ]);
 
             return response()->json([
@@ -100,7 +102,8 @@ class ManageSubjectController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'subject_code' => 'required|string|max:50|unique:subjects,subject_code,' . $id . ',subject_id',
-            'subject_name' => 'required|string|max:150'
+            'subject_name' => 'required|string|max:150',
+            'semester' => 'required|in:1st Semester,2nd Semester'
         ]);
 
         if ($validator->fails()) {
@@ -115,7 +118,8 @@ class ManageSubjectController extends Controller
             
             $subject->update([
                 'subject_code' => strtoupper($request->subject_code),
-                'subject_name' => $request->subject_name
+                'subject_name' => $request->subject_name,
+                'semester' => $request->semester
             ]);
 
             return response()->json([

@@ -3,8 +3,10 @@
 @section('content')
 <style>
     .subjects-container {
-        min-height: 100vh;
         padding: 30px;
+        height: calc(100vh - 60px);
+        display: flex;
+        flex-direction: column;
     }
 
     .header-section {
@@ -12,6 +14,7 @@
         justify-content: space-between;
         align-items: center;
         margin-bottom: 30px;
+        flex-shrink: 0;
     }
 
     .page-title {
@@ -77,6 +80,32 @@
         border-radius: 15px;
         overflow: hidden;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .table-scroll-wrapper {
+        flex: 1;
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+
+    .table-scroll-wrapper::-webkit-scrollbar {
+        width: 10px;
+    }
+
+    .table-scroll-wrapper::-webkit-scrollbar-track {
+        background: #f1f1f1;
+    }
+
+    .table-scroll-wrapper::-webkit-scrollbar-thumb {
+        background: #c1c1c1;
+        border-radius: 5px;
+    }
+
+    .table-scroll-wrapper::-webkit-scrollbar-thumb:hover {
+        background: #a8a8a8;
     }
 
     .subjects-table {
@@ -86,6 +115,9 @@
 
     .subjects-table thead {
         background-color: #d4e5ea;
+        position: sticky;
+        top: 0;
+        z-index: 10;
     }
 
     .subjects-table thead th {
@@ -251,20 +283,23 @@
 
     <!-- Table Section -->
     <div class="table-container">
-        <table class="subjects-table">
-            <thead>
-                <tr>
-                    <th>SUBJECT CODE</th>
-                    <th>SUBJECT NAME</th>
-                    <th>CLASSES USING</th>
-                    <th>ACTIONS</th>
-                </tr>
-            </thead>
-            <tbody id="subjectsTableBody">
+        <div class="table-scroll-wrapper">
+            <table class="subjects-table">
+                <thead>
+                    <tr>
+                        <th>SUBJECT CODE</th>
+                        <th>SUBJECT NAME</th>
+                        <th>SEMESTER OFFERED</th>
+                        <th>CLASSES USING</th>
+                        <th>ACTIONS</th>
+                    </tr>
+                </thead>
+                <tbody id="subjectsTableBody">
                 @forelse($subjects as $subject)
                 <tr>
                     <td><span class="subject-code">{{ $subject->subject_code }}</span></td>
                     <td class="subject-name">{{ $subject->subject_name }}</td>
+                    <td>{{ $subject->semester }}</td>
                     <td>{{ $subject->classes_count }} class(es)</td>
                     <td>
                         <div class="actions-cell">
@@ -279,11 +314,12 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="4" class="no-data-row">No subjects found</td>
+                    <td colspan="5" class="no-data-row">No subjects found</td>
                 </tr>
                 @endforelse
             </tbody>
         </table>
+        </div>
     </div>
 
     <!-- New Subject Modal -->
@@ -306,7 +342,7 @@
                                        class="form-control form-control-custom" 
                                        name="subject_code" 
                                        id="new_subject_code"
-                                       placeholder="CS101" 
+                                       placeholder="Subject Code" 
                                        required 
                                        style="text-transform: uppercase;">
                                 <div id="new_subject_code_error" class="error-message"></div>
@@ -319,9 +355,23 @@
                                        class="form-control form-control-custom" 
                                        name="subject_name" 
                                        id="new_subject_name"
-                                       placeholder="Computer Programming 1" 
+                                       placeholder="Subject Name" 
                                        required>
                                 <div id="new_subject_name_error" class="error-message"></div>
+                            </div>
+
+                            <!-- Semester -->
+                            <div class="col-md-12 mb-4">
+                                <label class="form-label-custom">Semester Offered</label>
+                                <select class="form-control form-control-custom" 
+                                        name="semester" 
+                                        id="new_semester"
+                                        required>
+                                    <option value="">Select Semester</option>
+                                    <option value="1st Semester">1st Semester</option>
+                                    <option value="2nd Semester">2nd Semester</option>
+                                </select>
+                                <div id="new_semester_error" class="error-message"></div>
                             </div>
                         </div>
 
@@ -376,6 +426,20 @@
                                        required>
                                 <div id="edit_subject_name_error" class="error-message"></div>
                             </div>
+
+                            <!-- Semester -->
+                            <div class="col-md-12 mb-4">
+                                <label class="form-label-custom">Semester Offered</label>
+                                <select class="form-control form-control-custom" 
+                                        name="semester" 
+                                        id="edit_semester"
+                                        required>
+                                    <option value="">Select Semester</option>
+                                    <option value="1st Semester">1st Semester</option>
+                                    <option value="2nd Semester">2nd Semester</option>
+                                </select>
+                                <div id="edit_semester_error" class="error-message"></div>
+                            </div>
                         </div>
 
                         <div class="d-flex justify-content-end mt-4">
@@ -410,6 +474,7 @@
     function clearErrors(prefix) {
         document.getElementById(`${prefix}_subject_code_error`).textContent = '';
         document.getElementById(`${prefix}_subject_name_error`).textContent = '';
+        document.getElementById(`${prefix}_semester_error`).textContent = '';
     }
 
     // Display error messages
@@ -421,6 +486,9 @@
         }
         if (errors.subject_name) {
             document.getElementById(`${prefix}_subject_name_error`).textContent = errors.subject_name[0];
+        }
+        if (errors.semester) {
+            document.getElementById(`${prefix}_semester_error`).textContent = errors.semester[0];
         }
     }
 
@@ -487,6 +555,7 @@
                 document.getElementById('edit_subject_id').value = data.subject.subject_id;
                 document.getElementById('edit_subject_code').value = data.subject.subject_code;
                 document.getElementById('edit_subject_name').value = data.subject.subject_name;
+                document.getElementById('edit_semester').value = data.subject.semester;
                 
                 openEditSubjectModal();
             } else {
