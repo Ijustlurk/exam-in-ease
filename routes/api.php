@@ -2,6 +2,8 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\ExamController;
 
 /*
 |--------------------------------------------------------------------------
@@ -14,6 +16,27 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
+// Public authentication routes
+Route::post('/login', [AuthController::class, 'login']);
+
+// Protected routes - require authentication
+Route::middleware('auth:sanctum')->group(function () {
+    // Authentication
+    Route::post('/logout', [AuthController::class, 'logout']);
+    Route::get('/me', [AuthController::class, 'me']);
+    Route::get('/user', function (Request $request) {
+        return $request->user();
+    });
+
+    // Student classes
+    Route::get('/classes', [ExamController::class, 'getClasses']);
+
+    // Exams
+    Route::get('/exams', [ExamController::class, 'index']);
+    Route::get('/exams/{examId}', [ExamController::class, 'show']);
+
+    // Exam attempts
+    Route::post('/exam-attempts', [ExamController::class, 'startAttempt']);
+    Route::post('/exam-attempts/{attemptId}/submit', [ExamController::class, 'submitAttempt']);
+    Route::get('/exam-attempts/{attemptId}/results', [ExamController::class, 'getResults']);
 });
