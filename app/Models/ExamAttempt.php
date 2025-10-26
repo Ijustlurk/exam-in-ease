@@ -51,4 +51,12 @@ class ExamAttempt extends Model
     {
         return $this->belongsTo(UserStudent::class, 'student_id', 'user_id');
     }
+
+    /**
+     * Relationship: Attempt has many answers
+     */
+    public function answers()
+    {
+        return $this->hasMany(ExamAnswer::class, 'attempt_id', 'attempt_id');
+    }
 }

@@ -6,8 +6,10 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Exam;
 use App\Models\ExamApproval;
+use App\Models\Notification;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 class ManageApprovalController extends Controller
 {
@@ -28,7 +30,7 @@ class ManageApprovalController extends Controller
                     $query->latest('created_at');
                 }
             ])
-            ->whereIn('status', ['draft', 'approved'])
+            ->whereIn('status', ['for approval', 'approved'])
             ->when($search, function($query, $search) {
                 $query->where('exam_title', 'like', "%{$search}%")
                       ->orWhereHas('subject', function($q) use ($search) {
@@ -81,11 +83,66 @@ class ManageApprovalController extends Controller
     }
 
     /**
+     * Get exam details for approval modal (AJAX)
+     */
+    public function getDetails(Exam $exam)
+    {
+        try {
+            // Load relationships
+            $exam->load(['teacher', 'subject', 'examAssignments.class']);
+            
+            // Get assigned classes - using the display_name attribute or building the name
+            $classes = $exam->examAssignments->map(function($assignment) {
+                if ($assignment->class) {
+                    // Use the display_name accessor or build manually
+                    return $assignment->class->display_name ?? 
+                           (($assignment->class->year_level ?? '') . 
+                            ($assignment->class->section ?? '') . ' - ' . 
+                            ($assignment->class->title ?? 'Unknown'));
+                }
+                return null;
+            })->filter()->join(', ');
+            
+            // Get author name
+            $author = 'Unknown Author';
+            if ($exam->teacher) {
+                $author = $exam->teacher->first_name . ' ' . $exam->teacher->last_name;
+            }
+            
+            // Format datetime for input fields
+            $scheduleStart = $exam->schedule_start ? $exam->schedule_start->format('Y-m-d\TH:i') : '';
+            $scheduleEnd = $exam->schedule_end ? $exam->schedule_end->format('Y-m-d\TH:i') : '';
+            
+            return response()->json([
+                'exam_title' => $exam->exam_title,
+                'author' => $author,
+                'exam_desc' => $exam->exam_desc,
+                'subject' => $exam->subject->subject_name ?? null,
+                'classes' => $classes ?: 'Not assigned to any class yet',
+                'duration' => $exam->duration,
+                'schedule_start' => $scheduleStart,
+                'schedule_end' => $scheduleEnd,
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error fetching exam details: ' . $e->getMessage());
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
      * Approve an exam
      * FIXED: Using route model binding with Exam $exam
      */
     public function approve(Request $request, Exam $exam)
     {
+        // Validate the request
+        $validated = $request->validate([
+            'duration' => 'required|integer|min:1',
+            'schedule_start' => 'required|date',
+            'schedule_end' => 'required|date|after:schedule_start',
+            'exam_password' => 'nullable|string|max:255',
+        ]);
+
         // Check if already approved
         $latestApproval = $exam->approvals()->latest('created_at')->first();
         if ($latestApproval && $latestApproval->status === 'approved') {
@@ -104,17 +161,45 @@ class ManageApprovalController extends Controller
                 'notes' => $request->input('notes'),
             ]);
 
-            // Update exam status
+            // Update exam with new configuration
             $exam->update([
                 'status' => 'approved',
                 'approved_by' => Auth::id(),
                 'approved_date' => now(),
+                'duration' => $validated['duration'],
+                'schedule_start' => $validated['schedule_start'],
+                'schedule_end' => $validated['schedule_end'],
+                'exam_password' => $validated['exam_password'],
                 'revision_notes' => null  // Clear any previous revision notes
             ]);
 
+            // Create notification for the exam creator
+            if ($exam->teacher_id) {
+                $scheduleStart = Carbon::parse($validated['schedule_start'])->format('F d, Y \a\t h:i A');
+                $scheduleEnd = Carbon::parse($validated['schedule_end'])->format('F d, Y \a\t h:i A');
+                $passwordText = $validated['exam_password'] ? "The exam password is: {$validated['exam_password']}" : "No exam password is required.";
+                
+                Notification::create([
+                    'user_id' => $exam->teacher_id,
+                    'type' => 'exam_approved',
+                    'title' => 'Exam Approved',
+                    'message' => "Your \"{$exam->exam_title}\" exam has been approved. The exam is scheduled on {$scheduleStart} to {$scheduleEnd}. {$passwordText}",
+                    'data' => json_encode([
+                        'exam_id' => $exam->exam_id,
+                        'exam_title' => $exam->exam_title,
+                        'schedule_start' => $validated['schedule_start'],
+                        'schedule_end' => $validated['schedule_end'],
+                        'exam_password' => $validated['exam_password'],
+                        'url' => route('instructor.exams.show', $exam->exam_id)
+                    ]),
+                    'is_read' => false
+                ]);
+            }
+
             DB::commit();
 
-            return view('programchair.manage-approval.index')
+            return redirect()
+                ->route('programchair.manage-approval.index')
                 ->with('success', 'Exam "' . $exam->exam_title . '" has been approved successfully!');
 
         } catch (\Exception $e) {

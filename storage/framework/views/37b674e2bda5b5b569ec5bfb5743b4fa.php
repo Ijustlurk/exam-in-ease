@@ -1,7 +1,4 @@
-{{-- dashboard.blade.php --}}
-@extends('layouts.Instructor.app')
-
-@section('content')
+<?php $__env->startSection('content'); ?>
 <style>
     body {
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
@@ -699,24 +696,26 @@
 
 <div class="exam-content">
     <div class="container-fluid">
-        @if(session('success'))
+        <?php if(session('success')): ?>
             <div class="alert alert-success alert-dismissible fade show" role="alert">
-                {{ session('success') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        @endif
+                <?php echo e(session('success')); ?>
 
-        @if(session('error'))
-            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                {{ session('error') }}
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
-        @endif
+        <?php endif; ?>
+
+        <?php if(session('error')): ?>
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <?php echo e(session('error')); ?>
+
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        <?php endif; ?>
 
         <!-- Search Bar -->
         <div class="search-bar">
             <i class="bi bi-search" style="color: #9ca3af;"></i>
-            <input type="text" id="examSearchInput" placeholder="Search for exams" value="{{ request('search') }}">
+            <input type="text" id="examSearchInput" placeholder="Search for exams" value="<?php echo e(request('search')); ?>">
         </div>
          <!-- Main Content Row -->
         <div class="row">
@@ -724,16 +723,16 @@
             <div class="col-lg-8 col-md-7 mb-4">
                 <div class="recents-label">Recents</div>
                 
-                @if($exams->count() > 0)
+                <?php if($exams->count() > 0): ?>
                     <div class="row">
-                        @foreach($exams as $exam)
+                        <?php $__currentLoopData = $exams; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $exam): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                         <div class="col-lg-3 col-md-4 col-sm-6 mb-3">
-                            <div class="exam-card-wrapper {{ $loop->first ? 'active' : '' }}" 
-                                 data-exam-id="{{ $exam->exam_id }}" 
-                                 onclick="handleCardClick({{ $exam->exam_id }}, this)"
-                                 ondblclick="openExamEditor({{ $exam->exam_id }})">
+                            <div class="exam-card-wrapper <?php echo e($loop->first ? 'active' : ''); ?>" 
+                                 data-exam-id="<?php echo e($exam->exam_id); ?>" 
+                                 onclick="handleCardClick(<?php echo e($exam->exam_id); ?>, this)"
+                                 ondblclick="openExamEditor(<?php echo e($exam->exam_id); ?>)">
                                 
-                                <div class="menu-dots" onclick="event.stopPropagation(); toggleCardMenu(event, 'menu{{ $exam->exam_id }}')">
+                                <div class="menu-dots" onclick="event.stopPropagation(); toggleCardMenu(event, 'menu<?php echo e($exam->exam_id); ?>')">
                                     <i class="bi bi-three-dots-vertical"></i>
                                 </div>
 
@@ -744,79 +743,82 @@
                                 <div class="exam-footer">
                                     <div class="exam-info">
                                         <div class="exam-title-text">
-                                            {{ $exam->exam_title }}
+                                            <?php echo e($exam->exam_title); ?>
+
                                         </div>
                                         <div class="exam-date-text">
-                                            Last opened {{ $exam->updated_at->diffForHumans() }}
+                                            Last opened <?php echo e($exam->updated_at->diffForHumans()); ?>
+
                                         </div>
                                     </div>
                                 </div>
                                 <!-- Card Menu Dropdown -->
-                                <div class="menu-dropdown" id="menu{{ $exam->exam_id }}" onclick="event.stopPropagation();">
-                                    <a href="{{ route('instructor.exams.create', $exam->exam_id) }}" target="_blank" class="menu-item text-decoration-none" onclick="closeAllMenus()">
+                                <div class="menu-dropdown" id="menu<?php echo e($exam->exam_id); ?>" onclick="event.stopPropagation();">
+                                    <a href="<?php echo e(route('instructor.exams.create', $exam->exam_id)); ?>" target="_blank" class="menu-item text-decoration-none" onclick="closeAllMenus()">
                                         <i class="bi bi-box-arrow-up-right"></i> Open in new tab
                                     </a>
-                                    <div class="menu-item" onclick="downloadExam({{ $exam->exam_id }}); closeAllMenus();">
+                                    <div class="menu-item" onclick="downloadExam(<?php echo e($exam->exam_id); ?>); closeAllMenus();">
                                         <i class="bi bi-download"></i> Download
                                     </div>
-                                    @if($exam->status === 'draft')
-                                    <div class="menu-item" onclick="openAddCollaboratorModal({{ $exam->exam_id }}); closeAllMenus();">
+                                    <?php if($exam->status === 'draft'): ?>
+                                    <div class="menu-item" onclick="openAddCollaboratorModal(<?php echo e($exam->exam_id); ?>); closeAllMenus();">
                                         <i class="bi bi-person-plus"></i> Add Collaborator
                                     </div>
-                                    @endif
-                                    @if($exam->status !== 'for approval' && $exam->status !== 'approved')
-                                    <div class="menu-item" onclick="editExam({{ $exam->exam_id }}); closeAllMenus();">
+                                    <?php endif; ?>
+                                    <?php if($exam->status !== 'for approval' && $exam->status !== 'approved'): ?>
+                                    <div class="menu-item" onclick="editExam(<?php echo e($exam->exam_id); ?>); closeAllMenus();">
                                         <i class="bi bi-pencil"></i> Edit Exam Details
                                     </div>
-                                    @endif
-                                    @if($exam->status === 'draft')
-                                    <form action="{{ route('instructor.exams.duplicate', $exam->exam_id) }}" method="POST" class="m-0" onsubmit="closeAllMenus()">
-                                        @csrf
+                                    <?php endif; ?>
+                                    <?php if($exam->status === 'draft'): ?>
+                                    <form action="<?php echo e(route('instructor.exams.duplicate', $exam->exam_id)); ?>" method="POST" class="m-0" onsubmit="closeAllMenus()">
+                                        <?php echo csrf_field(); ?>
                                         <button type="submit" class="menu-item">
                                             <i class="bi bi-files"></i> Create a Copy
                                         </button>
                                     </form>
-                                    @endif
-                                    @if($exam->status === 'draft')
-                                    <div class="menu-item text-danger" onclick="deleteExam({{ $exam->exam_id }}, '{{ $exam->exam_title }}'); closeAllMenus();" 
+                                    <?php endif; ?>
+                                    <?php if($exam->status === 'draft'): ?>
+                                    <div class="menu-item text-danger" onclick="deleteExam(<?php echo e($exam->exam_id); ?>, '<?php echo e($exam->exam_title); ?>'); closeAllMenus();" 
                                          style="border-top: 1px solid #e5e7eb;">
                                         <i class="bi bi-trash"></i> Delete
                                     </div>
-                                    @endif
+                                    <?php endif; ?>
                                 </div>
                             </div>
                         </div>
-                        @endforeach
+                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                     </div>
-                @else
+                <?php else: ?>
                     <div class="no-exams">
                         <i class="bi bi-folder2-open"></i>
                         <p class="mt-3">No exams found. Create your first exam!</p>
                     </div>
-                @endif
+                <?php endif; ?>
             </div>
 
             <!-- Right Section - Details Panel -->
             <div class="col-lg-4 col-md-5" id="exam-details-panel" >
-                @if($selectedExam)
+                <?php if($selectedExam): ?>
                     <div class="details-panel">
                         <div class="detail-header">
                             <div class="detail-icon">
                                 <i class="bi bi-file-text"></i>
                             </div>
                             <div class="detail-title" id="detail-title">
-                                {{ $selectedExam->exam_title }}
+                                <?php echo e($selectedExam->exam_title); ?>
+
                             </div>
                         </div>
 
                         <div class="collaborator-section">
                             <div class="collaborator-header">
                                 <div class="collaborator-label">Collaborator</div>
-                                @if($selectedExam->status === 'draft')
-                                <button class="add-collab-btn" onclick="openAddCollaboratorModal({{ $selectedExam->exam_id }})">
+                                <?php if($selectedExam->status === 'draft'): ?>
+                                <button class="add-collab-btn" onclick="openAddCollaboratorModal(<?php echo e($selectedExam->exam_id); ?>)">
                                     <i class="bi bi-people"></i> Manage Collaborators
                                 </button>
-                                @endif
+                                <?php endif; ?>
                             </div>
                             <div class="collaborator-display" id="collaborator-display">
                                 <div class="collaborator-avatars" id="collaborator-avatars">
@@ -835,29 +837,33 @@
                         <div class="detail-row">
                             <div class="detail-label">Subject</div>
                             <div class="detail-value" id="detail-subject">
-                                {{ $selectedExam->subject->subject_name ?? 'N/A' }}
+                                <?php echo e($selectedExam->subject->subject_name ?? 'N/A'); ?>
+
                             </div>
                         </div>
 
                         <div class="detail-row">
                             <div class="detail-label">Date Created</div>
                             <div class="detail-value" id="detail-created">
-                                {{ $selectedExam->formatted_created_at }}
+                                <?php echo e($selectedExam->formatted_created_at); ?>
+
                             </div>
                         </div>
 
                         <div class="detail-row">
                             <div class="detail-label">Last Modified</div>
                             <div class="detail-value" id="detail-modified">
-                                {{ $selectedExam->updated_at->format('F j, Y') }}
+                                <?php echo e($selectedExam->updated_at->format('F j, Y')); ?>
+
                             </div>
                         </div>
 
                         <div class="detail-row">
                             <div class="detail-label">Status</div>
                             <div class="detail-value">
-                                <span class="status-badge status-{{ str_replace(' ', '-', $selectedExam->status) }}" id="detail-status">
-                                    {{ ucwords($selectedExam->status) }}
+                                <span class="status-badge status-<?php echo e(str_replace(' ', '-', $selectedExam->status)); ?>" id="detail-status">
+                                    <?php echo e(ucwords($selectedExam->status)); ?>
+
                                 </span>
                             </div>
                         </div>
@@ -865,18 +871,19 @@
                         <div class="detail-row">
                             <div class="detail-label">Revision Notes</div>
                             <div class="detail-value" id="detail-notes">
-                                {{ $selectedExam->revision_notes ?? 'N/A' }}
+                                <?php echo e($selectedExam->revision_notes ?? 'N/A'); ?>
+
                             </div>
                         </div>
                     </div>
-                @else
+                <?php else: ?>
                     <div class="details-panel">
                         <div class="empty-details">
                             <i class="bi bi-file-text"></i>
                             <p class="text-muted">Select an exam to view details</p>
                         </div>
                     </div>
-                @endif
+                <?php endif; ?>
             </div>
         </div>
     </div>
@@ -899,8 +906,8 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body" style="padding: 24px;">
-                <form action="{{ route('instructor.exams.store') }}" method="POST" id="newExamForm">
-                    @csrf
+                <form action="<?php echo e(route('instructor.exams.store')); ?>" method="POST" id="newExamForm">
+                    <?php echo csrf_field(); ?>
                     
                     <div class="mb-3">
                         <input type="text" class="form-control" name="exam_title" placeholder="Exam Title" required style="border-radius: 8px; padding: 12px 16px; border: 1px solid #d1d5db; font-size: 0.95rem;">
@@ -918,9 +925,9 @@
                                 <label style="font-size: 0.875rem; color: #374151; font-weight: 500; margin-bottom: 6px; display: block;">Subject</label>
                                 <select class="form-select" name="subject_id" id="subjectSelect" required onchange="loadClassesBySubject()" style="border-radius: 8px; padding: 10px 14px; border: 1px solid #d1d5db; font-size: 0.875rem;">
                                 <option value="" disabled selected>Select Subject</option>
-                                @foreach($subjects as $subject)
-                                        <option value="{{ $subject->subject_id }}">{{ $subject->subject_name }}</option>
-                                    @endforeach
+                                <?php $__currentLoopData = $subjects; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $subject): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                        <option value="<?php echo e($subject->subject_id); ?>"><?php echo e($subject->subject_name); ?></option>
+                                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                                 </select>
                             </div>
                             <!--Select Class Drop Down-->
@@ -1084,7 +1091,7 @@
             </div>
             <div class="modal-body" style="padding: 24px;">
                 <form id="editExamForm">
-                    @csrf
+                    <?php echo csrf_field(); ?>
                     <input type="hidden" name="_method" value="PUT">
                     <input type="hidden" id="editExamId" name="exam_id">
                     
@@ -1106,9 +1113,9 @@
                             <select class="form-select" name="subject_id" id="editSubjectSelect" required onchange="loadClassesBySubject('edit')" 
                                     style="border-radius: 8px; padding: 10px 14px; border: 1px solid #d1d5db; font-size: 0.875rem;">
                                 <option value="" disabled selected>Select Subject</option>
-                                @foreach($subjects as $subject)
-                                    <option value="{{ $subject->subject_id }}">{{ $subject->subject_name }}</option>
-                                @endforeach
+                                <?php $__currentLoopData = $subjects; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $subject): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                    <option value="<?php echo e($subject->subject_id); ?>"><?php echo e($subject->subject_name); ?></option>
+                                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                             </select>
                         </div>
 
@@ -1183,9 +1190,9 @@
     </div>
 </div>
 
-@endsection
+<?php $__env->stopSection(); ?>
 
-@push('scripts')
+<?php $__env->startPush('scripts'); ?>
 <script>
     let selectedCollaborators = [];
     let currentExamId = null;
@@ -1243,7 +1250,7 @@
         
         classCheckboxList.innerHTML = '<div class="p-3 text-muted">Loading classes...</div>';
         
-        fetch(`{{ route('instructor.classes.get') }}?subject_id=${subjectId}`)
+        fetch(`<?php echo e(route('instructor.classes.get')); ?>?subject_id=${subjectId}`)
             .then(response => response.json())
             .then(classes => {
                 if (classes.length === 0) {
@@ -1417,7 +1424,7 @@
         
         console.log('Loading classes for subject:', subjectId);
         
-        return fetch(`{{ route('instructor.classes.get') }}?subject_id=${subjectId}`)
+        return fetch(`<?php echo e(route('instructor.classes.get')); ?>?subject_id=${subjectId}`)
             .then(response => {
                 console.log('Response status:', response.status);
                 return response.json();
@@ -1618,7 +1625,7 @@
         
         clearTimeout(searchTimeout);
         searchTimeout = setTimeout(() => {
-            fetch(`{{ route('instructor.teachers.search') }}?search=${encodeURIComponent(searchTerm)}&exam_id=${currentExamId}`)
+            fetch(`<?php echo e(route('instructor.teachers.search')); ?>?search=${encodeURIComponent(searchTerm)}&exam_id=${currentExamId}`)
                 .then(response => response.json())
                 .then(teachers => {
                     if (teachers.length > 0) {
@@ -2077,7 +2084,7 @@
         }
         
         function performSearch(searchTerm) {
-            const url = new URL('{{ route('instructor.exams.index') }}', window.location.origin);
+            const url = new URL('<?php echo e(route('instructor.exams.index')); ?>', window.location.origin);
             if (searchTerm) {
                 url.searchParams.set('search', searchTerm);
             }
@@ -2260,3 +2267,4 @@
     });
 </script>
    
+<?php echo $__env->make('layouts.Instructor.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH C:\xampp\htdocs\exam1\resources\views/instructor/dashboard.blade.php ENDPATH**/ ?>

@@ -18,6 +18,7 @@ class ExamItem extends Model
         'exam_section_id',
         'question',
         'item_type',
+        'enum_type',
         'expected_answer',
         'options',
         'answer',

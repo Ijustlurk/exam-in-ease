@@ -6,11 +6,14 @@ use App\Http\Controllers\Controller;
 use App\Models\Exam;
 use App\Models\ExamAssignment;
 use App\Models\ExamAttempt;
+use App\Models\ExamAnswer;
 use App\Models\ExamItem;
 use App\Models\ClassEnrolment;
 use App\Models\UserStudent;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
 class ExamController extends Controller
@@ -22,15 +25,34 @@ class ExamController extends Controller
     {
         $studentId = $request->user()->id;
 
+        Log::debug('API Get Exams Request', [
+            'student_id' => $studentId,
+            'ip' => $request->ip()
+        ]);
+
         // Get classes the student is enrolled in
         $enrolledClassIds = ClassEnrolment::where('student_id', $studentId)
             ->where('status', 'Active')
             ->pluck('class_id');
 
+        Log::debug('API Get Exams - Enrolled Classes', [
+            'student_id' => $studentId,
+            'class_count' => $enrolledClassIds->count(),
+            'class_ids' => $enrolledClassIds->toArray()
+        ]);
+
         // Get exam assignments for those classes
         $examAssignments = ExamAssignment::whereIn('class_id', $enrolledClassIds)
             ->with(['exam.subject', 'class'])
+            ->whereHas('exam', function($query) {
+                $query->whereIn('status', ['approved', 'ongoing']);
+            })
             ->get();
+
+        Log::debug('API Get Exams - Exam Assignments (Approved & Ongoing)', [
+            'student_id' => $studentId,
+            'assignment_count' => $examAssignments->count()
+        ]);
 
         $exams = $examAssignments->map(function ($assignment) use ($studentId) {
             $exam = $assignment->exam;
@@ -71,9 +93,14 @@ class ExamController extends Controller
                 'schedule_start' => $exam->schedule_start,
                 'schedule_end' => $exam->schedule_end,
                 'duration' => $exam->duration, // in minutes
+                'duration_seconds' => $exam->duration * 60, // in seconds
                 'total_points' => $exam->total_points,
                 'no_of_items' => $exam->no_of_items,
                 'status' => $status,
+                // Additional fields for Flutter integration guide compatibility
+                'requiresOtp' => !empty($exam->exam_password),
+                'resultsReleased' => $status === 'completed' && $attempt && $attempt->score !== null,
+                'allowReview' => false, // Set based on your review policy
                 'attempt' => $attempt ? [
                     'attempt_id' => $attempt->attempt_id,
                     'start_time' => $attempt->start_time,
@@ -83,6 +110,11 @@ class ExamController extends Controller
                 ] : null,
             ];
         });
+
+        Log::info('API Get Exams Success', [
+            'student_id' => $studentId,
+            'exam_count' => $exams->count()
+        ]);
 
         return response()->json([
             'exams' => $exams,
@@ -96,6 +128,12 @@ class ExamController extends Controller
     {
         $studentId = $request->user()->id;
 
+        Log::debug('API Get Exam Details Request', [
+            'student_id' => $studentId,
+            'exam_id' => $examId,
+            'ip' => $request->ip()
+        ]);
+
         // Verify student has access to this exam
         $enrolledClassIds = ClassEnrolment::where('student_id', $studentId)
             ->where('status', 'Active')
@@ -104,13 +142,26 @@ class ExamController extends Controller
         $assignment = ExamAssignment::whereIn('class_id', $enrolledClassIds)
             ->where('exam_id', $examId)
             ->with(['exam.subject', 'exam.sections.items'])
+            ->whereHas('exam', function($query) {
+                $query->whereIn('status', ['approved', 'ongoing']);
+            })
             ->first();
 
         if (!$assignment) {
+            Log::warning('API Get Exam Details Failed - Not accessible', [
+                'student_id' => $studentId,
+                'exam_id' => $examId
+            ]);
             return response()->json([
                 'message' => 'Exam not found or not accessible',
             ], 404);
         }
+
+        Log::debug('API Get Exam Details - Access Verified', [
+            'student_id' => $studentId,
+            'exam_id' => $examId,
+            'assignment_id' => $assignment->assignment_id
+        ]);
 
         $exam = $assignment->exam;
 
@@ -122,10 +173,16 @@ class ExamController extends Controller
         // Format exam data
         $sections = $exam->sections->map(function ($section) {
             $items = $section->items->sortBy('order')->map(function ($item) {
+                // For enum questions, append type (ordered/unordered) to item_type
+                $itemType = $item->item_type;
+                if ($itemType === 'enum' && $item->enum_type) {
+                    $itemType = 'enum_' . $item->enum_type; // e.g., 'enum_ordered' or 'enum_unordered'
+                }
+                
                 return [
                     'item_id' => $item->item_id,
                     'question' => $item->question,
-                    'item_type' => $item->item_type,
+                    'item_type' => $itemType,
                     'options' => $item->options, // JSON decoded automatically
                     'points_awarded' => $item->points_awarded,
                     'order' => $item->order,
@@ -142,6 +199,13 @@ class ExamController extends Controller
             ];
         })->sortBy('order')->values();
 
+        Log::info('API Get Exam Details Success', [
+            'student_id' => $studentId,
+            'exam_id' => $examId,
+            'section_count' => $sections->count(),
+            'has_attempt' => $attempt !== null
+        ]);
+
         return response()->json([
             'exam' => [
                 'exam_id' => $exam->exam_id,
@@ -155,8 +219,10 @@ class ExamController extends Controller
                 'schedule_start' => $exam->schedule_start,
                 'schedule_end' => $exam->schedule_end,
                 'duration' => $exam->duration,
+                'duration_seconds' => $exam->duration * 60,
                 'total_points' => $exam->total_points,
                 'no_of_items' => $exam->no_of_items,
+                'requiresOtp' => !empty($exam->exam_password),
                 'sections' => $sections,
             ],
             'attempt' => $attempt ? [
@@ -170,19 +236,177 @@ class ExamController extends Controller
     }
 
     /**
+     * Verify exam password (OTP) before allowing access
+     */
+    public function verifyOtp(Request $request, $examId)
+    {
+        $request->validate([
+            'studentId' => 'required',
+            'otp' => 'required|string',
+        ]);
+
+        $studentId = $request->user()->id;
+
+        Log::debug('API Verify OTP Request', [
+            'student_id' => $studentId,
+            'exam_id' => $examId,
+            'provided_student_id' => $request->studentId,
+            'otp_provided' => !empty($request->otp),
+            'ip' => $request->ip()
+        ]);
+
+        // Verify the provided studentId matches authenticated user
+        if ($request->studentId != $studentId) {
+            Log::warning('API Verify OTP Failed - Student ID mismatch', [
+                'authenticated_student_id' => $studentId,
+                'provided_student_id' => $request->studentId,
+                'exam_id' => $examId
+            ]);
+            
+            return response()->json([
+                'verified' => false,
+                'message' => 'Student ID mismatch',
+            ], 403);
+        }
+
+        // Get the exam
+        $exam = Exam::find($examId);
+
+        if (!$exam || !in_array($exam->status, ['approved', 'ongoing'])) {
+            Log::warning('API Verify OTP Failed - Exam not found or not available', [
+                'student_id' => $studentId,
+                'exam_id' => $examId,
+                'exam_found' => $exam ? 'yes' : 'no',
+                'exam_status' => $exam ? $exam->status : 'N/A'
+            ]);
+            
+            return response()->json([
+                'verified' => false,
+                'message' => 'Exam not found or not available',
+            ], 404);
+        }
+
+        // Check if exam requires password
+        if (empty($exam->exam_password)) {
+            Log::info('API Verify OTP - No password required', [
+                'student_id' => $studentId,
+                'exam_id' => $examId
+            ]);
+            
+            // No password required, auto-verify
+            return response()->json([
+                'verified' => true,
+                'message' => 'No password required for this exam',
+            ]);
+        }
+
+        // Verify password
+        if ($request->otp === $exam->exam_password) {
+            Log::info('API Verify OTP Success - Password verified', [
+                'student_id' => $studentId,
+                'exam_id' => $examId,
+                'exam_title' => $exam->exam_title
+            ]);
+            
+            return response()->json([
+                'verified' => true,
+                'message' => 'Password verified successfully',
+            ]);
+        }
+
+        Log::warning('API Verify OTP Failed - Invalid password', [
+            'student_id' => $studentId,
+            'exam_id' => $examId,
+            'exam_title' => $exam->exam_title
+        ]);
+
+        return response()->json([
+            'verified' => false,
+            'message' => 'Invalid exam password',
+        ], 400);
+    }
+
+    /**
+     * Get all completed exams for a student
+     */
+    public function completedExams(Request $request)
+    {
+        $studentId = $request->user()->id;
+
+        // Get all submitted attempts for this student
+        $attempts = ExamAttempt::where('student_id', $studentId)
+            ->where('status', 'submitted')
+            ->with(['examAssignment.exam.subject'])
+            ->whereHas('examAssignment.exam', function($query) {
+                $query->whereIn('status', ['approved', 'ongoing']);
+            })
+            ->orderBy('end_time', 'desc')
+            ->get();
+
+        $completedExams = $attempts->map(function ($attempt) {
+            $exam = $attempt->examAssignment->exam;
+            
+            return [
+                'attempt_id' => $attempt->attempt_id,
+                'exam_id' => $exam->exam_id,
+                'title' => $exam->exam_title,
+                'subject' => [
+                    'id' => $exam->subject->subject_id ?? null,
+                    'code' => $exam->subject->subject_code ?? null,
+                    'name' => $exam->subject->subject_name ?? null,
+                ],
+                'score' => $attempt->score,
+                'total_points' => $exam->total_points,
+                'percentage' => $exam->total_points > 0
+                    ? round(($attempt->score / $exam->total_points) * 100, 2)
+                    : 0,
+                'completed_at' => $attempt->end_time,
+                'submitted_at' => $attempt->end_time,
+                'resultsReleased' => $attempt->score !== null,
+            ];
+        });
+
+        return response()->json([
+            'completed_exams' => $completedExams,
+        ]);
+    }
+
+    /**
      * Start an exam attempt
      */
     public function startAttempt(Request $request)
     {
-        $request->validate([
-            'exam_assignment_id' => 'required|integer|exists:exam_assignments,assignment_id',
-        ]);
+        try {
+            $request->validate([
+                'exam_assignment_id' => 'required|integer|exists:exam_assignments,assignment_id',
+            ]);
 
-        $studentId = $request->user()->id;
-        $assignmentId = $request->exam_assignment_id;
+            $studentId = $request->user()->id;
+            $assignmentId = $request->exam_assignment_id;
 
-        // Verify student has access
-        $assignment = ExamAssignment::find($assignmentId);
+            Log::debug('API Start Attempt Request', [
+                'student_id' => $studentId,
+                'exam_assignment_id' => $assignmentId,
+                'request_data' => $request->all(),
+            ]);
+
+            // Verify student has access
+            $assignment = ExamAssignment::find($assignmentId);
+            
+            if (!$assignment || !$assignment->exam || !in_array($assignment->exam->status, ['approved', 'ongoing'])) {
+                Log::warning('API Start Attempt Failed - Exam not found or not available', [
+                    'student_id' => $studentId,
+                    'exam_assignment_id' => $assignmentId,
+                    'assignment_found' => $assignment ? 'yes' : 'no',
+                    'exam_found' => ($assignment && $assignment->exam) ? 'yes' : 'no',
+                    'exam_status' => ($assignment && $assignment->exam) ? $assignment->exam->status : 'N/A',
+                ]);
+                
+                return response()->json([
+                    'message' => 'Exam not found or not available',
+                ], 404);
+            }
+        
         $enrolledClassIds = ClassEnrolment::where('student_id', $studentId)
             ->where('status', 'Active')
             ->pluck('class_id');
@@ -204,6 +428,13 @@ class ExamController extends Controller
                     'message' => 'You have already completed this exam',
                 ], 400);
             }
+
+            Log::info('API Start Attempt - Resuming Existing', [
+                'student_id' => $studentId,
+                'attempt_id' => $existingAttempt->attempt_id,
+                'exam_assignment_id' => $assignmentId,
+                'message' => '🔄 RETURNING EXISTING ATTEMPT ID TO MOBILE APP',
+            ]);
 
             // Return existing in-progress attempt
             return response()->json([
@@ -242,6 +473,14 @@ class ExamController extends Controller
             'status' => 'in_progress',
         ]);
 
+        Log::info('API Start Attempt - New Attempt Created', [
+            'student_id' => $studentId,
+            'attempt_id' => $attempt->attempt_id,
+            'exam_assignment_id' => $assignmentId,
+            'exam_id' => $assignment->exam->exam_id,
+            'message' => '✅ UNIQUE ATTEMPT ID GENERATED AND RETURNED TO MOBILE APP',
+        ]);
+
         return response()->json([
             'attempt' => [
                 'attempt_id' => $attempt->attempt_id,
@@ -252,6 +491,26 @@ class ExamController extends Controller
             ],
             'message' => 'Exam attempt started successfully',
         ], 201);
+        
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::error('API Start Attempt Failed - Validation Error', [
+                'student_id' => $request->user()->id ?? 'unknown',
+                'request_data' => $request->all(),
+                'errors' => $e->errors(),
+            ]);
+            throw $e;
+        } catch (\Exception $e) {
+            Log::error('API Start Attempt Failed - Exception', [
+                'student_id' => $request->user()->id ?? 'unknown',
+                'request_data' => $request->all(),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            return response()->json([
+                'message' => 'An error occurred while starting the exam attempt',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     /**
@@ -263,6 +522,7 @@ class ExamController extends Controller
             'answers' => 'required|array',
             'answers.*.item_id' => 'required|integer|exists:exam_items,item_id',
             'answers.*.answer' => 'required',
+            'duration_taken' => 'required|integer|min:0', // Duration in seconds from mobile app
         ]);
 
         $studentId = $request->user()->id;
@@ -290,7 +550,39 @@ class ExamController extends Controller
             ], 400);
         }
 
-        // Calculate score
+        // Get the exam to check duration
+        $exam = $attempt->examAssignment->exam;
+        
+        // Get duration from mobile app (in seconds)
+        $durationTakenSeconds = $request->duration_taken;
+        $durationTakenMinutes = round($durationTakenSeconds / 60, 2);
+        $allowedMinutes = $exam->duration;
+        $allowedSeconds = $allowedMinutes * 60;
+        
+        // Check if time limit was exceeded (but still accept the submission)
+        $timeExceeded = $durationTakenSeconds > $allowedSeconds;
+        
+        if ($timeExceeded) {
+            Log::warning('API Submit Attempt - Time limit exceeded (auto-submitted)', [
+                'attempt_id' => $attemptId,
+                'student_id' => $studentId,
+                'duration_taken_seconds' => $durationTakenSeconds,
+                'duration_taken_minutes' => $durationTakenMinutes,
+                'allowed_minutes' => $allowedMinutes,
+                'allowed_seconds' => $allowedSeconds,
+                'exceeded_by_seconds' => $durationTakenSeconds - $allowedSeconds
+            ]);
+        } else {
+            Log::debug('API Submit Attempt Request', [
+                'attempt_id' => $attemptId,
+                'student_id' => $studentId,
+                'duration_taken_seconds' => $durationTakenSeconds,
+                'duration_taken_minutes' => $durationTakenMinutes,
+                'allowed_minutes' => $allowedMinutes
+            ]);
+        }
+
+        // Calculate score and store answers
         $totalScore = 0;
         $answers = $request->answers;
 
@@ -306,40 +598,124 @@ class ExamController extends Controller
 
             // Auto-grade based on item type
             $isCorrect = false;
+            $pointsEarned = 0;
 
             switch ($item->item_type) {
                 case 'mcq':
+                    // Mobile app sends option KEY (A, B, C, D)
+                    // Database stores correct answer in 'answer' field as array of indices: [0], [1,2], etc.
+                    
+                    $studentIndex = null;
+                    
+                    // Convert letter key to index (A=0, B=1, C=2, D=3)
+                    if (is_string($studentAnswer) && preg_match('/^[A-Z]$/i', $studentAnswer)) {
+                        $studentIndex = ord(strtoupper($studentAnswer)) - ord('A');
+                    } 
+                    // Handle if student sends numeric index directly
+                    elseif (is_numeric($studentAnswer)) {
+                        $studentIndex = (int)$studentAnswer;
+                    }
+                    
+                    // Get correct answer indices from 'answer' field (not expected_answer)
+                    $correctIndices = $item->answer ?? [];
+                    
+                    // Ensure correctIndices is an array
+                    if (!is_array($correctIndices)) {
+                        $correctIndices = json_decode($correctIndices, true) ?? [];
+                    }
+                    
+                    // Check if student's answer index is in the correct answers array
+                    if ($studentIndex !== null && is_array($correctIndices)) {
+                        $isCorrect = in_array($studentIndex, $correctIndices);
+                    } else {
+                        $isCorrect = false;
+                    }
+                    break;
+
                 case 'torf':
-                    // For MCQ and True/False, exact match
-                    $isCorrect = $studentAnswer === $correctAnswer;
+                    // Mobile app sends "True" or "False"
+                    // Database stores answer as: {"correct":"true"} or {"correct":"false"}
+                    
+                    $correctAnswerData = $item->answer ?? [];
+                    
+                    // Ensure it's an array
+                    if (!is_array($correctAnswerData)) {
+                        $correctAnswerData = json_decode($correctAnswerData, true) ?? [];
+                    }
+                    
+                    // Get the correct value
+                    $correctValue = $correctAnswerData['correct'] ?? null;
+                    
+                    // Case-insensitive comparison
+                    $isCorrect = $correctValue && strtolower(trim($studentAnswer)) === strtolower(trim($correctValue));
                     break;
 
                 case 'enum':
-                case 'iden':
-                    // For enumeration and identification, case-insensitive comparison
-                    if (is_array($correctAnswer) && is_array($studentAnswer)) {
-                        $isCorrect = count(array_intersect(
-                            array_map('strtolower', $studentAnswer),
-                            array_map('strtolower', $correctAnswer)
-                        )) === count($correctAnswer);
-                    } else {
-                        $isCorrect = strtolower(trim($studentAnswer)) === strtolower(trim($correctAnswer));
+                    // Mobile app might send comma-separated string: "Red, Blue, Green"
+                    // Convert to array if it's a string
+                    if (is_string($studentAnswer) && strpos($studentAnswer, ',') !== false) {
+                        $studentAnswer = array_map('trim', explode(',', $studentAnswer));
                     }
+                    
+                    // Ensure studentAnswer is an array
+                    if (!is_array($studentAnswer)) {
+                        $studentAnswer = [$studentAnswer];
+                    }
+                    
+                    // Get correct answer from database
+                    $correctAnswerData = $item->answer ?? [];
+                    if (!is_array($correctAnswerData)) {
+                        $correctAnswerData = json_decode($correctAnswerData, true) ?? [];
+                    }
+                    
+                    // Check if ordered or unordered enumeration
+                    $enumType = $item->enum_type ?? 'ordered';
+                    
+                    if ($enumType === 'ordered') {
+                        // ORDERED: Must match in exact order (case-insensitive)
+                        $isCorrect = count($studentAnswer) === count($correctAnswerData);
+                        if ($isCorrect) {
+                            foreach ($studentAnswer as $index => $answer) {
+                                if (!isset($correctAnswerData[$index]) || 
+                                    strtolower(trim($answer)) !== strtolower(trim($correctAnswerData[$index]))) {
+                                    $isCorrect = false;
+                                    break;
+                                }
+                            }
+                        }
+                    } else {
+                        // UNORDERED: Order doesn't matter (case-insensitive)
+                        $isCorrect = count(array_intersect(
+                            array_map('strtolower', array_map('trim', $studentAnswer)),
+                            array_map('strtolower', array_map('trim', $correctAnswerData))
+                        )) === count($correctAnswerData);
+                    }
+                    break;
+
+                case 'iden':
+                    // For identification, case-insensitive comparison with trimming
+                    $isCorrect = strtolower(trim($studentAnswer)) === strtolower(trim($correctAnswer));
                     break;
 
                 case 'essay':
                     // Essays need manual grading - don't auto-grade
-                    $isCorrect = false;
+                    $isCorrect = null; // null indicates needs manual grading
                     break;
             }
 
             if ($isCorrect) {
-                $totalScore += $item->points_awarded;
+                $pointsEarned = $item->points_awarded;
+                $totalScore += $pointsEarned;
             }
 
-            // Update item with student answer
-            $item->answer = $studentAnswer;
-            $item->save();
+            // Store student answer in exam_answers table
+            ExamAnswer::create([
+                'attempt_id' => $attemptId,
+                'item_id' => $item->item_id,
+                'answer_text' => is_array($studentAnswer) ? json_encode($studentAnswer) : $studentAnswer,
+                'is_correct' => $isCorrect,
+                'points_earned' => $pointsEarned,
+            ]);
         }
 
         // Update attempt
@@ -349,8 +725,21 @@ class ExamController extends Controller
             'score' => $totalScore,
         ]);
 
+        Log::info('API Submit Attempt Success', [
+            'attempt_id' => $attemptId,
+            'student_id' => $studentId,
+            'score' => $totalScore,
+            'total_points' => $exam->total_points,
+            'duration_taken_seconds' => $durationTakenSeconds,
+            'duration_taken_minutes' => $durationTakenMinutes,
+            'allowed_minutes' => $allowedMinutes,
+            'time_exceeded' => $timeExceeded
+        ]);
+
         return response()->json([
-            'message' => 'Exam submitted successfully',
+            'message' => $timeExceeded 
+                ? 'Exam auto-submitted due to time limit' 
+                : 'Exam submitted successfully',
             'attempt' => [
                 'attempt_id' => $attempt->attempt_id,
                 'start_time' => $attempt->start_time,
@@ -368,7 +757,7 @@ class ExamController extends Controller
     {
         $studentId = $request->user()->id;
 
-        $attempt = ExamAttempt::with(['examAssignment.exam.subject'])
+        $attempt = ExamAttempt::with(['examAssignment.exam.subject', 'answers.examItem'])
             ->find($attemptId);
 
         if (!$attempt) {
@@ -393,6 +782,21 @@ class ExamController extends Controller
 
         $exam = $attempt->examAssignment->exam;
 
+        // Format answers with question details
+        $answersData = $attempt->answers->map(function ($answer) {
+            $item = $answer->examItem;
+            return [
+                'item_id' => $item->item_id,
+                'question' => $item->item_content,
+                'item_type' => $item->item_type,
+                'student_answer' => json_decode($answer->answer_text) ?? $answer->answer_text,
+                'correct_answer' => $item->expected_answer,
+                'is_correct' => $answer->is_correct,
+                'points_awarded' => $item->points_awarded,
+                'points_earned' => $answer->points_earned,
+            ];
+        });
+
         return response()->json([
             'attempt' => [
                 'attempt_id' => $attempt->attempt_id,
@@ -413,6 +817,7 @@ class ExamController extends Controller
                     'name' => $exam->subject->subject_name ?? null,
                 ],
             ],
+            'answers' => $answersData,
         ]);
     }
 

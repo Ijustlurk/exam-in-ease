@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\UserStudent;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -17,6 +18,13 @@ class AuthController extends Controller
      */
     public function login(Request $request)
     {
+        Log::debug('API Login Request', [
+            'login' => $request->login,
+            'device_name' => $request->device_name,
+            'ip' => $request->ip(),
+            'user_agent' => $request->userAgent()
+        ]);
+
         $request->validate([
             'login' => 'required|string', // Can be email or ID number
             'password' => 'required|string',
@@ -29,6 +37,9 @@ class AuthController extends Controller
             ->first();
 
         if (!$student) {
+            Log::warning('API Login Failed - Student not found', [
+                'login' => $request->login
+            ]);
             throw ValidationException::withMessages([
                 'login' => ['The provided credentials are incorrect.'],
             ]);
@@ -36,6 +47,10 @@ class AuthController extends Controller
 
         // Verify password
         if (!Hash::check($request->password, $student->password_hash)) {
+            Log::warning('API Login Failed - Invalid password', [
+                'student_id' => $student->user_id,
+                'login' => $request->login
+            ]);
             throw ValidationException::withMessages([
                 'login' => ['The provided credentials are incorrect.'],
             ]);
@@ -43,6 +58,10 @@ class AuthController extends Controller
 
         // Check if student is enrolled
         if ($student->status !== 'Enrolled') {
+            Log::warning('API Login Failed - Student not enrolled', [
+                'student_id' => $student->user_id,
+                'status' => $student->status
+            ]);
             return response()->json([
                 'message' => 'Your account is not active. Please contact administration.',
             ], 403);
@@ -64,6 +83,13 @@ class AuthController extends Controller
         $deviceName = $request->device_name ?? 'mobile-app';
         $token = $user->createToken($deviceName)->plainTextToken;
 
+        Log::info('API Login Successful', [
+            'student_id' => $student->user_id,
+            'id_number' => $student->id_number,
+            'email' => $student->email_address,
+            'device_name' => $deviceName
+        ]);
+
         return response()->json([
             'token' => $token,
             'user' => [
@@ -84,6 +110,10 @@ class AuthController extends Controller
      */
     public function logout(Request $request)
     {
+        Log::info('API Logout Request', [
+            'user_id' => $request->user()->id
+        ]);
+
         $request->user()->currentAccessToken()->delete();
 
         return response()->json([
@@ -96,14 +126,25 @@ class AuthController extends Controller
      */
     public function me(Request $request)
     {
+        Log::debug('API Get Current User Request', [
+            'user_id' => $request->user()->id
+        ]);
+
         $user = $request->user();
         $student = UserStudent::find($user->id);
 
         if (!$student) {
+            Log::warning('API Get Current User Failed - Student not found', [
+                'user_id' => $user->id
+            ]);
             return response()->json([
                 'message' => 'Student profile not found',
             ], 404);
         }
+
+        Log::debug('API Get Current User Success', [
+            'student_id' => $student->user_id
+        ]);
 
         return response()->json([
             'user' => [

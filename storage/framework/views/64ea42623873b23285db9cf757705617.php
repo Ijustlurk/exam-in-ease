@@ -1,4 +1,4 @@
-{{-- resources/views/instructor/exam/question-modal.blade.php --}}
+
 
 <!-- MCQ Modal -->
 <div class="modal fade" id="mcqModal" tabindex="-1">
@@ -689,7 +689,7 @@ function saveQuestion(data) {
         method: method,
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'
         },
         body: JSON.stringify(data)
     })
@@ -1090,4 +1090,4 @@ function switchQuestionType(newType, currentType) {
 .enum-drag-handle:active {
     cursor: grabbing;
 }
-</style>
+</style><?php /**PATH C:\xampp\htdocs\exam1\resources\views/instructor/exam/question-modal.blade.php ENDPATH**/ ?>

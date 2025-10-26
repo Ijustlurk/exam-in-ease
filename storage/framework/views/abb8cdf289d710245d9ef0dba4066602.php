@@ -1,7 +1,7 @@
-{{-- resources/views/instructor/exams/create.blade.php --}}
-@extends('layouts.Instructor.app')
 
-@section('content')
+
+
+<?php $__env->startSection('content'); ?>
 <style>
     body {
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
@@ -776,12 +776,13 @@
 </style>
 
 <div class="exam-builder-container">
-    @if(session('success'))
+    <?php if(session('success')): ?>
         <div class="alert alert-success alert-dismissible fade show container" style="max-width: 1400px; margin: 0 auto 20px;" role="alert">
-            {{ session('success') }}
+            <?php echo e(session('success')); ?>
+
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
-    @endif
+    <?php endif; ?>
 
     <!-- Header -->
     <div class="builder-header">
@@ -792,24 +793,24 @@
             <div class="exam-title-section">
                 <input type="text" 
                        class="exam-title-input" 
-                       value="{{ $exam->exam_title }}" 
+                       value="<?php echo e($exam->exam_title); ?>" 
                        id="examTitle"
-                       @if($exam->status === 'for approval' || $exam->status === 'approved' || $exam->status === 'archived')
+                       <?php if($exam->status === 'for approval' || $exam->status === 'approved' || $exam->status === 'archived'): ?>
                        readonly
                        style="cursor: not-allowed;"
-                       @else
+                       <?php else: ?>
                        onchange="updateExamTitle()"
-                       @endif>
-                <span class="exam-subtitle" id="examSubtitle">{{ $exam->subject->subject_name ?? 'Edit Exam.' }}</span>
+                       <?php endif; ?>>
+                <span class="exam-subtitle" id="examSubtitle"><?php echo e($exam->subject->subject_name ?? 'Edit Exam.'); ?></span>
             </div>
-            @if($exam->status !== 'for approval' && $exam->status !== 'approved' && $exam->status !== 'archived')
+            <?php if($exam->status !== 'for approval' && $exam->status !== 'approved' && $exam->status !== 'archived'): ?>
             <button class="header-icon-btn" title="Edit Title">
                 <i class="bi bi-pencil"></i>
             </button>
-            @endif
+            <?php endif; ?>
         </div>
         <div class="header-actions">
-            <a href="{{ route('instructor.exams.index') }}" class="back-btn">
+            <a href="<?php echo e(route('instructor.exams.index')); ?>" class="back-btn">
                 <i class="bi bi-arrow-left"></i>
                 <span>Back</span>
             </a>
@@ -826,7 +827,7 @@
         </div>
     </div>
     
-    @if($exam->status === 'for approval')
+    <?php if($exam->status === 'for approval'): ?>
     <div class="container-fluid" style="max-width: 1400px; margin-bottom: 20px;">
         <div class="alert alert-warning d-flex align-items-center" role="alert">
             <i class="bi bi-lock-fill me-2"></i>
@@ -835,7 +836,7 @@
             </div>
         </div>
     </div>
-    @elseif($exam->status === 'approved')
+    <?php elseif($exam->status === 'approved'): ?>
     <div class="container-fluid" style="max-width: 1400px; margin-bottom: 20px;">
         <div class="alert alert-info d-flex align-items-center" role="alert">
             <i class="bi bi-check-circle-fill me-2"></i>
@@ -844,7 +845,7 @@
             </div>
         </div>
     </div>
-    @elseif($exam->status === 'archived')
+    <?php elseif($exam->status === 'archived'): ?>
     <div class="container-fluid" style="max-width: 1400px; margin-bottom: 20px;">
         <div class="alert alert-secondary d-flex align-items-center" role="alert">
             <i class="bi bi-archive-fill me-2"></i>
@@ -853,282 +854,285 @@
             </div>
         </div>
     </div>
-    @endif
+    <?php endif; ?>
     
     <div class="container-fluid" style="max-width: 1400px;">
-        @forelse($exam->sections as $section)
+        <?php $__empty_1 = true; $__currentLoopData = $exam->sections; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $section): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
         <!-- Section Container -->
-        <div class="exam-section" data-section-id="{{ $section->section_id }}">
+        <div class="exam-section" data-section-id="<?php echo e($section->section_id); ?>">
         <!-- Section Wrapper -->
         <div class="section-wrapper">
             <!-- Section Card -->
             <div class="section-card" 
-                 data-section-id="{{ $section->section_id }}"
-                 onclick="setActiveSection(this, {{ $section->section_id }})">
+                 data-section-id="<?php echo e($section->section_id); ?>"
+                 onclick="setActiveSection(this, <?php echo e($section->section_id); ?>)">
                 <div class="section-header">
-                    <h3 class="section-title">Section {{ $loop->iteration }} of {{ $exam->sections->count() }}</h3>
-                    @if($exam->status !== 'for approval' && $exam->status !== 'approved' && $exam->status !== 'archived')
-                    <button class="section-delete-btn" onclick="event.stopPropagation(); deleteSection({{ $section->section_id }})">
+                    <h3 class="section-title">Section <?php echo e($loop->iteration); ?> of <?php echo e($exam->sections->count()); ?></h3>
+                    <?php if($exam->status !== 'for approval' && $exam->status !== 'approved' && $exam->status !== 'archived'): ?>
+                    <button class="section-delete-btn" onclick="event.stopPropagation(); deleteSection(<?php echo e($section->section_id); ?>)">
                         <i class="bi bi-trash"></i>
                     </button>
-                    @endif
+                    <?php endif; ?>
                 </div>
                 <div class="section-body">
                     <input type="text" 
                            class="section-title-input" 
                            placeholder="(Write your exam title here or exam section title: eg. Part I)"
-                           value="{{ $section->section_title ?? '' }}"
-                           @if($exam->status === 'for approval' || $exam->status === 'approved' || $exam->status === 'archived')
+                           value="<?php echo e($section->section_title ?? ''); ?>"
+                           <?php if($exam->status === 'for approval' || $exam->status === 'approved' || $exam->status === 'archived'): ?>
                            readonly
                            style="cursor: not-allowed; color: #6b7280;"
-                           @else
+                           <?php else: ?>
                            onclick="event.stopPropagation();"
-                           onchange="updateSection({{ $section->section_id }}, 'section_title', this.value)"
-                           @endif>
+                           onchange="updateSection(<?php echo e($section->section_id); ?>, 'section_title', this.value)"
+                           <?php endif; ?>>
                     <textarea class="section-directions" 
                               placeholder="You can put your directions here."
-                              @if($exam->status === 'for approval' || $exam->status === 'approved' || $exam->status === 'archived')
+                              <?php if($exam->status === 'for approval' || $exam->status === 'approved' || $exam->status === 'archived'): ?>
                               readonly
                               style="cursor: not-allowed; color: #6b7280;"
-                              @else
+                              <?php else: ?>
                               onclick="event.stopPropagation();"
-                              onchange="updateSection({{ $section->section_id }}, 'section_directions', this.value)"
-                              @endif>{{ $section->section_directions ?? '' }}</textarea>
+                              onchange="updateSection(<?php echo e($section->section_id); ?>, 'section_directions', this.value)"
+                              <?php endif; ?>><?php echo e($section->section_directions ?? ''); ?></textarea>
                 </div>
             </div>
 
             <!-- Floating Action Pane for Section -->
-            @if($exam->status !== 'for approval' && $exam->status !== 'approved' && $exam->status !== 'archived')
+            <?php if($exam->status !== 'for approval' && $exam->status !== 'approved' && $exam->status !== 'archived'): ?>
             <div class="floating-action-pane">
-                <button class="floating-btn" title="Add Question" onclick="event.stopPropagation(); toggleFloatingSectionDropdown(this, {{ $section->section_id }})">
+                <button class="floating-btn" title="Add Question" onclick="event.stopPropagation(); toggleFloatingSectionDropdown(this, <?php echo e($section->section_id); ?>)">
                     <i class="bi bi-plus-lg"></i>
                 </button>
-                <button class="floating-btn" title="Duplicate Section" onclick="event.stopPropagation(); duplicateSection({{ $exam->exam_id }}, {{ $section->section_id }})">
+                <button class="floating-btn" title="Duplicate Section" onclick="event.stopPropagation(); duplicateSection(<?php echo e($exam->exam_id); ?>, <?php echo e($section->section_id); ?>)">
                     <i class="bi bi-files"></i>
                 </button>
                 <button class="floating-btn" 
                         title="Move Up" 
-                        onclick="event.stopPropagation(); moveSection({{ $section->section_id }}, 'up')"
-                        @if($exam->sections->count() <= 1 || $loop->first)
+                        onclick="event.stopPropagation(); moveSection(<?php echo e($section->section_id); ?>, 'up')"
+                        <?php if($exam->sections->count() <= 1 || $loop->first): ?>
                         disabled
                         style="opacity: 0.4; cursor: not-allowed;"
-                        @endif>
+                        <?php endif; ?>>
                     <i class="bi bi-arrow-up"></i>
                 </button>
                 <button class="floating-btn" 
                         title="Move Down" 
-                        onclick="event.stopPropagation(); moveSection({{ $section->section_id }}, 'down')"
-                        @if($exam->sections->count() <= 1 || $loop->last)
+                        onclick="event.stopPropagation(); moveSection(<?php echo e($section->section_id); ?>, 'down')"
+                        <?php if($exam->sections->count() <= 1 || $loop->last): ?>
                         disabled
                         style="opacity: 0.4; cursor: not-allowed;"
-                        @endif>
+                        <?php endif; ?>>
                     <i class="bi bi-arrow-down"></i>
                 </button>
             </div>
             <!-- Floating dropdown for section add button -->
-            <div class="floating-question-dropdown" id="floatingSectionDropdown_{{ $section->section_id }}" style="display: none;">
-                <button class="dropdown-item" onclick="event.stopPropagation(); openQuestionModal('mcq', {{ $section->section_id }}, 'start')">
+            <div class="floating-question-dropdown" id="floatingSectionDropdown_<?php echo e($section->section_id); ?>" style="display: none;">
+                <button class="dropdown-item" onclick="event.stopPropagation(); openQuestionModal('mcq', <?php echo e($section->section_id); ?>, 'start')">
                     <i class="bi bi-ui-radios"></i>
                     <span>New MCQ</span>
                 </button>
-                <button class="dropdown-item" onclick="event.stopPropagation(); openQuestionModal('torf', {{ $section->section_id }}, 'start')">
+                <button class="dropdown-item" onclick="event.stopPropagation(); openQuestionModal('torf', <?php echo e($section->section_id); ?>, 'start')">
                     <i class="bi bi-toggle-on"></i>
                     <span>New True or False</span>
                 </button>
-                <button class="dropdown-item" onclick="event.stopPropagation(); openQuestionModal('iden', {{ $section->section_id }}, 'start')">
+                <button class="dropdown-item" onclick="event.stopPropagation(); openQuestionModal('iden', <?php echo e($section->section_id); ?>, 'start')">
                     <i class="bi bi-pencil-square"></i>
                     <span>New Identification</span>
                 </button>
-                <button class="dropdown-item" onclick="event.stopPropagation(); openQuestionModal('enum', {{ $section->section_id }}, 'start')">
+                <button class="dropdown-item" onclick="event.stopPropagation(); openQuestionModal('enum', <?php echo e($section->section_id); ?>, 'start')">
                     <i class="bi bi-list-ol"></i>
                     <span>New Enumeration</span>
                 </button>
-                <button class="dropdown-item" onclick="event.stopPropagation(); openQuestionModal('essay', {{ $section->section_id }}, 'start')">
+                <button class="dropdown-item" onclick="event.stopPropagation(); openQuestionModal('essay', <?php echo e($section->section_id); ?>, 'start')">
                     <i class="bi bi-textarea-t"></i>
                     <span>New Essay</span>
                 </button>
             </div>
-            @endif
+            <?php endif; ?>
         </div>
 
         <!-- Question Cards -->
-        @forelse($section->items->sortBy('order') as $item)
-        <div class="question-wrapper" data-item-id="{{ $item->item_id }}">
-            @if($exam->status !== 'for approval' && $exam->status !== 'approved' && $exam->status !== 'archived')
+        <?php $__empty_2 = true; $__currentLoopData = $section->items->sortBy('order'); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $item): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_2 = false; ?>
+        <div class="question-wrapper" data-item-id="<?php echo e($item->item_id); ?>">
+            <?php if($exam->status !== 'for approval' && $exam->status !== 'approved' && $exam->status !== 'archived'): ?>
             <div class="drag-handle" draggable="true" title="Drag to reorder">
                 <i class="bi bi-grip-vertical"></i>
             </div>
-            @endif
+            <?php endif; ?>
             <div class="question-card" 
-                 data-item-id="{{ $item->item_id }}"
+                 data-item-id="<?php echo e($item->item_id); ?>"
                  onclick="setActiveQuestion(this)">
                 <div class="question-header">
-                    <h4 class="question-header-title">Exam Item {{ $loop->iteration }}</h4>
-                    @if($exam->status !== 'for approval' && $exam->status !== 'approved' && $exam->status !== 'archived')
+                    <h4 class="question-header-title">Exam Item <?php echo e($loop->iteration); ?></h4>
+                    <?php if($exam->status !== 'for approval' && $exam->status !== 'approved' && $exam->status !== 'archived'): ?>
                     <div class="question-header-actions">
-                        <button class="question-header-btn" onclick="event.stopPropagation(); editQuestion({{ $item->item_id }})" title="Edit">
+                        <button class="question-header-btn" onclick="event.stopPropagation(); editQuestion(<?php echo e($item->item_id); ?>)" title="Edit">
                             <i class="bi bi-pencil"></i>
                         </button>
-                        @if($item->item_type !== 'enum' || ($item->enum_type ?? 'ordered') === 'ordered')
-                        <button class="question-header-btn" onclick="event.stopPropagation(); duplicateQuestion({{ $exam->exam_id }}, {{ $item->item_id }})" title="Duplicate">
+                        <?php if($item->item_type !== 'enum' || ($item->enum_type ?? 'ordered') === 'ordered'): ?>
+                        <button class="question-header-btn" onclick="event.stopPropagation(); duplicateQuestion(<?php echo e($exam->exam_id); ?>, <?php echo e($item->item_id); ?>)" title="Duplicate">
                             <i class="bi bi-files"></i>
                         </button>
-                        @endif
-                        <button class="question-header-btn" onclick="event.stopPropagation(); deleteQuestion({{ $exam->exam_id }}, {{ $item->item_id }})" title="Delete">
+                        <?php endif; ?>
+                        <button class="question-header-btn" onclick="event.stopPropagation(); deleteQuestion(<?php echo e($exam->exam_id); ?>, <?php echo e($item->item_id); ?>)" title="Delete">
                             <i class="bi bi-trash"></i>
                         </button>
                     </div>
-                    @endif
+                    <?php endif; ?>
                 </div>
                 <div class="question-body">
-                    @php
+                    <?php
                         $displayType = strtoupper($item->item_type);
                         if ($item->item_type === 'enum') {
                             $enumType = $item->enum_type ?? 'ordered';
                             $displayType = $enumType === 'ordered' ? 'ORDERED ENUMERATION' : 'UNORDERED ENUMERATION';
                         }
-                    @endphp
-                    <div class="question-type-badge">{{ $displayType }}</div>
+                    ?>
+                    <div class="question-type-badge"><?php echo e($displayType); ?></div>
                     
-                    <div class="question-text">{{ $item->question }}</div>
+                    <div class="question-text"><?php echo e($item->question); ?></div>
 
-                    @if($item->item_type === 'mcq')
-                        @php 
+                    <?php if($item->item_type === 'mcq'): ?>
+                        <?php 
                             $options = json_decode($item->options, true); 
                             $answers = json_decode($item->answer, true);
-                        @endphp
+                        ?>
                         <ul class="options-list">
-                            @foreach($options as $key => $option)
+                            <?php $__currentLoopData = $options; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $key => $option): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                             <li class="option-item">
-                                <span class="option-text">{{ chr(65 + $key) }}. {{ $option }}</span>
-                                @if(in_array($key, $answers ?? []))
+                                <span class="option-text"><?php echo e(chr(65 + $key)); ?>. <?php echo e($option); ?></span>
+                                <?php if(in_array($key, $answers ?? [])): ?>
                                 <span class="correct-badge">✓ Correct</span>
-                                @endif
+                                <?php endif; ?>
                             </li>
-                            @endforeach
+                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                         </ul>
-                    @elseif($item->item_type === 'torf')
-                        @php $answer = json_decode($item->answer, true); @endphp
+                    <?php elseif($item->item_type === 'torf'): ?>
+                        <?php $answer = json_decode($item->answer, true); ?>
                         <ul class="options-list">
                             <li class="option-item">
                                 <span class="option-text">True</span>
-                                @if($answer['correct'] === 'true')
+                                <?php if($answer['correct'] === 'true'): ?>
                                 <span class="correct-badge">✓ Correct</span>
-                                @endif
+                                <?php endif; ?>
                             </li>
                             <li class="option-item">
                                 <span class="option-text">False</span>
-                                @if($answer['correct'] === 'false')
+                                <?php if($answer['correct'] === 'false'): ?>
                                 <span class="correct-badge">✓ Correct</span>
-                                @endif
+                                <?php endif; ?>
                             </li>
                         </ul>
-                    @elseif($item->item_type === 'iden')
+                    <?php elseif($item->item_type === 'iden'): ?>
                         <div class="expected-answer-box">
                             <strong>Expected Answer:</strong> 
-                            <span>{{ $item->expected_answer }}</span>
+                            <span><?php echo e($item->expected_answer); ?></span>
                         </div>
-                    @elseif($item->item_type === 'enum')
-                        @php 
+                    <?php elseif($item->item_type === 'enum'): ?>
+                        <?php 
                             $answers = json_decode($item->answer, true);
                             $enumType = $item->enum_type ?? 'ordered';
-                        @endphp
+                        ?>
                         <ul class="options-list">
-                            @foreach($answers as $index => $answer)
+                            <?php $__currentLoopData = $answers; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $index => $answer): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                             <li class="option-item">
-                                @if($enumType === 'ordered')
+                                <?php if($enumType === 'ordered'): ?>
                                     <span class="option-text">
-                                        <strong>{{ $index + 1 }}.</strong> {{ $answer }}
+                                        <strong><?php echo e($index + 1); ?>.</strong> <?php echo e($answer); ?>
+
                                     </span>
-                                @else
-                                    <span class="option-text">{{ $answer }}</span>
+                                <?php else: ?>
+                                    <span class="option-text"><?php echo e($answer); ?></span>
                                     <span style="color: #9ca3af; font-size: 0.9rem; margin-left: auto;">
                                         <i class="bi bi-grip-vertical"></i>
                                     </span>
-                                @endif
+                                <?php endif; ?>
                             </li>
-                            @endforeach
+                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                         </ul>
-                    @elseif($item->item_type === 'essay')
+                    <?php elseif($item->item_type === 'essay'): ?>
                         <div class="expected-answer-box">
                             <span style="font-style: italic; color: #6b7280;">Essay question - Student will provide written answer</span>
                         </div>
-                    @endif
+                    <?php endif; ?>
 
                     <div class="points-display">
-                        @if($item->item_type === 'enum' && ($item->enum_type ?? 'ordered') === 'unordered')
-                            <strong>Point per correct answer:</strong> {{ $item->points_awarded }}
-                        @else
-                            <strong>Points:</strong> {{ $item->points_awarded }}
-                        @endif
+                        <?php if($item->item_type === 'enum' && ($item->enum_type ?? 'ordered') === 'unordered'): ?>
+                            <strong>Point per correct answer:</strong> <?php echo e($item->points_awarded); ?>
+
+                        <?php else: ?>
+                            <strong>Points:</strong> <?php echo e($item->points_awarded); ?>
+
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>
             
-            @if($exam->status !== 'for approval' && $exam->status !== 'approved' && $exam->status !== 'archived')
+            <?php if($exam->status !== 'for approval' && $exam->status !== 'approved' && $exam->status !== 'archived'): ?>
             <div class="floating-action-pane">
-                <button class="floating-btn" title="Add Question" onclick="event.stopPropagation(); toggleFloatingDropdown(this, {{ $section->section_id }}, {{ $item->item_id }})">
+                <button class="floating-btn" title="Add Question" onclick="event.stopPropagation(); toggleFloatingDropdown(this, <?php echo e($section->section_id); ?>, <?php echo e($item->item_id); ?>)">
                     <i class="bi bi-plus-lg"></i>
                 </button>
-                <button class="floating-btn" title="Duplicate" onclick="event.stopPropagation(); duplicateQuestion({{ $exam->exam_id }}, {{ $item->item_id }})">
+                <button class="floating-btn" title="Duplicate" onclick="event.stopPropagation(); duplicateQuestion(<?php echo e($exam->exam_id); ?>, <?php echo e($item->item_id); ?>)">
                     <i class="bi bi-files"></i>
                 </button>
-                <button class="floating-btn" title="Move Up" onclick="event.stopPropagation(); moveQuestion({{ $item->item_id }}, 'up')">
+                <button class="floating-btn" title="Move Up" onclick="event.stopPropagation(); moveQuestion(<?php echo e($item->item_id); ?>, 'up')">
                     <i class="bi bi-arrow-up"></i>
                 </button>
-                <button class="floating-btn" title="Move Down" onclick="event.stopPropagation(); moveQuestion({{ $item->item_id }}, 'down')">
+                <button class="floating-btn" title="Move Down" onclick="event.stopPropagation(); moveQuestion(<?php echo e($item->item_id); ?>, 'down')">
                     <i class="bi bi-arrow-down"></i>
                 </button>
             </div>
             <!-- Floating dropdown for add button -->
-            <div class="floating-question-dropdown" id="floatingDropdown_{{ $item->item_id }}" style="display: none;">
-                <button class="dropdown-item" onclick="event.stopPropagation(); openQuestionModalAfter('mcq', {{ $section->section_id }}, {{ $item->item_id }})">
+            <div class="floating-question-dropdown" id="floatingDropdown_<?php echo e($item->item_id); ?>" style="display: none;">
+                <button class="dropdown-item" onclick="event.stopPropagation(); openQuestionModalAfter('mcq', <?php echo e($section->section_id); ?>, <?php echo e($item->item_id); ?>)">
                     <i class="bi bi-ui-radios"></i>
                     <span>New MCQ</span>
                 </button>
-                <button class="dropdown-item" onclick="event.stopPropagation(); openQuestionModalAfter('torf', {{ $section->section_id }}, {{ $item->item_id }})">
+                <button class="dropdown-item" onclick="event.stopPropagation(); openQuestionModalAfter('torf', <?php echo e($section->section_id); ?>, <?php echo e($item->item_id); ?>)">
                     <i class="bi bi-toggle-on"></i>
                     <span>New True or False</span>
                 </button>
-                <button class="dropdown-item" onclick="event.stopPropagation(); openQuestionModalAfter('iden', {{ $section->section_id }}, {{ $item->item_id }})">
+                <button class="dropdown-item" onclick="event.stopPropagation(); openQuestionModalAfter('iden', <?php echo e($section->section_id); ?>, <?php echo e($item->item_id); ?>)">
                     <i class="bi bi-pencil-square"></i>
                     <span>New Identification</span>
                 </button>
-                <button class="dropdown-item" onclick="event.stopPropagation(); openQuestionModalAfter('enum', {{ $section->section_id }}, {{ $item->item_id }})">
+                <button class="dropdown-item" onclick="event.stopPropagation(); openQuestionModalAfter('enum', <?php echo e($section->section_id); ?>, <?php echo e($item->item_id); ?>)">
                     <i class="bi bi-list-ol"></i>
                     <span>New Enumeration</span>
                 </button>
-                <button class="dropdown-item" onclick="event.stopPropagation(); openQuestionModalAfter('essay', {{ $section->section_id }}, {{ $item->item_id }})">
+                <button class="dropdown-item" onclick="event.stopPropagation(); openQuestionModalAfter('essay', <?php echo e($section->section_id); ?>, <?php echo e($item->item_id); ?>)">
                     <i class="bi bi-textarea-t"></i>
                     <span>New Essay</span>
                 </button>
             </div>
-            @endif
+            <?php endif; ?>
         </div>
-        @empty
-        @php
+        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_2): ?>
+        <?php
             // Check if exam has any questions at all
             $hasAnyQuestions = $exam->sections->sum(function($s) {
                 return $s->items->count();
             }) > 0;
-        @endphp
-        @if(!$hasAnyQuestions)
+        ?>
+        <?php if(!$hasAnyQuestions): ?>
         <div class="no-questions-yet">
             <i class="bi bi-question-circle"></i>
             <p>No questions yet. Click "Add" below to create your first question!</p>
         </div>
-        @endif
-        @endforelse
+        <?php endif; ?>
+        <?php endif; ?>
         </div><!-- End exam-section -->
-        @empty
+        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
         <div class="no-questions-yet">
             <i class="bi bi-folder2-open"></i>
             <p>Creating default section...</p>
         </div>
-        @endforelse
+        <?php endif; ?>
         
         <!-- Add Section -->
-        @if($exam->status !== 'for approval' && $exam->status !== 'approved' && $exam->status !== 'archived')
+        <?php if($exam->status !== 'for approval' && $exam->status !== 'approved' && $exam->status !== 'archived'): ?>
         <div class="add-section">
             <div class="add-dropdown-wrapper">
                 <button class="add-main-btn" onclick="toggleAddDropdown()">
@@ -1137,7 +1141,7 @@
                     <i class="bi bi-caret-down-fill" style="font-size: 0.8rem;"></i>
                 </button>
                 <div class="add-dropdown" id="addDropdown">
-                    @if($exam->sections->count() > 0)
+                    <?php if($exam->sections->count() > 0): ?>
                     <button class="dropdown-item" onclick="addNewSection()">
                         <i class="bi bi-file-earmark-plus"></i>
                         <span>New Section</span>
@@ -1162,11 +1166,11 @@
                         <i class="bi bi-textarea-t"></i>
                         <span>New Essay</span>
                     </button>
-                    @endif
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
-        @endif
+        <?php endif; ?>
     </div>
 </div>
 
@@ -1178,39 +1182,39 @@
                 <div class="modal-title-custom">
                     <i class="bi bi-gear-fill"></i>
                     <span id="examSettingsModalTitle">
-                        @if($exam->status === 'for approval' || $exam->status === 'approved' || $exam->status === 'archived')
+                        <?php if($exam->status === 'for approval' || $exam->status === 'approved' || $exam->status === 'archived'): ?>
                             Exam Settings (View Only)
-                        @else
+                        <?php else: ?>
                             Exam Settings
-                        @endif
+                        <?php endif; ?>
                     </span>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body" style="padding: 24px;">
-                @if($exam->status === 'for approval' || $exam->status === 'approved' || $exam->status === 'archived')
+                <?php if($exam->status === 'for approval' || $exam->status === 'approved' || $exam->status === 'archived'): ?>
                     <div class="alert alert-info" style="border-radius: 8px; margin-bottom: 20px;">
                         <i class="bi bi-info-circle-fill"></i>
-                        <strong>View Only:</strong> This exam is {{ $exam->status }} and cannot be edited.
+                        <strong>View Only:</strong> This exam is <?php echo e($exam->status); ?> and cannot be edited.
                     </div>
-                @endif
+                <?php endif; ?>
                 
                 <form id="examSettingsForm">
-                    @csrf
+                    <?php echo csrf_field(); ?>
                     
                     <div class="mb-3">
                         <label class="form-label-custom">Exam Title</label>
                         <input type="text" class="form-control-custom" name="exam_title" id="settingsExamTitle" 
-                               value="{{ $exam->exam_title }}" 
-                               {{ ($exam->status === 'for approval' || $exam->status === 'approved' || $exam->status === 'archived') ? 'readonly' : '' }} 
+                               value="<?php echo e($exam->exam_title); ?>" 
+                               <?php echo e(($exam->status === 'for approval' || $exam->status === 'approved' || $exam->status === 'archived') ? 'readonly' : ''); ?> 
                                required>
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label-custom">Exam Description</label>
                         <input type="text" class="form-control-custom" name="exam_desc" id="settingsExamDesc" 
-                               value="{{ $exam->exam_desc }}"
-                               {{ ($exam->status === 'for approval' || $exam->status === 'approved' || $exam->status === 'archived') ? 'readonly' : '' }}>
+                               value="<?php echo e($exam->exam_desc); ?>"
+                               <?php echo e(($exam->status === 'for approval' || $exam->status === 'approved' || $exam->status === 'archived') ? 'readonly' : ''); ?>>
                     </div>
 
                     <label class="form-label-custom" style="margin-bottom: 12px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px; display: block;">Settings</label>
@@ -1219,14 +1223,16 @@
                         <div class="col-md-6 mb-3">
                             <label class="form-label-custom">Subject</label>
                             <select class="form-control-custom" name="subject_id" id="settingsSubjectSelect" 
-                                    {{ ($exam->status === 'for approval' || $exam->status === 'approved' || $exam->status === 'archived') ? 'disabled' : '' }}
+                                    <?php echo e(($exam->status === 'for approval' || $exam->status === 'approved' || $exam->status === 'archived') ? 'disabled' : ''); ?>
+
                                     required onchange="loadClassesBySubjectSettings()">
                                 <option value="">Select Subject</option>
-                                @foreach(\App\Models\Subject::all() as $subject)
-                                <option value="{{ $subject->subject_id }}" {{ $exam->subject_id == $subject->subject_id ? 'selected' : '' }}>
-                                    {{ $subject->subject_name }}
+                                <?php $__currentLoopData = \App\Models\Subject::all(); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $subject): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                <option value="<?php echo e($subject->subject_id); ?>" <?php echo e($exam->subject_id == $subject->subject_id ? 'selected' : ''); ?>>
+                                    <?php echo e($subject->subject_name); ?>
+
                                 </option>
-                                @endforeach
+                                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                             </select>
                         </div>
 
@@ -1234,9 +1240,9 @@
                             <label class="form-label-custom">Class Assignment</label>
                             <div class="class-dropdown">
                                 <button type="button" class="form-control-custom" 
-                                        onclick="{{ ($exam->status === 'for approval' || $exam->status === 'approved' || $exam->status === 'archived') ? '' : 'toggleClassDropdownSettings(event)' }}" 
-                                        style="text-align: left; display: flex; justify-content: space-between; align-items: center; {{ ($exam->status === 'for approval' || $exam->status === 'approved' || $exam->status === 'archived') ? 'cursor: not-allowed; opacity: 0.6;' : 'cursor: pointer;' }}"
-                                        {{ ($exam->status === 'for approval' || $exam->status === 'approved' || $exam->status === 'archived') ? 'disabled' : '' }}>
+                                        onclick="<?php echo e(($exam->status === 'for approval' || $exam->status === 'approved' || $exam->status === 'archived') ? '' : 'toggleClassDropdownSettings(event)'); ?>" 
+                                        style="text-align: left; display: flex; justify-content: space-between; align-items: center; <?php echo e(($exam->status === 'for approval' || $exam->status === 'approved' || $exam->status === 'archived') ? 'cursor: not-allowed; opacity: 0.6;' : 'cursor: pointer;'); ?>"
+                                        <?php echo e(($exam->status === 'for approval' || $exam->status === 'approved' || $exam->status === 'archived') ? 'disabled' : ''); ?>>
                                     <span id="settingsSelectedClassesText">Select Classes</span>
                                     <i class="bi bi-chevron-down"></i>
                                 </button>
@@ -1257,10 +1263,10 @@
                         <div class="col-md-6 mb-3">
                             <label class="form-label-custom">Term</label>
                             <select class="form-control-custom" name="term" id="settingsTermSelect"
-                                    {{ ($exam->status === 'for approval' || $exam->status === 'approved' || $exam->status === 'archived') ? 'disabled' : '' }}>
-                                <option value="prelim" {{ $exam->term == 'prelim' ? 'selected' : '' }}>Prelim</option>
-                                <option value="midterm" {{ $exam->term == 'midterm' ? 'selected' : '' }}>Midterm</option>
-                                <option value="finals" {{ $exam->term == 'finals' ? 'selected' : '' }}>Finals</option>
+                                    <?php echo e(($exam->status === 'for approval' || $exam->status === 'approved' || $exam->status === 'archived') ? 'disabled' : ''); ?>>
+                                <option value="prelim" <?php echo e($exam->term == 'prelim' ? 'selected' : ''); ?>>Prelim</option>
+                                <option value="midterm" <?php echo e($exam->term == 'midterm' ? 'selected' : ''); ?>>Midterm</option>
+                                <option value="finals" <?php echo e($exam->term == 'finals' ? 'selected' : ''); ?>>Finals</option>
                             </select>
                         </div>
 
@@ -1268,8 +1274,9 @@
                             <label class="form-label-custom">Duration (minutes)</label>
                             <div style="display: flex; align-items: center; gap: 8px;">
                                 <input type="number" class="form-control-custom" name="duration" id="settingsDuration" 
-                                       value="{{ $exam->duration }}" 
-                                       {{ ($exam->status === 'for approval' || $exam->status === 'approved' || $exam->status === 'archived') ? 'readonly' : '' }}
+                                       value="<?php echo e($exam->duration); ?>" 
+                                       <?php echo e(($exam->status === 'for approval' || $exam->status === 'approved' || $exam->status === 'archived') ? 'readonly' : ''); ?>
+
                                        required min="1" style="flex: 1;">
                                 <span style="color: #6b7280;">mins</span>
                             </div>
@@ -1280,8 +1287,9 @@
                         <div class="col-md-6 mb-3">
                             <label class="form-label-custom">Schedule Start</label>
                             <input type="datetime-local" class="form-control-custom" name="schedule_start" id="settingsScheduleStart" 
-                                   value="{{ $exam->schedule_start ? $exam->schedule_start->format('Y-m-d\TH:i') : '' }}" 
-                                   {{ ($exam->status === 'for approval' || $exam->status === 'approved' || $exam->status === 'archived') ? 'readonly' : '' }}
+                                   value="<?php echo e($exam->schedule_start ? $exam->schedule_start->format('Y-m-d\TH:i') : ''); ?>" 
+                                   <?php echo e(($exam->status === 'for approval' || $exam->status === 'approved' || $exam->status === 'archived') ? 'readonly' : ''); ?>
+
                                    required>
                             <small class="text-danger" id="settingsStartDateError" style="display: none;"></small>
                         </div>
@@ -1289,8 +1297,9 @@
                         <div class="col-md-6 mb-3">
                             <label class="form-label-custom">Schedule End</label>
                             <input type="datetime-local" class="form-control-custom" name="schedule_end" id="settingsScheduleEnd" 
-                                   value="{{ $exam->schedule_end ? $exam->schedule_end->format('Y-m-d\TH:i') : '' }}" 
-                                   {{ ($exam->status === 'for approval' || $exam->status === 'approved' || $exam->status === 'archived') ? 'readonly' : '' }}
+                                   value="<?php echo e($exam->schedule_end ? $exam->schedule_end->format('Y-m-d\TH:i') : ''); ?>" 
+                                   <?php echo e(($exam->status === 'for approval' || $exam->status === 'approved' || $exam->status === 'archived') ? 'readonly' : ''); ?>
+
                                    required>
                             <small class="text-danger" id="settingsEndDateError" style="display: none;"></small>
                         </div>
@@ -1298,13 +1307,14 @@
 
                     <div class="d-flex justify-content-end gap-2 mt-4">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="border-radius: 8px; padding: 10px 24px;">
-                            {{ ($exam->status === 'for approval' || $exam->status === 'approved' || $exam->status === 'archived') ? 'Close' : 'Cancel' }}
+                            <?php echo e(($exam->status === 'for approval' || $exam->status === 'approved' || $exam->status === 'archived') ? 'Close' : 'Cancel'); ?>
+
                         </button>
-                        @if($exam->status !== 'for approval' && $exam->status !== 'approved' && $exam->status !== 'archived')
+                        <?php if($exam->status !== 'for approval' && $exam->status !== 'approved' && $exam->status !== 'archived'): ?>
                             <button type="submit" class="btn-save-question">
                                 Save Changes
                             </button>
-                        @endif
+                        <?php endif; ?>
                     </div>
                 </form>
             </div>
@@ -1350,14 +1360,14 @@
     </div>
 </div>
 
-@include('instructor.exam.question-modal')
+<?php echo $__env->make('instructor.exam.question-modal', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?>
 
-@endsection
+<?php $__env->stopSection(); ?>
 
-@push('scripts')
+<?php $__env->startPush('scripts'); ?>
 <script>
-const examId = {{ $exam->exam_id }};
-let approvalStatus = '{{ $exam->status }}';
+const examId = <?php echo e($exam->exam_id); ?>;
+let approvalStatus = '<?php echo e($exam->status); ?>';
 const isLocked = (approvalStatus === 'for approval' || approvalStatus === 'approved' || approvalStatus === 'archived');
 
 // Header Scroll Behavior
@@ -1403,7 +1413,7 @@ function setActiveQuestion(card) {
 
 // Set Active Section
 // Track the currently active section ID
-let activeSectionId = {{ $exam->sections->last()->section_id ?? 'null' }};
+let activeSectionId = <?php echo e($exam->sections->last()->section_id ?? 'null'); ?>;
 
 function setActiveSection(card, sectionId) {
     if (isLocked) return;
@@ -1575,7 +1585,7 @@ function updateExamTitle() {
         method: 'PUT',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'
         },
         body: JSON.stringify({ exam_title: title })
     })
@@ -1598,7 +1608,7 @@ function updateSection(sectionId, field, value) {
         method: 'PUT',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'
         },
         body: JSON.stringify({ [field]: value })
     });
@@ -1615,7 +1625,7 @@ function deleteSection(sectionId) {
         fetch(`/instructor/exams/${examId}/sections/${sectionId}`, {
             method: 'DELETE',
             headers: {
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'
             }
         })
         .then(response => response.json())
@@ -1643,7 +1653,7 @@ function duplicateQuestion(examId, itemId) {
     fetch(`/instructor/exams/${examId}/questions/${itemId}/duplicate`, {
         method: 'POST',
         headers: {
-            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'
         }
     })
     .then(response => response.json())
@@ -1665,7 +1675,7 @@ function deleteQuestion(examId, itemId) {
         fetch(`/instructor/exams/${examId}/questions/${itemId}`, {
             method: 'DELETE',
             headers: {
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'
             }
         })
         .then(response => response.json())
@@ -1688,7 +1698,7 @@ function moveQuestion(itemId, direction) {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'
         },
         body: JSON.stringify({ item_id: itemId, direction: direction })
     })
@@ -2100,7 +2110,7 @@ function reorderQuestionByDrag(draggedItemId, targetItemId, insertBefore = true)
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'
         },
         body: JSON.stringify({ 
             dragged_item_id: draggedItemId, 
@@ -2140,7 +2150,7 @@ function duplicateSection(examId, sectionId) {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'
         }
     })
     .then(response => response.json())
@@ -2168,7 +2178,7 @@ function moveSection(sectionId, direction) {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'
         },
         body: JSON.stringify({ section_id: sectionId, direction: direction })
     })
@@ -2197,7 +2207,7 @@ function addNewSection() {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'
         },
         body: JSON.stringify({
             section_title: '',
@@ -2239,7 +2249,7 @@ function updateExamStatus(newStatus) {
         method: 'PUT',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'
         },
         body: JSON.stringify({ status: newStatus })
     })
@@ -2267,7 +2277,7 @@ function updateApprovalButton() {
     if (approvalStatus === 'draft') {
         btn.textContent = 'Request for Approval';
         btn.classList.remove('pending', 'approved');
-        subtitle.textContent = '{{ $exam->subject->subject_name ?? "Edit Exam." }}';
+        subtitle.textContent = '<?php echo e($exam->subject->subject_name ?? "Edit Exam."); ?>';
     } else if (approvalStatus === 'for approval') {
         btn.textContent = 'Cancel Approval Request';
         btn.classList.add('pending');
@@ -2475,7 +2485,7 @@ document.getElementById('examSettingsForm').addEventListener('submit', function(
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'
         },
         body: JSON.stringify({
             ...data,
@@ -2521,7 +2531,7 @@ function loadExamPreview() {
     fetch(`/instructor/exams/${examId}/preview`, {
         headers: {
             'Accept': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'
         }
     })
     .then(response => response.json())
@@ -2584,4 +2594,5 @@ function showDownloadNotAvailable() {
     alert('Download feature is not yet available. This feature is currently under development.');
 }
 </script>
-@endpush
+<?php $__env->stopPush(); ?>
+<?php echo $__env->make('layouts.Instructor.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH C:\xampp\htdocs\exam1\resources\views/instructor/exam/create.blade.php ENDPATH**/ ?>

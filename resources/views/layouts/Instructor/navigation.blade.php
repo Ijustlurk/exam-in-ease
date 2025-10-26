@@ -99,7 +99,104 @@
                 </a>
             </div>
 
-            <div class="hidden sm:flex sm:items-center sm:ms-6">
+            <div class="hidden sm:flex sm:items-center sm:ms-6 gap-4">
+                <!-- Notification Bell -->
+                <div class="relative" x-data="{ open: false }">
+                    <button @click="open = !open" class="relative p-2 text-gray-500 hover:text-gray-700 focus:outline-none transition">
+                        <i class="bi bi-bell text-xl"></i>
+                        @php
+                            $unreadCount = Auth::user()->notifications()->unread()->count();
+                        @endphp
+                        @if($unreadCount > 0)
+                            <span class="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-red-500 rounded-full">
+                                {{ $unreadCount > 99 ? '99+' : $unreadCount }}
+                            </span>
+                        @endif
+                    </button>
+
+                    <!-- Notification Dropdown -->
+                    <div x-show="open" 
+                         @click.away="open = false"
+                         x-transition:enter="transition ease-out duration-200"
+                         x-transition:enter-start="opacity-0 scale-95"
+                         x-transition:enter-end="opacity-100 scale-100"
+                         x-transition:leave="transition ease-in duration-75"
+                         x-transition:leave-start="opacity-100 scale-100"
+                         x-transition:leave-end="opacity-0 scale-95"
+                         class="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50"
+                         style="display: none;">
+                        
+                        <div class="p-6 border-b border-gray-200 flex items-center justify-between">
+                            <h4 class="font-semibold text-gray-800">Notifications</h4>
+                            @if($unreadCount > 0)
+                                <a href="{{ route('instructor.notifications.mark-all-read') }}" 
+                                   class="text-xs text-blue-600 hover:text-blue-800"
+                                   onclick="event.preventDefault(); markAllAsRead();">
+                                    Mark all as read
+                                </a>
+                            @endif
+                        </div>
+
+                        <div class="max-h-96 overflow-y-auto">
+                            @php
+                                $notifications = Auth::user()->notifications()->latest()->limit(10)->get();
+                            @endphp
+                            
+                            @forelse($notifications as $notification)
+                                <a href="{{ route('instructor.notifications.show', $notification->notification_id) }}" 
+                                   class="block p-3 hover:bg-gray-50 border-b border-gray-100 {{ !$notification->is_read ? 'bg-blue-50' : '' }}"
+                                   onclick="event.preventDefault(); markAsReadAndRedirect({{ $notification->notification_id }}, '{{ $notification->data['url'] ?? route('dashboard') }}');">
+                                    <div class="flex items-start gap-3">
+                                        <div class="flex-shrink-0">
+                                            @if($notification->type === 'exam_approved')
+                                                <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                                                    <i class="bi bi-check-circle text-green-600"></i>
+                                                </div>
+                                            @elseif($notification->type === 'exam_rejected')
+                                                <div class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                                                    <i class="bi bi-x-circle text-red-600"></i>
+                                                </div>
+                                            @elseif($notification->type === 'collaborator_added')
+                                                <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                                    <i class="bi bi-people text-blue-600"></i>
+                                                </div>
+                                            @else
+                                                <div class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                                                    <i class="bi bi-info-circle text-gray-600"></i>
+                                                </div>
+                                            @endif
+                                        </div>
+                                        <div class="flex-1 min-w-0">
+                                            <p class="text-sm font-medium text-gray-800">{{ $notification->title }}</p>
+                                            <p class="text-xs text-gray-600 mt-1">{{ $notification->message }}</p>
+                                            <p class="text-xs text-gray-400 mt-1">{{ $notification->time_ago }}</p>
+                                        </div>
+                                        @if(!$notification->is_read)
+                                            <div class="flex-shrink-0">
+                                                <span class="inline-block w-2 h-2 bg-blue-600 rounded-full"></span>
+                                            </div>
+                                        @endif
+                                    </div>
+                                </a>
+                            @empty
+                                <div class="p-8 text-center text-gray-500">
+                                    <i class="bi bi-bell-slash text-4xl mb-2"></i>
+                                    <p class="text-sm">No notifications yet</p>
+                                </div>
+                            @endforelse
+                        </div>
+
+                        @if($notifications->count() > 0)
+                            <div class="p-3 border-t border-gray-200 text-center">
+                                <a href="{{ route('instructor.notifications.index') }}" class="text-sm text-blue-600 hover:text-blue-800">
+                                    View all notifications
+                                </a>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+
+                <!-- User Dropdown -->
                 <x-dropdown align="right" width="48">
                     <x-slot name="trigger">
                         <button
@@ -214,9 +311,82 @@
     function toggleSidebar() {
         const sidebar = document.getElementById('sidebar');
         const main = document.getElementById('mainContent');
+        const examContent = document.querySelector('.exam-content');
+        const notificationsContent = document.querySelector('.notifications-content');
+        console.log('Toggle sidebar called');
+        console.log('Sidebar:', sidebar);
+        console.log('Main:', main);
+        console.log('Exam Content:', examContent);
+        console.log('Notifications Content:', notificationsContent);
+        
         sidebar.classList.toggle('expanded');
         if (main) {
             main.classList.toggle('expanded');
+            console.log('Main classes after toggle:', main.className);
+        }
+        if (examContent) {
+            examContent.classList.toggle('expanded');
+            console.log('Exam content classes after toggle:', examContent.className);
+        }
+        if (notificationsContent) {
+            notificationsContent.classList.toggle('expanded');
+            console.log('Notifications content classes after toggle:', notificationsContent.className);
         }
     }
+
+    function markAsReadAndRedirect(notificationId, url) {
+        fetch(`/instructor/notifications/${notificationId}/mark-as-read`, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.location.href = url;
+            }
+        })
+        .catch(error => {
+            console.error('Error marking notification as read:', error);
+            window.location.href = url;
+        });
+    }
+
+    function markAllAsRead() {
+        fetch('/instructor/notifications/mark-all-read', {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            }
+        })
+        .catch(error => {
+            console.error('Error marking all as read:', error);
+        });
+    }
+
+    // Poll for new notifications every 30 seconds
+    setInterval(() => {
+        fetch('/instructor/notifications/unread/count')
+            .then(response => response.json())
+            .then(data => {
+                const badge = document.querySelector('.notification-badge');
+                if (data.count > 0) {
+                    if (badge) {
+                        badge.textContent = data.count > 99 ? '99+' : data.count;
+                    }
+                } else if (badge) {
+                    badge.remove();
+                }
+            })
+            .catch(error => console.error('Error fetching notification count:', error));
+    }, 30000);
 </script>

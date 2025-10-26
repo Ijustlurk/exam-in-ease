@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ExamController;
+use App\Http\Controllers\Api\HealthController;
 
 /*
 |--------------------------------------------------------------------------
@@ -15,6 +16,9 @@ use App\Http\Controllers\Api\ExamController;
 | be assigned to the "api" middleware group. Make something great!
 |
 */
+
+// Health check - no authentication required
+Route::get('/health', [HealthController::class, 'check']);
 
 // Public authentication routes
 Route::post('/login', [AuthController::class, 'login']);
@@ -33,7 +37,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Exams
     Route::get('/exams', [ExamController::class, 'index']);
+    Route::get('/exams/completed', [ExamController::class, 'completedExams']);
     Route::get('/exams/{examId}', [ExamController::class, 'show']);
+    Route::post('/exams/{examId}/verify-otp', [ExamController::class, 'verifyOtp']);
 
     // Exam attempts
     Route::post('/exam-attempts', [ExamController::class, 'startAttempt']);

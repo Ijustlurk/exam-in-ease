@@ -1,6 +1,6 @@
 @extends('layouts.ProgramChair.app')
 
-@section('content')
+@section('main-content')
 <div class="container-fluid px-4 py-4">
 
     @if(session('success'))
@@ -42,6 +42,7 @@
                         </th>
                         <th scope="col">Exam Name <i class="bi bi-caret-down-fill small"></i></th>
                         <th scope="col">Subject <i class="bi bi-caret-down-fill small"></i></th>
+                        <th scope="col">Schedule <i class="bi bi-caret-down-fill small"></i></th>
                         <th scope="col">Approval Status <i class="bi bi-caret-down-fill small"></i></th>
                         <th scope="col">Actions</th>
                     </tr>
@@ -66,6 +67,16 @@
                             </small>
                         </td>
                         <td>{{ $exam->subject->subject_name ?? 'N/A' }}</td>
+                        <td>
+                            @if($exam->schedule_start && $exam->schedule_end)
+                                <div class="small">
+                                    <div><i class="bi bi-calendar-event me-1"></i>{{ \Carbon\Carbon::parse($exam->schedule_start)->format('M d, Y') }}</div>
+                                    <div class="text-muted"><i class="bi bi-clock me-1"></i>{{ \Carbon\Carbon::parse($exam->schedule_start)->format('h:i A') }} - {{ \Carbon\Carbon::parse($exam->schedule_end)->format('h:i A') }}</div>
+                                </div>
+                            @else
+                                <span class="text-muted">Not scheduled</span>
+                            @endif
+                        </td>
                         <td>
                             @if($exam->approval_status == 'approved')
                                 <span class="badge bg-success px-3 py-2">Approved</span>
@@ -93,7 +104,7 @@
                                 <!-- Pending exam actions -->
                                 <div class="d-flex gap-3">
                                     <a href="javascript:void(0)" 
-                                       onclick="approveExam({{ $exam->exam_id }}, '{{ addslashes($exam->exam_title) }}')"
+                                       onclick="openApprovalModal({{ $exam->exam_id }})"
                                        class="text-success text-decoration-none">
                                         <i class="bi bi-check-circle me-1"></i> Approve
                                     </a>
@@ -112,7 +123,7 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="5" class="text-center py-5 text-muted">
+                        <td colspan="6" class="text-center py-5 text-muted">
                             <i class="bi bi-folder2-open" style="font-size: 3rem;"></i>
                             <p class="mt-3">No exams found for approval</p>
                         </td>
@@ -122,8 +133,6 @@
             </table>
         </div>
     </div>
-
-</div>
 
 <!-- Revision Modal -->
 <div class="modal fade" id="revisionModal" tabindex="-1" aria-labelledby="revisionModalLabel" aria-hidden="true">
@@ -153,6 +162,97 @@
                         <button type="submit" class="btn btn-primary" 
                                 style="background-color: #6ba5b3; border: none; border-radius: 8px; padding: 10px 28px; font-weight: 500;">
                             For Revision
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Approval Modal -->
+<div class="modal fade" id="approvalModal" tabindex="-1" aria-labelledby="approvalModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content" style="border-radius: 12px; border: none;">
+            <div class="modal-header" style="background-color: #28a745; color: white; border-radius: 12px 12px 0 0; padding: 20px 24px;">
+                <h5 class="modal-title d-flex align-items-center gap-2" id="approvalModalLabel">
+                    <i class="bi bi-check-circle-fill"></i>
+                    <span id="approvalModalTitle">Approve Exam</span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" style="padding: 24px;">
+                <form id="approvalForm" method="POST">
+                    @csrf
+                    <input type="hidden" id="approval_exam_id" name="exam_id">
+                    
+                    <!-- Exam Details Section -->
+                    <div class="mb-4">
+                        <h6 class="fw-bold text-secondary mb-3">Exam Details</h6>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold small text-muted">Exam Title</label>
+                                <p class="form-control-plaintext" id="approval_exam_title"></p>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold small text-muted">Subject</label>
+                                <p class="form-control-plaintext" id="approval_subject"></p>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold small text-muted">Description</label>
+                            <p class="form-control-plaintext" id="approval_description"></p>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold small text-muted">Assigned Classes</label>
+                            <p class="form-control-plaintext" id="approval_classes"></p>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <!-- Editable Fields Section -->
+                    <div class="mb-4">
+                        <h6 class="fw-bold text-secondary mb-3">Exam Configuration</h6>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Duration (minutes) <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control" id="approval_duration" name="duration" 
+                                       min="1" required style="border-radius: 8px; border: 1px solid #d1d5db;">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Schedule Start <span class="text-danger">*</span></label>
+                                <input type="datetime-local" class="form-control" id="approval_schedule_start" 
+                                       name="schedule_start" required style="border-radius: 8px; border: 1px solid #d1d5db;">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Schedule End <span class="text-danger">*</span></label>
+                                <input type="datetime-local" class="form-control" id="approval_schedule_end" 
+                                       name="schedule_end" required style="border-radius: 8px; border: 1px solid #d1d5db;">
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Exam Password (Optional)</label>
+                            <input type="text" class="form-control" id="approval_password" name="exam_password" 
+                                   placeholder="Leave empty if no password required" 
+                                   style="border-radius: 8px; border: 1px solid #d1d5db;">
+                            <small class="text-muted">Students will need this password to access the exam</small>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" 
+                                style="border-radius: 8px; padding: 10px 20px;">
+                            Cancel
+                        </button>
+                        <button type="submit" class="btn btn-success" 
+                                style="border-radius: 8px; padding: 10px 28px; font-weight: 500;">
+                            <i class="bi bi-check-circle me-1"></i> Approve Exam
                         </button>
                     </div>
                 </form>
@@ -216,6 +316,50 @@
 
 @push('scripts')
 <script>
+    function openApprovalModal(examId) {
+        // Fetch exam details via AJAX
+        fetch(`/programchair/manage-approval/programchair/${examId}/details`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                // Populate modal header
+                document.getElementById('approvalModalTitle').textContent = 
+                    `Approve: ${data.exam_title} by ${data.author}`;
+                
+                // Populate exam details (read-only)
+                document.getElementById('approval_exam_title').textContent = data.exam_title;
+                document.getElementById('approval_subject').textContent = data.subject || 'N/A';
+                document.getElementById('approval_description').textContent = data.exam_desc || 'No description provided';
+                document.getElementById('approval_classes').textContent = data.classes || 'Not assigned to any class yet';
+                
+                // Populate editable fields with existing values
+                document.getElementById('approval_exam_id').value = examId;
+                document.getElementById('approval_duration').value = data.duration || '';
+                document.getElementById('approval_schedule_start').value = data.schedule_start || '';
+                document.getElementById('approval_schedule_end').value = data.schedule_end || '';
+                document.getElementById('approval_password').value = '';
+                
+                // Set form action
+                document.getElementById('approvalForm').action = `/programchair/manage-approval/${examId}/approve`;
+                
+                // Show modal
+                const modal = new bootstrap.Modal(document.getElementById('approvalModal'));
+                modal.show();
+            })
+            .catch(error => {
+                console.error('Error fetching exam details:', error);
+                alert('Failed to load exam details: ' + error.message);
+            });
+    }
+
     function openRevisionModal(examId, examTitle) {
         document.getElementById('revision_exam_id').value = examId;
         document.getElementById('revisionForm').action = `/programchair/manage-approval/${examId}/revise`;
@@ -230,23 +374,6 @@
         
         const modal = new bootstrap.Modal(document.getElementById('rescindModal'));
         modal.show();
-    }
-
-    function approveExam(examId, examTitle) {
-        if (confirm(`Are you sure you want to approve "${examTitle}"?`)) {
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = `/programchair/manage-approval/${examId}/approve`;
-            
-            const csrfToken = document.createElement('input');
-            csrfToken.type = 'hidden';
-            csrfToken.name = '_token';
-            csrfToken.value = '{{ csrf_token() }}';
-            
-            form.appendChild(csrfToken);
-            document.body.appendChild(form);
-            form.submit();
-        }
     }
 </script>
 @endpush

@@ -230,21 +230,21 @@
 
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto align-items-center">
-                    @if (Route::has('login'))
-                        @auth
+                    <?php if(Route::has('login')): ?>
+                        <?php if(auth()->guard()->check()): ?>
                             <li class="nav-item">
-                                <a class="btn btn-dashboard" href="{{ url('/dashboard') }}">
+                                <a class="btn btn-dashboard" href="<?php echo e(url('/dashboard')); ?>">
                                     <i class="fas fa-tachometer-alt"></i> Dashboard
                                 </a>
                             </li>
-                        @else
+                        <?php else: ?>
                             <li class="nav-item">
-                                <a class="btn btn-login" href="{{ route('login') }}">
+                                <a class="btn btn-login" href="<?php echo e(route('login')); ?>">
                                     <i class="fas fa-sign-in-alt"></i> Login
                                 </a>
                             </li>
-                        @endauth
-                    @endif
+                        <?php endif; ?>
+                    <?php endif; ?>
                 </ul>
             </div>
         </div>
@@ -335,3 +335,4 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </html>
+<?php /**PATH C:\xampp\htdocs\exam1\resources\views/welcome.blade.php ENDPATH**/ ?>

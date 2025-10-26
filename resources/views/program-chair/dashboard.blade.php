@@ -1,6 +1,6 @@
 @extends('layouts.ProgramChair.app')
 
-@section('content')
+@section('main-content')
 
    
         <style>

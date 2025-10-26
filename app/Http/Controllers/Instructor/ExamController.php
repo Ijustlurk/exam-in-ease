@@ -328,42 +328,52 @@ class ExamController extends Controller
             'answer' => 'nullable|string',
             'expected_answer' => 'nullable|string',
             'enum_type' => 'nullable|in:ordered,unordered',
-            'after_item_id' => 'nullable|exists:exam_items,item_id'
+            'after_item_id' => 'nullable'
         ]);
 
         DB::beginTransaction();
         try {
             $newOrder = 0;
             
-            // If after_item_id is provided, insert after that item
+            // Check if after_item_id is provided
             if (!empty($validated['after_item_id'])) {
-                $afterItem = ExamItem::where('item_id', $validated['after_item_id'])
-                    ->where('exam_section_id', $validated['section_id'])
-                    ->first();
-                
-                if ($afterItem) {
-                    // Get the order of the item we want to insert after
-                    $afterOrder = $afterItem->order;
-                    
-                    // Increment order of all items after this one
-                    ExamItem::where('exam_section_id', $validated['section_id'])
-                        ->where('order', '>', $afterOrder)
-                        ->increment('order');
-                    
-                    // Set new item's order to be right after the specified item
-                    $newOrder = $afterOrder + 1;
-                } else {
-                    // Fallback: add to start of section
+                // Special case: 'start' means insert at beginning
+                if ($validated['after_item_id'] === 'start') {
+                    // Add to start of section
+                    // Increment all existing items' order
                     ExamItem::where('exam_section_id', $validated['section_id'])
                         ->increment('order');
                     $newOrder = 1;
+                } else {
+                    // Insert after a specific item
+                    $afterItem = ExamItem::where('item_id', $validated['after_item_id'])
+                        ->where('exam_section_id', $validated['section_id'])
+                        ->first();
+                    
+                    if ($afterItem) {
+                        // Get the order of the item we want to insert after
+                        $afterOrder = $afterItem->order;
+                        
+                        // Increment order of all items after this one
+                        ExamItem::where('exam_section_id', $validated['section_id'])
+                            ->where('order', '>', $afterOrder)
+                            ->increment('order');
+                        
+                        // Set new item's order to be right after the specified item
+                        $newOrder = $afterOrder + 1;
+                    } else {
+                        // Fallback: add to end of section
+                        $maxOrder = ExamItem::where('exam_section_id', $validated['section_id'])
+                            ->max('order');
+                        $newOrder = ($maxOrder ?? 0) + 1;
+                    }
                 }
             } else {
-                // No after_item_id: add to start of section
-                // Increment all existing items' order
-                ExamItem::where('exam_section_id', $validated['section_id'])
-                    ->increment('order');
-                $newOrder = 1;
+                // No after_item_id: add to end of section
+                // Get the highest order in this section
+                $maxOrder = ExamItem::where('exam_section_id', $validated['section_id'])
+                    ->max('order');
+                $newOrder = ($maxOrder ?? 0) + 1;
             }
 
             $item = ExamItem::create([
