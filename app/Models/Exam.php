@@ -26,7 +26,8 @@ class Exam extends Model
         'no_of_items',
         'status',
         'approved_date',
-        'revision_notes'
+        'revision_notes',
+        'exam_password'
     ];
 
     protected $casts = [
@@ -214,6 +215,21 @@ class Exam extends Model
             'class_id',
             'exam_id',
             'class_id'
+        );
+    }
+
+    /**
+     * Get all exam attempts for this exam through exam assignments
+     */
+    public function examAttempts()
+    {
+        return $this->hasManyThrough(
+            ExamAttempt::class,      // Final model we want to access
+            ExamAssignment::class,   // Intermediate model
+            'exam_id',              // Foreign key on exam_assignments table
+            'exam_assignment_id',   // Foreign key on exam_attempts table
+            'exam_id',              // Local key on exams table
+            'assignment_id'         // Local key on exam_assignments table
         );
     }
 }

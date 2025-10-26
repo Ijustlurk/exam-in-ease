@@ -160,6 +160,9 @@ Route::
                 // List all exams for approval
                 Route::get('/programchair', [ManageApprovalController::class, 'index'])
                     ->name('index');
+                // Details route must come before the show route to avoid {exam} catching "details"
+                Route::get('/programchair/{exam}/details', [ManageApprovalController::class, 'getDetails'])
+                    ->name('details');
                 Route::get('/programchair/{exam}', [ManageApprovalController::class, 'show'])
                     ->name('show');
                 Route::post('/{exam}/approve', [ManageApprovalController::class, 'approve'])
@@ -220,11 +223,20 @@ Route::
         Route::delete('/exams/{examId}/collaborators/{teacherId}', [ExamController::class, 'removeCollaborator'])->name('exams.collaborators.remove');
         Route::get('/exams/{examId}/collaborators', [ExamController::class, 'getCollaborators'])->name('exams.collaborators.get');
 
+        // Notifications
+        Route::get('/notifications', [\App\Http\Controllers\Instructor\NotificationController::class, 'index'])->name('notifications.index');
+        Route::get('/notifications/{id}', [\App\Http\Controllers\Instructor\NotificationController::class, 'show'])->name('notifications.show');
+        Route::post('/notifications/{id}/mark-as-read', [\App\Http\Controllers\Instructor\NotificationController::class, 'markAsRead'])->name('notifications.mark-as-read');
+        Route::post('/notifications/mark-all-read', [\App\Http\Controllers\Instructor\NotificationController::class, 'markAllAsRead'])->name('notifications.mark-all-read');
+        Route::delete('/notifications/{id}', [\App\Http\Controllers\Instructor\NotificationController::class, 'destroy'])->name('notifications.destroy');
+        Route::get('/notifications/unread/count', [\App\Http\Controllers\Instructor\NotificationController::class, 'getUnreadCount'])->name('notifications.unread-count');
+
         // Get classes by subject (for the create exam modal)
         Route::get('/api/classes', [ExamController::class, 'getClasses'])->name('classes.get');
 
-        Route::get('instructor/exams-statistics', [ExamStatisticsController::class, 'index'])->name('exam-statistics.index');
-        Route::get('instructor/exams-statistics/show', [ExamStatisticsController::class, 'show'])->name('exam-statistics.show');
+        // Exam Statistics
+        Route::get('/exams-statistics', [ExamStatisticsController::class, 'index'])->name('exam-statistics.index');
+        Route::get('/exams-statistics/{id}', [ExamStatisticsController::class, 'show'])->name('exam-statistics.show');
 
     });
 
