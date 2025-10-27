@@ -162,12 +162,27 @@ class Exam extends Model
     }
 
     /**
-     * Get approval status
+     * Get approval status based on exam's current status
+     * The exam.status field is the source of truth
      */
     public function getApprovalStatusAttribute()
     {
-        $latestApproval = $this->latest_approval;
-        return $latestApproval ? $latestApproval->status : 'pending';
+        // If exam is approved, show approved
+        if ($this->status == 'approved') {
+            return 'approved';
+        }
+        
+        // If exam is for approval, check if there's a rejection
+        if ($this->status == 'for approval') {
+            $latestApproval = $this->latest_approval;
+            if ($latestApproval && $latestApproval->status == 'rejected') {
+                return 'rejected';
+            }
+            return 'pending';
+        }
+        
+        // For any other status (draft, etc.)
+        return 'pending';
     }
 
     /**

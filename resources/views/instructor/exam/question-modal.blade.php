@@ -257,6 +257,9 @@
                     <div class="mb-4 mt-4">
                         <label class="form-label-custom" id="enumPointsLabel">Points:</label>
                         <input type="number" class="form-control-custom" id="enum_points" name="points_awarded" value="1" min="1" required style="width: 120px;">
+                        <small id="enumPointsHelp" class="form-text text-muted" style="display: none; margin-top: 5px;">
+                            Students earn points for each correct answer. If you enter 3 points for 3 answers, each correct answer = 1 point.
+                        </small>
                     </div>
 
                     <div class="d-flex justify-content-end gap-2">
@@ -465,6 +468,20 @@ function editQuestion(itemId) {
 function populateModalForEdit(item) {
     const type = item.item_type;
     
+    // Helper function to safely parse JSON or return existing object/array
+    const safeJsonParse = (data, defaultValue = null) => {
+        if (data === null || data === undefined) return defaultValue;
+        if (typeof data === 'string') {
+            try {
+                return JSON.parse(data);
+            } catch (e) {
+                console.error('JSON parse error:', e);
+                return defaultValue;
+            }
+        }
+        return data; // Already an object/array
+    };
+    
     // Set editing mode
     editingItemId = item.item_id;
     currentSectionId = item.exam_section_id;
@@ -480,8 +497,9 @@ function populateModalForEdit(item) {
     
     // Fill type-specific fields
     if (type === 'mcq') {
-        const options = JSON.parse(item.options);
-        const correctAnswers = JSON.parse(item.answer);
+        // Parse options and answers (may be string or already parsed)
+        const options = safeJsonParse(item.options, {});
+        const correctAnswers = safeJsonParse(item.answer, []);
         
         const container = document.getElementById('mcq_options');
         container.innerHTML = '<label class="form-label-custom">Options</label>';
@@ -503,7 +521,8 @@ function populateModalForEdit(item) {
         });
         
     } else if (type === 'torf') {
-        const answer = JSON.parse(item.answer);
+        // Parse answer (may be string or already parsed)
+        const answer = safeJsonParse(item.answer, {});
         const correctValue = answer.correct;
         
         if (correctValue === 'true') {
@@ -516,7 +535,8 @@ function populateModalForEdit(item) {
         document.getElementById('iden_expected_answer').value = item.expected_answer || '';
         
     } else if (type === 'enum') {
-        const answers = JSON.parse(item.answer);
+        // Parse answers (may be string or already parsed)
+        const answers = safeJsonParse(item.answer, []);
         const enumType = item.enum_type || 'ordered';
         
         document.getElementById('enumTypeSelect').value = enumType;
@@ -899,6 +919,7 @@ function toggleEnumType() {
     const dragHandles = document.querySelectorAll('.enum-drag-handle');
     const answersLabel = document.getElementById('enumAnswersLabel');
     const pointsLabel = document.getElementById('enumPointsLabel');
+    const pointsHelp = document.getElementById('enumPointsHelp');
     
     // Update hidden field
     document.getElementById('enum_type').value = enumType;
@@ -907,14 +928,16 @@ function toggleEnumType() {
         // Show numbers, hide drag handles
         numbers.forEach(num => num.style.display = 'inline-block');
         dragHandles.forEach(handle => handle.style.display = 'none');
-        answersLabel.textContent = 'Expected Answers (in order)';
-        pointsLabel.textContent = 'Points:';
+        if (answersLabel) answersLabel.textContent = 'Expected Answers (in order)';
+        if (pointsLabel) pointsLabel.textContent = 'Total Points:';
+        if (pointsHelp) pointsHelp.style.display = 'none';
     } else {
         // Hide numbers, show drag handles
         numbers.forEach(num => num.style.display = 'none');
         dragHandles.forEach(handle => handle.style.display = 'inline-block');
-        answersLabel.textContent = 'Expected Answers';
-        pointsLabel.textContent = 'Point per correct answer:';
+        if (answersLabel) answersLabel.textContent = 'Expected Answers (any order)';
+        if (pointsLabel) pointsLabel.textContent = 'Total Points (partial credit enabled):';
+        if (pointsHelp) pointsHelp.style.display = 'block';
     }
 }
 

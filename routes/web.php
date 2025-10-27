@@ -237,6 +237,9 @@ Route::
         // Exam Statistics
         Route::get('/exams-statistics', [ExamStatisticsController::class, 'index'])->name('exam-statistics.index');
         Route::get('/exams-statistics/{id}', [ExamStatisticsController::class, 'show'])->name('exam-statistics.show');
+        Route::get('/exams-statistics/{id}/filter', [ExamStatisticsController::class, 'getFilteredStats'])->name('exam-statistics.filter');
+        Route::get('/exams-statistics/{id}/questions', [ExamStatisticsController::class, 'getQuestionStats'])->name('exam-statistics.questions');
+        Route::get('/instructor/exam-statistics/{exam}', [App\Http\Controllers\Instructor\ExamStatisticsController::class, 'show'])->name('instructor.exam-statistics.show');
 
     });
 

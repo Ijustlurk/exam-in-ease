@@ -594,90 +594,163 @@ class ExamController extends Controller
             }
 
             $studentAnswer = $answerData['answer'];
-            $correctAnswer = $item->expected_answer;
+            $originalStudentAnswer = $studentAnswer; // Keep original for logging
 
             // Auto-grade based on item type
             $isCorrect = false;
             $pointsEarned = 0;
 
+            // STEP 1: Convert/normalize student answer to match database format
             switch ($item->item_type) {
                 case 'mcq':
                     // Mobile app sends option KEY (A, B, C, D)
-                    // Database stores correct answer in 'answer' field as array of indices: [0], [1,2], etc.
+                    // Convert to index (0, 1, 2, 3) to match database format
                     
-                    $studentIndex = null;
-                    
-                    // Convert letter key to index (A=0, B=1, C=2, D=3)
                     if (is_string($studentAnswer) && preg_match('/^[A-Z]$/i', $studentAnswer)) {
-                        $studentIndex = ord(strtoupper($studentAnswer)) - ord('A');
-                    } 
-                    // Handle if student sends numeric index directly
-                    elseif (is_numeric($studentAnswer)) {
-                        $studentIndex = (int)$studentAnswer;
+                        // Convert letter to index: A=0, B=1, C=2, D=3
+                        $studentAnswer = ord(strtoupper($studentAnswer)) - ord('A');
+                    } elseif (is_numeric($studentAnswer)) {
+                        // Already a number, convert to int
+                        $studentAnswer = (int)$studentAnswer;
+                    } else {
+                        // Invalid format
+                        $studentAnswer = null;
                     }
+                    break;
+
+                case 'torf':
+                    // Mobile app SHOULD send "True" or "False" (or "true"/"false")
+                    // BUT if mobile app treats it as MCQ, it might send "A"/"B" or "0"/"1"
+                    // Handle both cases for backward compatibility
                     
-                    // Get correct answer indices from 'answer' field (not expected_answer)
+                    if (is_string($studentAnswer)) {
+                        $trimmed = trim($studentAnswer);
+                        
+                        // Check if it's MCQ format (A, B, 0, 1)
+                        if (preg_match('/^[AB]$/i', $trimmed)) {
+                            // Convert A=True, B=False
+                            $studentAnswer = (strtoupper($trimmed) === 'A') ? 'true' : 'false';
+                        } elseif ($trimmed === '0' || $trimmed === '1') {
+                            // Convert 0=True, 1=False
+                            $studentAnswer = ($trimmed === '0') ? 'true' : 'false';
+                        } else {
+                            // Already in True/False format, just normalize
+                            $studentAnswer = strtolower($trimmed);
+                        }
+                    } else {
+                        $studentAnswer = null;
+                    }
+                    break;
+
+                case 'enum':
+                    // Mobile app might send comma-separated string: "Red, Blue, Green"
+                    // Convert to array and normalize
+                    if (is_string($studentAnswer)) {
+                        if (strpos($studentAnswer, ',') !== false) {
+                            $studentAnswer = array_map('trim', explode(',', $studentAnswer));
+                        } else {
+                            $studentAnswer = [trim($studentAnswer)];
+                        }
+                    } elseif (!is_array($studentAnswer)) {
+                        $studentAnswer = [$studentAnswer];
+                    }
+                    // Normalize array values (lowercase and trim)
+                    $studentAnswer = array_map('trim', $studentAnswer);
+                    break;
+
+                case 'iden':
+                    // Normalize: lowercase and trim
+                    if (is_string($studentAnswer)) {
+                        $studentAnswer = strtolower(trim($studentAnswer));
+                    } else {
+                        $studentAnswer = null;
+                    }
+                    break;
+
+                case 'essay':
+                    // Keep as-is, will need manual grading
+                    break;
+            }
+
+            // STEP 2: Validate the normalized answer against the answer key
+            switch ($item->item_type) {
+                case 'mcq':
+                    // Get correct answer indices from 'answer' field
                     $correctIndices = $item->answer ?? [];
-                    
-                    // Ensure correctIndices is an array
                     if (!is_array($correctIndices)) {
                         $correctIndices = json_decode($correctIndices, true) ?? [];
                     }
                     
                     // Check if student's answer index is in the correct answers array
-                    if ($studentIndex !== null && is_array($correctIndices)) {
-                        $isCorrect = in_array($studentIndex, $correctIndices);
-                    } else {
-                        $isCorrect = false;
-                    }
+                    $isCorrect = ($studentAnswer !== null && in_array($studentAnswer, $correctIndices));
                     break;
 
                 case 'torf':
-                    // Mobile app sends "True" or "False"
-                    // Database stores answer as: {"correct":"true"} or {"correct":"false"}
-                    
-                    $correctAnswerData = $item->answer ?? [];
-                    
-                    // Ensure it's an array
-                    if (!is_array($correctAnswerData)) {
-                        $correctAnswerData = json_decode($correctAnswerData, true) ?? [];
+                    // Get correct answer from 'answer' field: can be string ("True"/"False") or object {"correct":"true"}
+                    $dbAnswer = $item->answer ?? null;
+                    $correctValue = null;
+                    if (is_array($dbAnswer)) {
+                        // Eloquent cast: array/object
+                        if (isset($dbAnswer['correct'])) {
+                            $correctValue = strtolower(trim($dbAnswer['correct']));
+                        }
+                    } elseif (is_string($dbAnswer)) {
+                        // Could be JSON or plain string
+                        $decoded = json_decode($dbAnswer, true);
+                        if (is_array($decoded) && isset($decoded['correct'])) {
+                            $correctValue = strtolower(trim($decoded['correct']));
+                        } else {
+                            // Plain string: "True" or "False"
+                            $correctValue = strtolower(trim($dbAnswer));
+                        }
                     }
-                    
-                    // Get the correct value
-                    $correctValue = $correctAnswerData['correct'] ?? null;
-                    
-                    // Case-insensitive comparison
-                    $isCorrect = $correctValue && strtolower(trim($studentAnswer)) === strtolower(trim($correctValue));
+                    // Debug logging
+                    Log::debug('TORF Validation', [
+                        'item_id' => $item->item_id,
+                        'answer_raw' => $item->answer,
+                        'answer_type' => gettype($item->answer),
+                        'correctValue' => $correctValue,
+                        'studentAnswer' => $studentAnswer,
+                        'student_type' => gettype($studentAnswer)
+                    ]);
+                    // Direct comparison (both are now lowercase)
+                    $isCorrect = ($studentAnswer !== null && $correctValue !== null && $studentAnswer === $correctValue);
                     break;
 
                 case 'enum':
-                    // Mobile app might send comma-separated string: "Red, Blue, Green"
-                    // Convert to array if it's a string
-                    if (is_string($studentAnswer) && strpos($studentAnswer, ',') !== false) {
-                        $studentAnswer = array_map('trim', explode(',', $studentAnswer));
-                    }
-                    
-                    // Ensure studentAnswer is an array
-                    if (!is_array($studentAnswer)) {
-                        $studentAnswer = [$studentAnswer];
-                    }
-                    
                     // Get correct answer from database
                     $correctAnswerData = $item->answer ?? [];
                     if (!is_array($correctAnswerData)) {
                         $correctAnswerData = json_decode($correctAnswerData, true) ?? [];
                     }
                     
+                    // Normalize correct answers (lowercase and trim)
+                    $normalizedCorrectAnswers = array_map('strtolower', array_map('trim', $correctAnswerData));
+                    $normalizedStudentAnswers = array_map('strtolower', $studentAnswer);
+                    
+                    // Debug logging
+                    Log::debug('ENUM Validation', [
+                        'item_id' => $item->item_id,
+                        'enum_type' => $item->enum_type,
+                        'answer_raw' => $item->answer,
+                        'answer_type' => gettype($item->answer),
+                        'correctAnswerData' => $correctAnswerData,
+                        'normalizedCorrectAnswers' => $normalizedCorrectAnswers,
+                        'studentAnswer_raw' => $studentAnswer,
+                        'student_type' => gettype($studentAnswer),
+                        'normalizedStudentAnswers' => $normalizedStudentAnswers
+                    ]);
+                    
                     // Check if ordered or unordered enumeration
                     $enumType = $item->enum_type ?? 'ordered';
                     
                     if ($enumType === 'ordered') {
                         // ORDERED: Must match in exact order (case-insensitive)
-                        $isCorrect = count($studentAnswer) === count($correctAnswerData);
+                        $isCorrect = count($normalizedStudentAnswers) === count($normalizedCorrectAnswers);
                         if ($isCorrect) {
-                            foreach ($studentAnswer as $index => $answer) {
-                                if (!isset($correctAnswerData[$index]) || 
-                                    strtolower(trim($answer)) !== strtolower(trim($correctAnswerData[$index]))) {
+                            foreach ($normalizedStudentAnswers as $index => $answer) {
+                                if (!isset($normalizedCorrectAnswers[$index]) || 
+                                    $answer !== $normalizedCorrectAnswers[$index]) {
                                     $isCorrect = false;
                                     break;
                                 }
@@ -685,16 +758,45 @@ class ExamController extends Controller
                         }
                     } else {
                         // UNORDERED: Order doesn't matter (case-insensitive)
-                        $isCorrect = count(array_intersect(
-                            array_map('strtolower', array_map('trim', $studentAnswer)),
-                            array_map('strtolower', array_map('trim', $correctAnswerData))
-                        )) === count($correctAnswerData);
+                        // Robust normalization: trim, lowercase, remove extra whitespace
+                        $normalizedCorrectAnswers = array_unique(array_map(function($ans) {
+                            return strtolower(trim(preg_replace('/\s+/', ' ', $ans)));
+                        }, $correctAnswerData));
+                        $normalizedStudentAnswers = array_unique(array_map(function($ans) {
+                            return strtolower(trim(preg_replace('/\s+/', ' ', $ans)));
+                        }, $studentAnswer));
+
+                        $totalCorrectAnswers = count($normalizedCorrectAnswers);
+
+                        // Only count unique correct matches
+                        $matchingAnswers = array_intersect($normalizedStudentAnswers, $normalizedCorrectAnswers);
+                        $correctCount = count($matchingAnswers);
+
+                        // Calculate partial points
+                        if ($correctCount > 0 && $totalCorrectAnswers > 0) {
+                            // Award points proportionally: (correct answers / total answers) * total points
+                            $pointsEarned = ($correctCount / $totalCorrectAnswers) * $item->points_awarded;
+                            $pointsEarned = round($pointsEarned, 2); // Round to 2 decimal places
+                            // Mark as correct if AT LEAST ONE answer is correct
+                            $isCorrect = true;
+                        } else {
+                            $pointsEarned = 0;
+                            $isCorrect = false;
+                        }
                     }
                     break;
 
                 case 'iden':
-                    // For identification, case-insensitive comparison with trimming
-                    $isCorrect = strtolower(trim($studentAnswer)) === strtolower(trim($correctAnswer));
+                    // Get expected answer
+                    $correctAnswer = $item->expected_answer;
+                    
+                    if ($correctAnswer) {
+                        $normalizedCorrectAnswer = strtolower(trim($correctAnswer));
+                        // Direct comparison (both already normalized)
+                        $isCorrect = ($studentAnswer !== null && $studentAnswer === $normalizedCorrectAnswer);
+                    } else {
+                        $isCorrect = false;
+                    }
                     break;
 
                 case 'essay':
@@ -703,12 +805,31 @@ class ExamController extends Controller
                     break;
             }
 
-            if ($isCorrect) {
+            // Award points based on correctness
+            // For unordered enum, $pointsEarned is already calculated with partial credit
+            // For other types, award full points if correct
+            if ($isCorrect && $pointsEarned === 0) {
                 $pointsEarned = $item->points_awarded;
+            }
+            
+            // Add to total score (even partial points)
+            if ($pointsEarned > 0) {
                 $totalScore += $pointsEarned;
             }
 
+            // Log answer validation for debugging
+            Log::debug('Answer Validation', [
+                'item_id' => $item->item_id,
+                'item_type' => $item->item_type,
+                'original_answer' => $originalStudentAnswer,
+                'normalized_answer' => $studentAnswer,
+                'is_correct' => $isCorrect,
+                'points_earned' => $pointsEarned,
+                'points_possible' => $item->points_awarded
+            ]);
+
             // Store student answer in exam_answers table
+            // Store the NORMALIZED/CONVERTED answer for consistency with database format
             ExamAnswer::create([
                 'attempt_id' => $attemptId,
                 'item_id' => $item->item_id,

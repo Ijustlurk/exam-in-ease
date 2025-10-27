@@ -44,11 +44,25 @@ class ManageApprovalController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
-        // Add approval status for each exam
+        // Add approval status for each exam based on the exam's actual status
+        // The exam.status field is the source of truth
         $exams->each(function($exam) {
-            $latestApproval = $exam->approvals->first();
+            // Use the exam's status field as the primary source
+            if ($exam->status == 'approved') {
+                $exam->approval_status = 'approved';
+            } elseif ($exam->status == 'for approval') {
+                // Check if there's a rejection/revision in approvals table
+                $latestApproval = $exam->approvals->first();
+                if ($latestApproval && $latestApproval->status == 'rejected') {
+                    $exam->approval_status = 'rejected';
+                } else {
+                    $exam->approval_status = 'pending';
+                }
+            } else {
+                $exam->approval_status = 'pending';
+            }
             
-            $exam->approval_status = $latestApproval ? $latestApproval->status : 'pending';
+            $latestApproval = $exam->approvals->first();
             $exam->approval_notes = $latestApproval ? $latestApproval->notes : null;
         });
 
@@ -74,9 +88,22 @@ class ManageApprovalController extends Controller
             }
         ]);
 
-        // Get latest approval status
+        // Get approval status based on exam's actual status (source of truth)
+        if ($exam->status == 'approved') {
+            $exam->approval_status = 'approved';
+        } elseif ($exam->status == 'for approval') {
+            // Check if there's a rejection/revision in approvals table
+            $latestApproval = $exam->approvals->first();
+            if ($latestApproval && $latestApproval->status == 'rejected') {
+                $exam->approval_status = 'rejected';
+            } else {
+                $exam->approval_status = 'pending';
+            }
+        } else {
+            $exam->approval_status = 'pending';
+        }
+        
         $latestApproval = $exam->approvals->first();
-        $exam->approval_status = $latestApproval ? $latestApproval->status : 'pending';
         $exam->approval_notes = $latestApproval ? $latestApproval->notes : null;
 
         return view('program-chair.manage-approval.show', compact('exam'));

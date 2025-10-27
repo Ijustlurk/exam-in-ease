@@ -1057,7 +1057,12 @@
 
                     <div class="points-display">
                         @if($item->item_type === 'enum' && ($item->enum_type ?? 'ordered') === 'unordered')
-                            <strong>Point per correct answer:</strong> {{ $item->points_awarded }}
+                            <?php
+                                $answerCount = count(json_decode($item->answer, true) ?? []);
+                                $pointPerAnswer = $answerCount > 0 ? round($item->points_awarded / $answerCount, 2) : $item->points_awarded;
+                            ?>
+                            <strong>Total Points:</strong> {{ $item->points_awarded }} 
+                            <span style="color: #6c757d; font-size: 0.9em;">({{ $pointPerAnswer }} pt per correct answer)</span>
                         @else
                             <strong>Points:</strong> {{ $item->points_awarded }}
                         @endif

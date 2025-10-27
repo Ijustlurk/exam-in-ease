@@ -1,7 +1,7 @@
-{{-- This shows exam statistic per exam --}}
-@extends('layouts.Instructor.app')
 
-@section('content')
+
+
+<?php $__env->startSection('content'); ?>
     <style>
         /* Main Container */
         .exam-statistics-container {
@@ -497,20 +497,21 @@
         <!-- Header Section -->
         <div class="exam-header">
             <div class="exam-header-left">
-                <h1>{{ $exam->exam_title }}</h1>
+                <h1><?php echo e($exam->exam_title); ?></h1>
                 <div class="exam-schedule">
-                    Scheduled: {{ $schedule }}
+                    Scheduled: <?php echo e($schedule); ?>
+
                 </div>
                 <div class="exam-schedule">
-                    {{ $exam->subject->subject_name }} | {{ $totalItems }} items | {{ $totalPoints }} points
+                    <?php echo e($exam->subject->subject_name); ?> | <?php echo e($totalItems); ?> items | <?php echo e($totalPoints); ?> points
                 </div>
             </div>
             <div class="exam-header-right">
                 <select class="class-filter-dropdown" id="classFilter" onchange="handleClassFilterChange()">
-                    <option value="all">All Classes ({{ $assignedClasses->count() }})</option>
-                    @foreach($assignedClasses as $class)
-                        <option value="{{ $class['class_id'] }}">{{ $class['display_name'] }}</option>
-                    @endforeach
+                    <option value="all">All Classes (<?php echo e($assignedClasses->count()); ?>)</option>
+                    <?php $__currentLoopData = $assignedClasses; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $class): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                        <option value="<?php echo e($class['class_id']); ?>"><?php echo e($class['display_name']); ?></option>
+                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                 </select>
             </div>
         </div>
@@ -539,22 +540,22 @@
                 <div class="stats-grid">
                     <div class="stat-card">
                         <div class="stat-card-label">Submissions</div>
-                        <div class="stat-card-value">{{ $submittedCount }}/{{ $totalStudents }}</div>
-                        <div class="stat-card-subtext">{{ $completionRate }}% completion rate</div>
+                        <div class="stat-card-value"><?php echo e($submittedCount); ?>/<?php echo e($totalStudents); ?></div>
+                        <div class="stat-card-subtext"><?php echo e($completionRate); ?>% completion rate</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-card-label">Highest Score</div>
-                        <div class="stat-card-value">{{ $highestScore }}</div>
-                        <div class="stat-card-subtext">Out of {{ $totalPoints }} points</div>
+                        <div class="stat-card-value"><?php echo e($highestScore); ?></div>
+                        <div class="stat-card-subtext">Out of <?php echo e($totalPoints); ?> points</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-card-label">Lowest Score</div>
-                        <div class="stat-card-value">{{ $lowestScore }}</div>
-                        <div class="stat-card-subtext">Out of {{ $totalPoints }} points</div>
+                        <div class="stat-card-value"><?php echo e($lowestScore); ?></div>
+                        <div class="stat-card-subtext">Out of <?php echo e($totalPoints); ?> points</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-card-label">Average Time</div>
-                        <div class="stat-card-value">{{ $averageTime }}</div>
+                        <div class="stat-card-value"><?php echo e($averageTime); ?></div>
                         <div class="stat-card-subtext">Completion time</div>
                     </div>
                 </div>
@@ -571,17 +572,17 @@
                 <div class="chart-container">
                     <div class="chart-title">Highest Scoring Students</div>
                     <div class="student-list">
-                        @forelse($highestScoringStudents as $student)
+                        <?php $__empty_1 = true; $__currentLoopData = $highestScoringStudents; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $student): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
                         <div class="student-item">
-                            <span class="student-name">{{ $student['name'] }}</span>
-                            <span class="student-class">({{ $student['class'] }})</span>
-                            <span style="float: right; font-weight: 600; color: #059669;">{{ $student['score'] }}</span>
+                            <span class="student-name"><?php echo e($student['name']); ?></span>
+                            <span class="student-class">(<?php echo e($student['class']); ?>)</span>
+                            <span style="float: right; font-weight: 600; color: #059669;"><?php echo e($student['score']); ?></span>
                         </div>
-                        @empty
+                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
                         <div style="text-align: center; color: #6c757d; padding: 20px;">
                             No submissions yet
                         </div>
-                        @endforelse
+                        <?php endif; ?>
                     </div>
                 </div>
 
@@ -595,15 +596,16 @@
                             <h3 class="question-card-title">Hardest Question</h3>
                         </div>
                         <div class="question-card-content">
-                            @if($hardestQuestion)
-                                <span class="question-number">Question #{{ $hardestQuestion['number'] }}:</span> 
-                                {{ Str::limit($hardestQuestion['question'], 100) }}
-                                <div class="success-rate {{ $hardestQuestion['success_rate'] < 50 ? 'low' : ($hardestQuestion['success_rate'] < 75 ? 'medium' : 'high') }}">
-                                    Success Rate: {{ $hardestQuestion['success_rate'] }}%
+                            <?php if($hardestQuestion): ?>
+                                <span class="question-number">Question #<?php echo e($hardestQuestion['number']); ?>:</span> 
+                                <?php echo e(Str::limit($hardestQuestion['question'], 100)); ?>
+
+                                <div class="success-rate <?php echo e($hardestQuestion['success_rate'] < 50 ? 'low' : ($hardestQuestion['success_rate'] < 75 ? 'medium' : 'high')); ?>">
+                                    Success Rate: <?php echo e($hardestQuestion['success_rate']); ?>%
                                 </div>
-                            @else
+                            <?php else: ?>
                                 <div style="color: #6c757d;">No data available yet</div>
-                            @endif
+                            <?php endif; ?>
                         </div>
                     </div>
 
@@ -615,15 +617,16 @@
                             <h3 class="question-card-title">Easiest Question</h3>
                         </div>
                         <div class="question-card-content">
-                            @if($easiestQuestion)
-                                <span class="question-number">Question #{{ $easiestQuestion['number'] }}:</span> 
-                                {{ Str::limit($easiestQuestion['question'], 100) }}
-                                <div class="success-rate {{ $easiestQuestion['success_rate'] < 50 ? 'low' : ($easiestQuestion['success_rate'] < 75 ? 'medium' : 'high') }}">
-                                    Success Rate: {{ $easiestQuestion['success_rate'] }}%
+                            <?php if($easiestQuestion): ?>
+                                <span class="question-number">Question #<?php echo e($easiestQuestion['number']); ?>:</span> 
+                                <?php echo e(Str::limit($easiestQuestion['question'], 100)); ?>
+
+                                <div class="success-rate <?php echo e($easiestQuestion['success_rate'] < 50 ? 'low' : ($easiestQuestion['success_rate'] < 75 ? 'medium' : 'high')); ?>">
+                                    Success Rate: <?php echo e($easiestQuestion['success_rate']); ?>%
                                 </div>
-                            @else
+                            <?php else: ?>
                                 <div style="color: #6c757d;">No data available yet</div>
-                            @endif
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
@@ -652,7 +655,7 @@
 
     <script>
         // Store exam ID for AJAX requests
-        const examId = {{ $exam->exam_id }};
+        const examId = <?php echo e($exam->exam_id); ?>;
         
         // Initialize the sliding indicator position
         document.addEventListener('DOMContentLoaded', function() {
@@ -1015,4 +1018,5 @@
             return div.innerHTML;
         }
     </script>
-@endsection
+<?php $__env->stopSection(); ?>
+<?php echo $__env->make('layouts.Instructor.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH C:\xampp\htdocs\exam1\resources\views/instructor/exam-statistics/show.blade.php ENDPATH**/ ?>
