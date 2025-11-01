@@ -239,6 +239,8 @@ Route::
         Route::get('/exams-statistics/{id}', [ExamStatisticsController::class, 'show'])->name('exam-statistics.show');
         Route::get('/exams-statistics/{id}/filter', [ExamStatisticsController::class, 'getFilteredStats'])->name('exam-statistics.filter');
         Route::get('/exams-statistics/{id}/questions', [ExamStatisticsController::class, 'getQuestionStats'])->name('exam-statistics.questions');
+        Route::get('/exams-statistics/{id}/individual', [ExamStatisticsController::class, 'getIndividualStats'])->name('exam-statistics.individual');
+        Route::post('/exams-statistics/{id}/answer/{answerId}/override', [ExamStatisticsController::class, 'overrideAnswer'])->name('exam-statistics.override-answer');
         Route::get('/instructor/exam-statistics/{exam}', [App\Http\Controllers\Instructor\ExamStatisticsController::class, 'show'])->name('instructor.exam-statistics.show');
 
     });

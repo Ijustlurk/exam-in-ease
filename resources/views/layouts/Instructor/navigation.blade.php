@@ -2,7 +2,7 @@
 <style>
     .sidebar {
         background-color: rgb(207, 218, 225);
-        height: calc(100vh - 90px);
+        height: 550px;
         display: flex;
         flex-direction: column;
         padding-top: 1rem;
@@ -123,10 +123,10 @@
                          x-transition:leave="transition ease-in duration-75"
                          x-transition:leave-start="opacity-100 scale-100"
                          x-transition:leave-end="opacity-0 scale-95"
-                         class="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50"
-                         style="display: none;">
+                         class="absolute right-0 mt-2 bg-white rounded-lg shadow-lg border border-gray-200 z-50"
+                         style="display: none; width: 320px;">
                         
-                        <div class="p-6 border-b border-gray-200 flex items-center justify-between">
+                        <div class="p-4 border-b border-gray-200 flex items-center justify-between">
                             <h4 class="font-semibold text-gray-800">Notifications</h4>
                             @if($unreadCount > 0)
                                 <a href="{{ route('instructor.notifications.mark-all-read') }}" 
@@ -137,9 +137,9 @@
                             @endif
                         </div>
 
-                        <div class="max-h-96 overflow-y-auto">
+                        <div style="max-height: 180px; overflow-y: auto;">
                             @php
-                                $notifications = Auth::user()->notifications()->latest()->limit(10)->get();
+                                $notifications = Auth::user()->notifications()->latest()->limit(2)->get();
                             @endphp
                             
                             @forelse($notifications as $notification)

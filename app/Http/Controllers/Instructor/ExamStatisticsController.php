@@ -536,32 +536,108 @@ class ExamStatisticsController extends Controller
                 
                 // Response breakdown based on item type
                 $responseBreakdown = [];
+                $options = []; // Initialize as empty array
                 
                 if ($item->item_type === 'mcq' || $item->item_type === 'torf') {
-                    // For MCQ and True/False, count responses per option
+                    // Get options from exam_items.options field
+                    $itemOptions = $item->options; // Eloquent cast handles JSON
+                    
+                    // If options is still a string (cast didn't work), decode it manually
+                    if (is_string($itemOptions)) {
+                        $itemOptions = json_decode($itemOptions, true);
+                    }
+                    
+                    // Ensure it's an array
+                    if (!is_array($itemOptions)) {
+                        $itemOptions = [];
+                    }
+                    
+                    // Get correct answer(s) from exam_items.answer field
+                    $correctAnswers = $item->answer; // Eloquent cast handles JSON
+                    
+                    // If answer is still a string, decode it manually
+                    if (is_string($correctAnswers)) {
+                        $correctAnswers = json_decode($correctAnswers, true);
+                    }
+                    
+                    // For MCQ: answer is array of indices [0, 2] or single index
+                    // For T/F: answer is {"correct":"true"} or {"correct":"false"}
+                    $correctIndices = [];
+                    $correctValue = null;
+                    
+                    if ($item->item_type === 'mcq') {
+                        if (is_array($correctAnswers)) {
+                            $correctIndices = $correctAnswers;
+                        } else {
+                            $correctIndices = [$correctAnswers];
+                        }
+                    } elseif ($item->item_type === 'torf') {
+                        if (is_array($correctAnswers) && isset($correctAnswers['correct'])) {
+                            $correctValue = strtolower($correctAnswers['correct']);
+                        }
+                    }
+                    
+                    // Count student responses per answer_text
                     $responses = \DB::table('exam_answers')
                         ->whereIn('attempt_id', $submittedAttemptIds)
                         ->where('item_id', $item->item_id)
                         ->select('answer_text', \DB::raw('COUNT(*) as count'))
                         ->groupBy('answer_text')
-                        ->get();
+                        ->get()
+                        ->keyBy('answer_text');
                     
-                    foreach ($responses as $response) {
-                        $percentage = $totalResponses > 0 ? round(($response->count / $totalResponses) * 100, 1) : 0;
-                        $isCorrect = $response->answer_text === $item->expected_answer;
-                        
-                        $responseBreakdown[] = [
-                            'option' => $response->answer_text,
-                            'count' => $response->count,
-                            'percentage' => $percentage,
-                            'is_correct' => $isCorrect
-                        ];
+                    // Build response breakdown with all options
+                    if (is_array($itemOptions)) {
+                        foreach ($itemOptions as $index => $optionText) {
+                            $optionKey = (string)$index; // "0", "1", "2", "3"
+                            $optionLabel = chr(65 + $index); // "A", "B", "C", "D"
+                            
+                            // Check if this option is correct
+                            $isCorrect = false;
+                            if ($item->item_type === 'mcq') {
+                                $isCorrect = in_array($index, $correctIndices) || in_array((string)$index, $correctIndices);
+                            } elseif ($item->item_type === 'torf') {
+                                // For T/F, check if the option text matches the correct value
+                                $isCorrect = strtolower(trim($optionText)) === $correctValue;
+                            }
+                            
+                            // Get response count for this option (check both index and label)
+                            $count = 0;
+                            if (isset($responses[$optionKey])) {
+                                $count = $responses[$optionKey]->count;
+                            } elseif (isset($responses[$optionLabel])) {
+                                $count = $responses[$optionLabel]->count;
+                            }
+                            
+                            $percentage = $totalResponses > 0 ? round(($count / $totalResponses) * 100, 1) : 0;
+                            
+                            $responseBreakdown[] = [
+                                'option' => $optionLabel,
+                                'text' => $optionText,
+                                'count' => $count,
+                                'percentage' => $percentage,
+                                'is_correct' => $isCorrect
+                            ];
+                            
+                            $options[] = [
+                                'option' => $optionLabel,
+                                'text' => $optionText,
+                                'is_correct' => $isCorrect
+                            ];
+                        }
                     }
-                    
-                    // Sort by option letter/label
-                    usort($responseBreakdown, function($a, $b) {
-                        return strcmp($a['option'], $b['option']);
-                    });
+                }
+                
+                // Add expected answer for IDEN and ENUM types
+                $expectedAnswer = null;
+                if ($item->item_type === 'iden') {
+                    $expectedAnswer = $item->expected_answer;
+                } elseif ($item->item_type === 'enum') {
+                    $expectedAnswer = $item->answer;
+                    // If it's a string, decode it
+                    if (is_string($expectedAnswer)) {
+                        $expectedAnswer = json_decode($expectedAnswer, true);
+                    }
                 }
                 
                 return [
@@ -575,12 +651,178 @@ class ExamStatisticsController extends Controller
                     'wrong_count' => $wrongCount,
                     'success_rate' => $successRate,
                     'response_breakdown' => $responseBreakdown,
-                    'expected_answer' => $item->item_type === 'mcq' || $item->item_type === 'torf' ? $item->expected_answer : null
+                    'options' => $options,
+                    'expected_answer' => $expectedAnswer,
+                    'enum_type' => $item->enum_type ?? null
                 ];
             });
         
         return response()->json([
             'questions' => $questions
+        ]);
+    }
+
+    /**
+     * Get individual student performance data
+     */
+    public function getIndividualStats(Request $request, $id)
+    {
+        $classId = $request->input('class_id');
+        
+        $exam = Exam::with(['subject', 'examItems', 'examAssignments.class'])
+            ->where('exam_id', $id)
+            ->where('teacher_id', Auth::id())
+            ->firstOrFail();
+        
+        // Filter by class if specified
+        $assignmentsQuery = $exam->examAssignments();
+        if ($classId && $classId !== 'all') {
+            $assignmentsQuery->where('class_id', $classId);
+        }
+        $assignments = $assignmentsQuery->get();
+        
+        // Get assignment IDs for filtering attempts
+        $assignmentIds = $assignments->pluck('assignment_id');
+        
+        // Get all submitted attempts with student info
+        $attempts = \DB::table('exam_attempts')
+            ->join('user_student', 'exam_attempts.student_id', '=', 'user_student.user_id')
+            ->join('exam_assignments', 'exam_attempts.exam_assignment_id', '=', 'exam_assignments.assignment_id')
+            ->leftJoin('class', 'exam_assignments.class_id', '=', 'class.class_id')
+            ->whereIn('exam_attempts.exam_assignment_id', $assignmentIds)
+            ->where('exam_attempts.status', 'submitted')
+            ->select(
+                'exam_attempts.attempt_id',
+                'exam_attempts.student_id',
+                'exam_attempts.score',
+                'exam_attempts.start_time',
+                'exam_attempts.end_time',
+                'user_student.first_name',
+                'user_student.middle_name',
+                'user_student.last_name',
+                'user_student.id_number',
+                'class.year_level',
+                'class.section'
+            )
+            ->orderBy('user_student.last_name')
+            ->orderBy('user_student.first_name')
+            ->get();
+        
+        // Get exam items
+        $examItems = $exam->examItems()->orderBy('order')->get();
+        
+        // Format student data with their answers
+        $students = $attempts->map(function($attempt) use ($examItems) {
+            $middleInitial = $attempt->middle_name ? ' ' . substr($attempt->middle_name, 0, 1) . '.' : '';
+            
+            // Calculate duration
+            $duration = 'N/A';
+            if ($attempt->start_time && $attempt->end_time) {
+                $start = \Carbon\Carbon::parse($attempt->start_time);
+                $end = \Carbon\Carbon::parse($attempt->end_time);
+                $minutes = $start->diffInMinutes($end);
+                $hours = floor($minutes / 60);
+                $mins = $minutes % 60;
+                $duration = $hours > 0 ? "{$hours}h {$mins}m" : "{$mins}m";
+            }
+            
+            // Get student's answers for all questions
+            $answers = \DB::table('exam_answers')
+                ->where('attempt_id', $attempt->attempt_id)
+                ->get()
+                ->keyBy('item_id');
+            
+            // Build question-answer pairs
+            $questionAnswers = $examItems->map(function($item) use ($answers) {
+                $studentAnswer = $answers->get($item->item_id);
+                
+                // Get correct answer based on item type
+                $correctAnswer = null;
+                if ($item->item_type === 'mcq' || $item->item_type === 'torf') {
+                    // Decode options and answer
+                    $options = is_string($item->options) ? json_decode($item->options, true) : $item->options;
+                    $answer = is_string($item->answer) ? json_decode($item->answer, true) : $item->answer;
+                    
+                    if ($item->item_type === 'mcq' && is_array($options)) {
+                        $correctIndices = is_array($answer) ? $answer : [$answer];
+                        $correctOptions = [];
+                        foreach ($correctIndices as $index) {
+                            if (isset($options[$index])) {
+                                $label = chr(65 + $index);
+                                $correctOptions[] = "$label. " . $options[$index];
+                            }
+                        }
+                        $correctAnswer = implode(', ', $correctOptions);
+                    } elseif ($item->item_type === 'torf' && is_array($answer)) {
+                        $correctAnswer = isset($answer['correct']) ? ucfirst($answer['correct']) : null;
+                    }
+                } elseif ($item->item_type === 'iden') {
+                    $correctAnswer = $item->expected_answer;
+                } elseif ($item->item_type === 'enum') {
+                    $answer = is_string($item->answer) ? json_decode($item->answer, true) : $item->answer;
+                    $correctAnswer = is_array($answer) ? implode(', ', $answer) : $answer;
+                }
+                
+                // Format student's answer
+                $studentAnswerText = $studentAnswer ? $studentAnswer->answer_text : 'No answer';
+                
+                // For MCQ, convert index to letter if needed
+                if ($item->item_type === 'mcq' && $studentAnswer && is_numeric($studentAnswer->answer_text)) {
+                    $options = is_string($item->options) ? json_decode($item->options, true) : $item->options;
+                    $index = (int)$studentAnswer->answer_text;
+                    if (isset($options[$index])) {
+                        $label = chr(65 + $index);
+                        $studentAnswerText = "$label. " . $options[$index];
+                    }
+                }
+                
+                // For enumeration, format as list if it's an array
+                if ($item->item_type === 'enum' && $studentAnswer) {
+                    $answerData = $studentAnswer->answer_text;
+                    if (strpos($answerData, '[') === 0) {
+                        $decoded = json_decode($answerData, true);
+                        if (is_array($decoded)) {
+                            $studentAnswerText = implode(', ', $decoded);
+                        }
+                    }
+                }
+                
+                return [
+                    'item_id' => $item->item_id,
+                    'answer_id' => $studentAnswer ? $studentAnswer->answer_id : null,
+                    'question_number' => $item->order,
+                    'question' => $item->question,
+                    'item_type' => $item->item_type,
+                    'options' => ($item->item_type === 'mcq' || $item->item_type === 'torf') 
+                        ? (is_string($item->options) ? json_decode($item->options, true) : $item->options)
+                        : null,
+                    'correct_indices' => ($item->item_type === 'mcq' || $item->item_type === 'torf')
+                        ? (is_string($item->answer) ? json_decode($item->answer, true) : $item->answer)
+                        : null,
+                    'student_answer' => $studentAnswerText,
+                    'student_answer_raw' => $studentAnswer ? $studentAnswer->answer_text : null,
+                    'correct_answer' => $correctAnswer,
+                    'is_correct' => $studentAnswer ? $studentAnswer->is_correct : 0,
+                    'points_earned' => $studentAnswer ? $studentAnswer->points_earned : 0,
+                    'points_possible' => $item->points_awarded
+                ];
+            });
+            
+            return [
+                'attempt_id' => $attempt->attempt_id,
+                'student_id' => $attempt->student_id,
+                'name' => $attempt->first_name . $middleInitial . ' ' . $attempt->last_name,
+                'id_number' => $attempt->id_number,
+                'class' => ($attempt->year_level ?? '') . '-' . ($attempt->section ?? 'N/A'),
+                'score' => $attempt->score,
+                'duration' => $duration,
+                'answers' => $questionAnswers
+            ];
+        });
+        
+        return response()->json([
+            'students' => $students,
+            'total_points' => $exam->total_points
         ]);
     }
 
@@ -598,6 +840,48 @@ class ExamStatisticsController extends Controller
     public function update(Request $request, string $id)
     {
         //
+    }
+    
+    /**
+     * Override student answer correctness and points
+     */
+    public function overrideAnswer(Request $request, $examId, $answerId)
+    {
+        $request->validate([
+            'is_correct' => 'required|boolean',
+            'points_earned' => 'required|numeric|min:0'
+        ]);
+        
+        // Get the exam to verify ownership
+        $exam = Exam::where('exam_id', $examId)
+            ->where('teacher_id', Auth::id())
+            ->firstOrFail();
+        
+        // Get the answer and verify it belongs to this exam
+        $answer = ExamAnswer::where('answer_id', $answerId)
+            ->whereHas('attempt.examAssignment', function($query) use ($examId) {
+                $query->where('exam_id', $examId);
+            })
+            ->firstOrFail();
+        
+        // Update the answer
+        $answer->is_correct = $request->is_correct;
+        $answer->points_earned = $request->points_earned;
+        $answer->save();
+        
+        // Recalculate attempt score
+        $attempt = $answer->attempt;
+        $totalScore = ExamAnswer::where('attempt_id', $attempt->attempt_id)
+            ->sum('points_earned');
+        
+        $attempt->score = $totalScore;
+        $attempt->save();
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Answer updated successfully',
+            'new_score' => $totalScore
+        ]);
     }
 
     /**

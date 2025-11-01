@@ -471,6 +471,146 @@
         }
         /* ==================== QUESTIONS TAB STYLES END ==================== */
 
+        /* ==================== INDIVIDUAL TAB STYLES START ==================== */
+        /* Students Navigation */
+        .students-nav-container {
+            background: #f8f9fa;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .students-nav-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 12px;
+        }
+
+        .student-nav-item {
+            background: white;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 12px 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: left;
+        }
+
+        .student-nav-item:hover {
+            border-color: #6ba5b3;
+            background-color: #f0f9fa;
+        }
+
+        .student-nav-item.active {
+            border-color: #6ba5b3;
+            background-color: #e0f2f7;
+        }
+
+        .student-nav-name {
+            font-weight: 600;
+            font-size: 15px;
+            color: #1a1a1a;
+            margin-bottom: 4px;
+        }
+
+        .student-nav-score {
+            font-size: 13px;
+            color: #6c757d;
+        }
+
+        /* Student Performance Header */
+        .student-performance-header {
+            background: linear-gradient(135deg, #e0f2f7 0%, #f0f9fa 100%);
+            border: 1px solid #6ba5b3;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .student-performance-title {
+            font-size: 22px;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 15px;
+        }
+
+        .student-performance-stats {
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+
+        .student-stat-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .student-stat-label {
+            font-size: 13px;
+            color: #6c757d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 5px;
+        }
+
+        .student-stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #1a1a1a;
+        }
+
+        /* Student Answer Styles */
+        .choice-item.student-answer {
+            font-weight: 600;
+        }
+
+        .choice-item.student-correct {
+            background-color: #4caf50;
+            border-color: #4caf50;
+            color: white;
+        }
+
+        .choice-item.student-wrong {
+            background-color: #f44336;
+            border-color: #f44336;
+            color: white;
+        }
+
+        .choice-item.correct-highlight {
+            border: 2px solid #4caf50;
+            background-color: #e8f5e9;
+        }
+
+        .answer-indicator {
+            margin-left: auto;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+        }
+
+        .answer-indicator.correct {
+            color: white;
+        }
+
+        .answer-indicator.wrong {
+            color: white;
+        }
+
+        .choice-item.correct-highlight .choice-label,
+        .choice-item.correct-highlight .choice-text {
+            font-weight: 600;
+            color: #2e7d32;
+        }
+
+        .choice-item.student-correct .choice-label,
+        .choice-item.student-correct .choice-text,
+        .choice-item.student-wrong .choice-label,
+        .choice-item.student-wrong .choice-text {
+            font-weight: 700;
+        }
+        /* ==================== INDIVIDUAL TAB STYLES END ==================== */
+
         /* Responsive */
         @media (max-width: 768px) {
             .exam-header {
@@ -489,6 +629,15 @@
 
             .stats-grid {
                 grid-template-columns: 1fr;
+            }
+
+            .students-nav-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .student-performance-stats {
+                flex-direction: column;
+                gap: 15px;
             }
         }
     </style>
@@ -642,10 +791,81 @@
             </div>
             <!-- ==================== QUESTIONS TAB CONTENT END ==================== -->
 
+            <!-- ==================== INDIVIDUAL TAB CONTENT START ==================== -->
             <!-- Individual Tab Content (Hidden by default) -->
             <div class="tab-content-panel" id="individualContent">
-                <h2>Individual Student Performance</h2>
-                <p style="color: #6c757d;">Individual student performance data will be displayed here.</p>
+                <div id="individualLoading" style="text-align: center; padding: 40px; color: #6c757d;">
+                    <i class="bi bi-hourglass-split" style="font-size: 2rem; margin-bottom: 10px;"></i>
+                    <p>Loading student data...</p>
+                </div>
+                
+                <!-- Students Navigation -->
+                <div id="studentsNav" style="display: none;">
+                    <div class="students-nav-container">
+                        <div class="student-nav-controls">
+                            <button id="prevStudentBtn" class="student-nav-btn" onclick="navigateStudent(-1)">
+                                <i class="bi bi-chevron-left"></i>
+                            </button>
+                            <div class="student-nav-info" id="currentStudentInfo">
+                                <!-- Current student info will be displayed here -->
+                            </div>
+                            <button id="nextStudentBtn" class="student-nav-btn" onclick="navigateStudent(1)">
+                                <i class="bi bi-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Student Performance Content -->
+                <div id="studentPerformanceContainer" style="display: none;">
+                    <!-- Will be populated when student is selected -->
+                </div>
+            </div>
+            <!-- ==================== INDIVIDUAL TAB CONTENT END ==================== -->
+        </div>
+    </div>
+    
+    <!-- Override Modal -->
+    <div id="overrideModal" class="modal fade" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Override Answer</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="overrideForm">
+                        <input type="hidden" id="override_attempt_id">
+                        <input type="hidden" id="override_answer_id">
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Mark as:</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="is_correct" id="markCorrect" value="1">
+                                <label class="form-check-label" for="markCorrect">
+                                    <i class="bi bi-check-circle-fill text-success"></i> Correct
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="is_correct" id="markIncorrect" value="0">
+                                <label class="form-check-label" for="markIncorrect">
+                                    <i class="bi bi-x-circle-fill text-danger"></i> Incorrect
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="points_earned" class="form-label">Points Earned:</label>
+                            <input type="number" class="form-control" id="points_earned" name="points_earned" 
+                                   min="0" step="0.01" required>
+                            <small class="text-muted">Max: <span id="max_points"></span> points</small>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="submitOverride()">Save Changes</button>
+                </div>
             </div>
         </div>
     </div>
@@ -656,6 +876,9 @@
         
         // Initialize the sliding indicator position
         document.addEventListener('DOMContentLoaded', function() {
+            // Restore previous filter and tab selection from localStorage
+            restoreUserSelection();
+            
             updateIndicatorPosition();
             
             // Handle sidebar expansion
@@ -683,31 +906,88 @@
                 }
             }
         });
+        
+        // Restore user's previous selection from localStorage
+        function restoreUserSelection() {
+            const storageKey = `exam_${examId}_selection`;
+            const savedSelection = localStorage.getItem(storageKey);
+            
+            if (savedSelection) {
+                try {
+                    const selection = JSON.parse(savedSelection);
+                    
+                    // Restore class filter
+                    const classFilter = document.getElementById('classFilter');
+                    if (classFilter && selection.classFilter) {
+                        classFilter.value = selection.classFilter;
+                        handleClassFilterChange(false); // Don't save to localStorage again
+                    }
+                    
+                    // Restore active tab
+                    if (selection.activeTab) {
+                        switchTab(selection.activeTab, false); // Don't save to localStorage again
+                    }
+                } catch (e) {
+                    console.error('Error restoring selection:', e);
+                }
+            }
+        }
+        
+        // Save user's selection to localStorage
+        function saveUserSelection() {
+            const storageKey = `exam_${examId}_selection`;
+            const classFilter = document.getElementById('classFilter');
+            const activeTab = document.querySelector('.nav-tab-item.active')?.getAttribute('data-tab') || 'summary';
+            
+            const selection = {
+                classFilter: classFilter?.value || 'all',
+                activeTab: activeTab
+            };
+            
+            localStorage.setItem(storageKey, JSON.stringify(selection));
+        }
 
         // Handle class filter change
-        function handleClassFilterChange() {
+        function handleClassFilterChange(shouldSave = true) {
             const filterValue = document.getElementById('classFilter').value;
             const questionsTab = document.querySelector('[data-tab="questions"]');
             const individualTab = document.querySelector('[data-tab="individual"]');
+
+            console.log('Filter changed to:', filterValue);
+            
+            // Reset loaded flags - this forces reload when tabs are switched or data is requested
+            questionsLoaded = false;
+            studentsLoaded = false;
+            
+            // Clear data
+            studentsData = [];
+            selectedStudentIndex = 0;
 
             if (filterValue === 'all') {
                 // Show only Summary tab
                 questionsTab.style.display = 'none';
                 individualTab.style.display = 'none';
-                switchTab('summary');
             } else {
                 // Show all tabs
                 questionsTab.style.display = 'block';
                 individualTab.style.display = 'block';
             }
+            
+            // Always switch to Summary tab when class filter changes
+            switchTab('summary', false);
 
-            updateIndicatorPosition();
+            // Force indicator update after DOM changes
+            setTimeout(() => {
+                updateIndicatorPosition();
+            }, 10);
             
-            // Reset questions loaded flag to reload with new filter
-            questionsLoaded = false;
-            
-            // Fetch filtered statistics
+            // Fetch filtered statistics for Summary tab
             fetchFilteredStats(filterValue);
+            
+            // Save filter selection to localStorage (but not tab selection)
+            if (shouldSave) {
+                localStorage.setItem('exam_filter_' + examId, filterValue);
+            }
         }
 
         // Fetch filtered statistics via AJAX
@@ -824,7 +1104,7 @@
         }
 
         // Switch between tabs
-        function switchTab(tabName) {
+        function switchTab(tabName, shouldSave = true) {
             // Hide all tab contents
             document.querySelectorAll('.tab-content-panel').forEach(panel => {
                 panel.classList.remove('active');
@@ -847,6 +1127,16 @@
             // Load questions data when Questions tab is clicked
             if (tabName === 'questions') {
                 loadQuestionStats();
+            }
+            
+            // Load students data when Individual tab is clicked
+            if (tabName === 'individual') {
+                loadStudentsData();
+            }
+            
+            // Save selection to localStorage
+            if (shouldSave) {
+                saveUserSelection();
             }
         }
 
@@ -888,6 +1178,7 @@
             })
             .then(response => response.json())
             .then(data => {
+                console.log('Question statistics received:', data);
                 renderQuestions(data.questions);
                 questionsLoaded = true;
                 questionsLoading.style.display = 'none';
@@ -905,6 +1196,13 @@
             
             if (questions.length === 0) {
                 container.innerHTML = '<p style="text-align: center; color: #6c757d; padding: 40px;">No questions available.</p>';
+                return;
+            }
+            
+            // Check if there are any responses across all questions
+            const totalResponses = questions.reduce((sum, q) => sum + (q.total_responses || 0), 0);
+            if (totalResponses === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #6c757d; padding: 40px;">No responses have been submitted yet.</p>';
                 return;
             }
             
@@ -949,22 +1247,66 @@
         }
         
         // Render choices for MCQ and True/False
-        function renderChoices(question) {
-            if (!question.response_breakdown || question.response_breakdown.length === 0) {
-                return '<div style="color: #6c757d; padding: 15px;">No responses yet</div>';
+        function renderChoices(question, studentAnswer = null) {
+            console.log('Rendering choices for question:', question);
+            console.log('Student answer:', studentAnswer);
+            
+            // Ensure we have all options, even if no responses
+            let choices = [];
+            
+            if (question.response_breakdown && question.response_breakdown.length > 0) {
+                choices = question.response_breakdown;
+            } else if (question.options && question.options.length > 0) {
+                // If no response_breakdown but options exist, create structure with 0 responses
+                choices = question.options.map((opt, index) => ({
+                    option: opt.option || String.fromCharCode(65 + index), // A, B, C, D
+                    text: opt.text || opt.option_text || opt.content || '',
+                    count: 0,
+                    percentage: 0,
+                    is_correct: opt.is_correct || opt.correct || false
+                }));
             }
             
-            const choicesHtml = question.response_breakdown.map(choice => {
+            if (choices.length === 0) {
+                return '<div style="color: #6c757d; padding: 15px;">No options available</div>';
+            }
+            
+            const choicesHtml = choices.map(choice => {
                 const isCorrect = choice.is_correct;
-                const correctClass = isCorrect ? 'correct-choice' : '';
+                const isStudentAnswer = studentAnswer && choice.option === studentAnswer;
+                const studentCorrect = isStudentAnswer && isCorrect;
+                const studentWrong = isStudentAnswer && !isCorrect;
+                
+                let choiceClasses = 'choice-item';
+                if (studentCorrect) {
+                    choiceClasses += ' student-correct student-answer';
+                } else if (studentWrong) {
+                    choiceClasses += ' student-wrong student-answer';
+                } else if (studentAnswer && isCorrect && !isStudentAnswer) {
+                    // Highlight correct answer when student got it wrong
+                    choiceClasses += ' correct-highlight';
+                } else if (!studentAnswer && isCorrect) {
+                    // No student answer context - show as correct choice
+                    choiceClasses += ' correct-choice';
+                }
+                
+                const answerIndicator = isStudentAnswer 
+                    ? (studentCorrect 
+                        ? '<span class="answer-indicator correct"><i class="bi bi-check-circle-fill"></i></span>'
+                        : '<span class="answer-indicator wrong"><i class="bi bi-x-circle-fill"></i></span>')
+                    : '';
                 
                 return `
-                    <div class="choice-item ${correctClass}">
+                    <div class="${choiceClasses}">
                         <div class="choice-label">${escapeHtml(choice.option)}</div>
+                        <div class="choice-text">${escapeHtml(choice.text || choice.option_text || 'No text provided')}</div>
+                        ${studentAnswer ? '' : `
                         <div class="choice-responses">
                             <span>${choice.count} responses</span>
                             <span class="choice-percentage">(${choice.percentage}%)</span>
                         </div>
+                        `}
+                        ${answerIndicator}
                     </div>
                 `;
             }).join('');
@@ -974,11 +1316,41 @@
         
         // Render text response statistics (for identification, enumeration, essay)
         function renderTextResponse(question) {
+            let expectedAnswerHtml = '';
+            
+            // Show expected answer for IDEN and ENUM
+            if (question.item_type === 'iden' && question.expected_answer) {
+                expectedAnswerHtml = `
+                    <div style="margin-bottom: 10px; padding: 10px; background: #e3f2fd; border-left: 3px solid #2196f3; border-radius: 4px;">
+                        <strong>Expected Answer:</strong> ${escapeHtml(question.expected_answer)}
+                    </div>
+                `;
+            } else if (question.item_type === 'enum' && question.expected_answer) {
+                const answers = Array.isArray(question.expected_answer) 
+                    ? question.expected_answer 
+                    : [question.expected_answer];
+                const answersList = answers.map(ans => `<li>${escapeHtml(ans)}</li>`).join('');
+                const enumTypeLabel = question.enum_type === 'unordered' ? ' (any order)' : ' (in order)';
+                
+                expectedAnswerHtml = `
+                    <div style="margin-bottom: 10px; padding: 10px; background: #e3f2fd; border-left: 3px solid #2196f3; border-radius: 4px;">
+                        <strong>Expected Answers${enumTypeLabel}:</strong>
+                        <ol style="margin: 5px 0 0 20px; padding: 0;">
+                            ${answersList}
+                        </ol>
+                    </div>
+                `;
+            }
+            
             return `
+                ${expectedAnswerHtml}
                 <div style="padding: 15px; background: #f8f9fa; border-radius: 8px; margin-top: 15px;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <div>
                             <strong>Correct Responses:</strong> ${question.correct_count} / ${question.total_responses}
+                        </div>
+                        <div>
+                            <strong>Wrong Responses:</strong> ${question.wrong_count} / ${question.total_responses}
                         </div>
                         <div>
                             <strong>Success Rate:</strong> ${question.success_rate}%
@@ -988,6 +1360,275 @@
             `;
         }
         
+        // ==================== INDIVIDUAL TAB FUNCTIONS ====================
+        let studentsData = [];
+        let studentsLoaded = false;
+        let selectedStudentIndex = 0;
+        
+        // Load students data
+        function loadStudentsData() {
+            console.log('loadStudentsData called, studentsLoaded:', studentsLoaded);
+            
+            const filterValue = document.getElementById('classFilter').value;
+            const individualLoading = document.getElementById('individualLoading');
+            const studentsNav = document.getElementById('studentsNav');
+            const studentPerformanceContainer = document.getElementById('studentPerformanceContainer');
+            
+            // If already loaded with current filter, just show the UI
+            if (studentsLoaded && studentsData.length > 0) {
+                console.log('Data already loaded, showing UI');
+                individualLoading.style.display = 'none';
+                studentsNav.style.display = 'block';
+                studentPerformanceContainer.style.display = 'block';
+                updateStudentNavigation();
+                return;
+            }
+            
+            // Show loading state
+            individualLoading.style.display = 'block';
+            studentsNav.style.display = 'none';
+            studentPerformanceContainer.style.display = 'none';
+            
+            console.log('Fetching student data for class:', filterValue);
+            
+            fetch(`/instructor/exams-statistics/${examId}/individual?class_id=${filterValue}`, {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Student data received:', data);
+                studentsData = data.students;
+                
+                // Sort students alphabetically by surname (last name first)
+                studentsData.sort((a, b) => {
+                    const nameA = a.name.split(' ').reverse().join(' ').toLowerCase();
+                    const nameB = b.name.split(' ').reverse().join(' ').toLowerCase();
+                    return nameA.localeCompare(nameB);
+                });
+                
+                console.log('Students sorted:', studentsData.length, 'students');
+                studentsLoaded = true;
+                
+                if (studentsData.length === 0) {
+                    individualLoading.innerHTML = '<p style="color: #6c757d;">No student submissions yet.</p>';
+                    return;
+                }
+                
+                selectedStudentIndex = 0;
+                console.log('Updating student navigation...');
+                updateStudentNavigation();
+                console.log('Rendering student performance...');
+                renderStudentPerformance(0); // Show first student by default
+                
+                individualLoading.style.display = 'none';
+                studentsNav.style.display = 'block';
+                studentPerformanceContainer.style.display = 'block';
+            })
+            .catch(error => {
+                console.error('Error fetching student data:', error);
+                individualLoading.innerHTML = '<p style="color: #dc2626;">Failed to load student data. Please try again.</p>';
+            });
+        }
+        
+        // Update student navigation display
+        function updateStudentNavigation() {
+            console.log('updateStudentNavigation called, selectedStudentIndex:', selectedStudentIndex, 'total students:', studentsData.length);
+            
+            const currentStudentInfo = document.getElementById('currentStudentInfo');
+            const prevBtn = document.getElementById('prevStudentBtn');
+            const nextBtn = document.getElementById('nextStudentBtn');
+            
+            if (!currentStudentInfo || !prevBtn || !nextBtn) {
+                console.error('Navigation elements not found!', {currentStudentInfo, prevBtn, nextBtn});
+                return;
+            }
+            
+            if (studentsData.length === 0) {
+                console.log('No students data available');
+                return;
+            }
+            
+            const student = studentsData[selectedStudentIndex];
+            console.log('Current student:', student);
+            
+            const percentage = Math.round((student.score / {{ $totalPoints }}) * 100);
+            const currentPosition = selectedStudentIndex + 1;
+            const totalStudents = studentsData.length;
+            
+            currentStudentInfo.innerHTML = `
+                <div style="text-align: center;">
+                    <div style="font-size: 20px; font-weight: 600; color: #1a1a1a; margin-bottom: 5px;">
+                        ${escapeHtml(student.name)}
+                    </div>
+                    <div style="font-size: 14px; color: #6c757d; margin-bottom: 10px;">
+                        ${student.id_number} | ${student.class}
+                    </div>
+                    <div style="display: flex; justify-content: center; gap: 20px; align-items: center; flex-wrap: wrap;">
+                        <span style="font-size: 15px; color: #495057;">
+                            Score: <strong>${student.score}/{{ $totalPoints }}</strong>
+                        </span>
+                        <span style="font-size: 15px; font-weight: 600; color: ${percentage >= 75 ? '#059669' : percentage >= 50 ? '#f59e0b' : '#dc2626'};">
+                            ${percentage}%
+                        </span>
+                        <span style="font-size: 13px; color: #6c757d;">
+                            Student ${currentPosition} of ${totalStudents}
+                        </span>
+                    </div>
+                </div>
+            `;
+            
+            // Disable/enable navigation buttons
+            prevBtn.disabled = selectedStudentIndex === 0;
+            nextBtn.disabled = selectedStudentIndex === studentsData.length - 1;
+        }
+        
+        // Navigate to next/previous student
+        function navigateStudent(direction) {
+            const newIndex = selectedStudentIndex + direction;
+            
+            if (newIndex >= 0 && newIndex < studentsData.length) {
+                selectedStudentIndex = newIndex;
+                updateStudentNavigation();
+                renderStudentPerformance(newIndex);
+            }
+        }
+        
+        // Render student performance
+        function renderStudentPerformance(index) {
+            const student = studentsData[index];
+            const container = document.getElementById('studentPerformanceContainer');
+            const percentage = Math.round((student.score / {{ $totalPoints }}) * 100);
+            
+            const questionsHtml = student.answers.map(answer => {
+                const statusColor = answer.is_correct ? '#059669' : '#dc2626';
+                const statusBg = answer.is_correct ? '#d1fae5' : '#fee2e2';
+                const statusIcon = answer.is_correct ? 'check-circle-fill' : 'x-circle-fill';
+                const typeLabel = getTypeLabel(answer.item_type);
+                
+                // Build options display for MCQ/T/F
+                let optionsHtml = '';
+                if ((answer.item_type === 'mcq' || answer.item_type === 'torf') && answer.options) {
+                    const correctIndices = answer.correct_indices;
+                    const studentAnswerRaw = answer.student_answer_raw;
+                    
+                    // Parse student answer if it's JSON
+                    let studentIndices = [];
+                    if (studentAnswerRaw) {
+                        try {
+                            const parsed = JSON.parse(studentAnswerRaw);
+                            studentIndices = Array.isArray(parsed) ? parsed : [parsed];
+                        } catch {
+                            // If not JSON, might be direct index
+                            studentIndices = [parseInt(studentAnswerRaw)];
+                        }
+                    }
+                    
+                    // Determine correct indices
+                    let correctIndexArray = [];
+                    if (answer.item_type === 'torf' && correctIndices) {
+                        correctIndexArray = correctIndices.correct === 'true' ? [0] : [1];
+                    } else if (Array.isArray(correctIndices)) {
+                        correctIndexArray = correctIndices;
+                    } else if (typeof correctIndices === 'number') {
+                        correctIndexArray = [correctIndices];
+                    }
+                    
+                    optionsHtml = '<div style="margin: 15px 0;">';
+                    answer.options.forEach((option, idx) => {
+                        const isCorrect = correctIndexArray.includes(idx);
+                        const isSelected = studentIndices.includes(idx);
+                        const label = String.fromCharCode(65 + idx);
+                        
+                        let optionStyle = 'padding: 10px; margin: 5px 0; border-radius: 6px; border: 2px solid ';
+                        let icon = '';
+                        
+                        if (isCorrect && isSelected) {
+                            optionStyle += '#059669; background: #d1fae5;';
+                            icon = '<i class="bi bi-check-circle-fill" style="color: #059669; margin-right: 8px;"></i>';
+                        } else if (isCorrect) {
+                            optionStyle += '#6ba5b3; background: #e3f2fd;';
+                            icon = '<i class="bi bi-check-circle" style="color: #6ba5b3; margin-right: 8px;"></i>';
+                        } else if (isSelected) {
+                            optionStyle += '#dc2626; background: #fee2e2;';
+                            icon = '<i class="bi bi-x-circle-fill" style="color: #dc2626; margin-right: 8px;"></i>';
+                        } else {
+                            optionStyle += '#e5e7eb; background: #f9fafb;';
+                        }
+                        
+                        optionsHtml += `
+                            <div style="${optionStyle}">
+                                ${icon}<strong>${label}.</strong> ${escapeHtml(option)}
+                            </div>
+                        `;
+                    });
+                    optionsHtml += '</div>';
+                    
+                    // Add student answer summary
+                    optionsHtml += `
+                        <div style="padding: 12px; background: ${statusBg}; border-left: 3px solid ${statusColor}; border-radius: 4px; margin-top: 10px;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <i class="bi bi-${statusIcon}" style="color: ${statusColor}; font-size: 18px;"></i>
+                                <strong style="color: ${statusColor};">Student answered: ${escapeHtml(answer.student_answer)}</strong>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    // For text-based questions, show expected and student answer
+                    if (answer.correct_answer) {
+                        optionsHtml += `
+                            <div style="padding: 10px; background: #f8f9fa; border-left: 3px solid #6ba5b3; border-radius: 4px; margin: 10px 0;">
+                                <strong>Expected Answer:</strong> ${escapeHtml(answer.correct_answer)}
+                            </div>
+                        `;
+                    }
+                    
+                    optionsHtml += `
+                        <div style="padding: 12px; background: ${statusBg}; border-left: 3px solid ${statusColor}; border-radius: 4px;">
+                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                                <i class="bi bi-${statusIcon}" style="color: ${statusColor}; font-size: 18px;"></i>
+                                <strong style="color: ${statusColor};">${answer.is_correct ? 'Correct' : 'Incorrect'}</strong>
+                            </div>
+                            <div style="color: #1a1a1a;">
+                                <strong>Student's Answer:</strong> ${escapeHtml(answer.student_answer)}
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                return `
+                    <div class="question-analysis-card" data-answer-id="${answer.answer_id}">
+                        <div class="question-header-row">
+                            <div class="question-title-text">
+                                <strong>Question ${answer.question_number}.</strong> ${escapeHtml(answer.question)}
+                            </div>
+                            <div class="question-type-badge">${typeLabel}</div>
+                        </div>
+                        
+                        ${optionsHtml}
+                        
+                        <div class="question-footer">
+                            <div class="question-stats">
+                                <strong>Points:</strong> 
+                                <span class="points-display">${answer.points_earned} / ${answer.points_possible}</span>
+                            </div>
+                            <button onclick="openOverrideModal(${student.attempt_id}, ${answer.answer_id}, ${answer.is_correct}, ${answer.points_earned}, ${answer.points_possible})" 
+                                    class="btn btn-sm" 
+                                    style="background: #6ba5b3; color: white; border: none; padding: 6px 16px; border-radius: 6px; cursor: pointer; font-size: 13px;">
+                                <i class="bi bi-pencil-square"></i> Override
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            container.innerHTML = questionsHtml;
+        }
+        
+        // ==================== HELPER FUNCTIONS ====================
         // Get type label
         function getTypeLabel(type) {
             const labels = {
@@ -1010,9 +1651,169 @@
         
         // Escape HTML to prevent XSS
         function escapeHtml(text) {
+            if (!text) return '';
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
         }
+        
+        // ==================== OVERRIDE FUNCTIONS ====================
+        let currentOverrideAttemptId = null;
+        
+        function openOverrideModal(attemptId, answerId, isCorrect, pointsEarned, maxPoints) {
+            currentOverrideAttemptId = attemptId;
+            document.getElementById('override_attempt_id').value = attemptId;
+            document.getElementById('override_answer_id').value = answerId;
+            document.getElementById('points_earned').value = pointsEarned;
+            document.getElementById('max_points').textContent = maxPoints;
+            document.getElementById('points_earned').max = maxPoints;
+            
+            // Set correct/incorrect radio
+            if (isCorrect) {
+                document.getElementById('markCorrect').checked = true;
+            } else {
+                document.getElementById('markIncorrect').checked = true;
+            }
+            
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('overrideModal'));
+            modal.show();
+        }
+        
+        function submitOverride() {
+            const answerId = document.getElementById('override_answer_id').value;
+            const isCorrect = document.querySelector('input[name="is_correct"]:checked').value;
+            const pointsEarned = parseFloat(document.getElementById('points_earned').value);
+            const maxPoints = parseFloat(document.getElementById('max_points').textContent);
+            
+            if (pointsEarned > maxPoints) {
+                alert('Points earned cannot exceed maximum points!');
+                return;
+            }
+            
+            if (pointsEarned < 0) {
+                alert('Points earned cannot be negative!');
+                return;
+            }
+            
+            // Send update request
+            fetch(`/instructor/exams-statistics/${examId}/answer/${answerId}/override`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    is_correct: isCorrect === '1',
+                    points_earned: pointsEarned
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Close modal
+                    bootstrap.Modal.getInstance(document.getElementById('overrideModal')).hide();
+                    
+                    // Update the question card
+                    const questionCard = document.querySelector(`.question-analysis-card[data-answer-id="${answerId}"]`);
+                    if (questionCard) {
+                        const pointsDisplay = questionCard.querySelector('.points-display');
+                        if (pointsDisplay) {
+                            pointsDisplay.textContent = `${pointsEarned} / ${maxPoints}`;
+                        }
+                    }
+                    
+                    // Update student data in memory
+                    const studentIndex = selectedStudentIndex;
+                    studentsData[studentIndex].score = data.new_score;
+                    
+                    // Update navigation to reflect new score
+                    updateStudentNavigation();
+                    
+                    // Show success message
+                    alert('Answer updated successfully!');
+                } else {
+                    alert('Failed to update answer. Please try again.');
+                }
+            })
+            .catch(error => {
+                console.error('Error updating answer:', error);
+                alert('An error occurred while updating the answer.');
+            });
+        }
+        
+        // Add CSS for students navigation grid
+        const style = document.createElement('style');
+        style.textContent = `
+            .students-nav-container {
+                background: white;
+                padding: 25px;
+                border-radius: 12px;
+                margin-bottom: 20px;
+                border: 1px solid #e5e7eb;
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            }
+            
+            .student-nav-controls {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 20px;
+            }
+            
+            .student-nav-btn {
+                background: linear-gradient(135deg, #6ba5b3 0%, #5a8f9c 100%);
+                color: white;
+                border: none;
+                border-radius: 50%;
+                width: 45px;
+                height: 45px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                font-size: 20px;
+                transition: all 0.3s ease;
+                flex-shrink: 0;
+            }
+            
+            .student-nav-btn:hover:not(:disabled) {
+                background: linear-gradient(135deg, #5a8f9c 0%, #4a7f8c 100%);
+                transform: scale(1.1);
+                box-shadow: 0 4px 8px rgba(107, 165, 179, 0.3);
+            }
+            
+            .student-nav-btn:disabled {
+                background: #d1d5db;
+                cursor: not-allowed;
+                opacity: 0.5;
+            }
+            
+            .student-nav-info {
+                flex: 1;
+                padding: 0 20px;
+            }
+            
+            @media (max-width: 768px) {
+                .student-nav-controls {
+                    flex-direction: column;
+                    gap: 15px;
+                }
+                
+                .student-nav-btn {
+                    width: 40px;
+                    height: 40px;
+                    font-size: 18px;
+                }
+                
+                .student-nav-info {
+                    padding: 0;
+                    width: 100%;
+                }
+            }
+        `;
+        document.head.appendChild(style);
     </script>
 @endsection
