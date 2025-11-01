@@ -18,6 +18,7 @@ class ExamAnswer extends Model
         'answer_text',
         'is_correct',
         'points_earned',
+        'ai_feedback',
     ];
 
     protected $casts = [

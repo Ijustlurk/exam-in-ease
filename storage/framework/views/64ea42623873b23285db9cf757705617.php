@@ -301,9 +301,49 @@
                         <textarea class="form-control-custom" id="essay_question" name="question" rows="4" placeholder="Write your essay question here" required></textarea>
                     </div>
 
+                    <div class="mb-4" id="essay_rubric_container">
+                        <label class="form-label-custom">Rubric</label>
+                        <div class="rubric-header">
+                            <div class="rubric-header-field">Talking Points</div>
+                            <div class="rubric-header-weight">Weight</div>
+                            <div class="rubric-header-action"></div>
+                        </div>
+                        <div id="essay_rubrics">
+                            <div class="rubric-input-group">
+                                <div class="rubric-row">
+                                    <div class="rubric-field">
+                                        <input type="text" class="form-control-custom" placeholder='Write a talking point here.' name="talking_points[]" required>
+                                    </div>
+                                    <div class="rubric-weight-field">
+                                        <input type="number" class="form-control-custom rubric-weight" placeholder="0" name="weights[]" min="1" required oninput="calculateEssayPoints()">
+                                    </div>
+                                    <button type="button" class="btn-remove-rubric" onclick="removeEssayRubric(this)" title="Remove rubric">
+                                        <i class="bi bi-x-lg"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="rubric-input-group">
+                                <div class="rubric-row">
+                                    <div class="rubric-field">
+                                        <input type="text" class="form-control-custom" placeholder='Write a talking point here.' name="talking_points[]" required>
+                                    </div>
+                                    <div class="rubric-weight-field">
+                                        <input type="number" class="form-control-custom rubric-weight" placeholder="0" name="weights[]" min="1" required oninput="calculateEssayPoints()">
+                                    </div>
+                                    <button type="button" class="btn-remove-rubric" onclick="removeEssayRubric(this)" title="Remove rubric">
+                                        <i class="bi bi-x-lg"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <button type="button" class="btn-add-option" onclick="addEssayRubric()">
+                            <i class="bi bi-plus-circle"></i> Add Rubric
+                        </button>
+                    </div>
+
                     <div class="mb-4">
-                        <label class="form-label-custom">Points</label>
-                        <input type="number" class="form-control-custom" id="essay_points" name="points_awarded" value="10" min="1" required style="width: 120px;">
+                        <label class="form-label-custom">Points (Sum of Weights)</label>
+                        <input type="number" class="form-control-custom" id="essay_points" name="points_awarded" value="0" min="1" required readonly style="width: 120px; background-color: #f3f4f6;">
                     </div>
 
                     <div class="d-flex justify-content-end gap-2">
@@ -424,6 +464,42 @@ function openQuestionModal(type, sectionId, afterItemId = null) {
         
         // Make draggable after adding
         setTimeout(() => makeEnumAnswersDraggable(), 100);
+    }
+    
+    // Reset essay rubrics if it's essay modal
+    if (modalType === 'essay') {
+        const container = document.getElementById('essay_rubrics');
+        container.innerHTML = `
+            <div class="rubric-input-group">
+                <div class="rubric-row">
+                    <div class="rubric-field">
+                        <input type="text" class="form-control-custom" placeholder='["Write a talking point here."]' name="talking_points[]" required>
+                    </div>
+                    <div class="rubric-weight-field">
+                        <input type="number" class="form-control-custom rubric-weight" placeholder="0" name="weights[]" min="1" required oninput="calculateEssayPoints()">
+                    </div>
+                    <button type="button" class="btn-remove-rubric" onclick="removeEssayRubric(this)" title="Remove rubric">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="rubric-input-group">
+                <div class="rubric-row">
+                    <div class="rubric-field">
+                        <input type="text" class="form-control-custom" placeholder='["Write a talking point here."]' name="talking_points[]" required>
+                    </div>
+                    <div class="rubric-weight-field">
+                        <input type="number" class="form-control-custom rubric-weight" placeholder="0" name="weights[]" min="1" required oninput="calculateEssayPoints()">
+                    </div>
+                    <button type="button" class="btn-remove-rubric" onclick="removeEssayRubric(this)" title="Remove rubric">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        // Reset points
+        document.getElementById('essay_points').value = 0;
     }
     
     // Open appropriate modal
@@ -572,6 +648,36 @@ function populateModalForEdit(item) {
         });
         
         toggleEnumType();
+    } else if (type === 'essay') {
+        // Parse rubric from expected_answer (may be string or already parsed)
+        const rubric = safeJsonParse(item.expected_answer, []);
+        
+        if (rubric && rubric.length > 0) {
+            const container = document.getElementById('essay_rubrics');
+            container.innerHTML = '';
+            
+            rubric.forEach((rubricItem, index) => {
+                const div = document.createElement('div');
+                div.className = 'rubric-input-group';
+                div.innerHTML = `
+                    <div class="rubric-row">
+                        <div class="rubric-field">
+                            <input type="text" class="form-control-custom" placeholder='["Write a talking point here."]' name="talking_points[]" value="${rubricItem.talking_point || ''}" required>
+                        </div>
+                        <div class="rubric-weight-field">
+                            <input type="number" class="form-control-custom rubric-weight" placeholder="0" name="weights[]" min="1" value="${rubricItem.weight || 0}" required oninput="calculateEssayPoints()">
+                        </div>
+                        <button type="button" class="btn-remove-rubric" onclick="removeEssayRubric(this)" title="Remove rubric">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+            
+            // Calculate total points
+            calculateEssayPoints();
+        }
     }
     
     // Open the appropriate modal
@@ -686,10 +792,21 @@ document.getElementById('essayForm').addEventListener('submit', function(e) {
     
     const formData = new FormData(this);
     
+    // Get rubric data
+    const talkingPoints = formData.getAll('talking_points[]');
+    const weights = formData.getAll('weights[]');
+    
+    // Build rubric array
+    const rubric = talkingPoints.map((point, index) => ({
+        talking_point: point,
+        weight: parseInt(weights[index])
+    }));
+    
     const data = {
         section_id: formData.get('section_id'),
         question: formData.get('question'),
         item_type: 'essay',
+        expected_answer: JSON.stringify(rubric), // Store rubric as JSON in expected_answer
         points_awarded: formData.get('points_awarded'),
         after_item_id: formData.get('after_item_id')
     };
@@ -941,6 +1058,59 @@ function toggleEnumType() {
     }
 }
 
+// Add Essay Rubric
+function addEssayRubric() {
+    const container = document.getElementById('essay_rubrics');
+    
+    const div = document.createElement('div');
+    div.className = 'rubric-input-group';
+    div.innerHTML = `
+        <div class="rubric-row">
+            <div class="rubric-field">
+                <input type="text" class="form-control-custom" placeholder='["Write a talking point here."]' name="talking_points[]" required>
+            </div>
+            <div class="rubric-weight-field">
+                <input type="number" class="form-control-custom rubric-weight" placeholder="0" name="weights[]" min="1" required oninput="calculateEssayPoints()">
+            </div>
+            <button type="button" class="btn-remove-rubric" onclick="removeEssayRubric(this)" title="Remove rubric">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+    `;
+    container.appendChild(div);
+}
+
+// Remove Essay Rubric
+function removeEssayRubric(button) {
+    const container = document.getElementById('essay_rubrics');
+    const rubricGroups = container.querySelectorAll('.rubric-input-group');
+    
+    // Don't allow removing if only 2 rubrics left (minimum)
+    if (rubricGroups.length <= 2) {
+        alert('An essay question must have at least 2 rubric items.');
+        return;
+    }
+    
+    // Remove the rubric group
+    button.closest('.rubric-input-group').remove();
+    
+    // Recalculate points
+    calculateEssayPoints();
+}
+
+// Calculate Essay Points (sum of weights)
+function calculateEssayPoints() {
+    const weights = document.querySelectorAll('#essay_rubrics .rubric-weight');
+    let total = 0;
+    
+    weights.forEach(weight => {
+        const value = parseInt(weight.value) || 0;
+        total += value;
+    });
+    
+    document.getElementById('essay_points').value = total;
+}
+
 // Switch Question Type
 function switchQuestionType(newType, currentType) {
     // Store current section ID and item ID
@@ -1112,5 +1282,74 @@ function switchQuestionType(newType, currentType) {
 
 .enum-drag-handle:active {
     cursor: grabbing;
+}
+
+.rubric-input-group {
+    margin-bottom: 12px;
+}
+
+.rubric-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+    padding: 0 0 8px 0;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.rubric-header-field {
+    flex: 1;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #374151;
+}
+
+.rubric-header-weight {
+    width: 120px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #374151;
+}
+
+.rubric-header-action {
+    width: 38px;
+}
+
+.rubric-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.rubric-field {
+    flex: 1;
+}
+
+.rubric-weight-field {
+    width: 120px;
+}
+
+.btn-remove-rubric {
+    background: transparent;
+    border: none;
+    color: #ef4444;
+    padding: 6px;
+    cursor: pointer;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    height: 38px;
+    width: 38px;
+}
+
+.btn-remove-rubric:hover {
+    background-color: #fee2e2;
+    color: #dc2626;
+}
+
+.btn-remove-rubric i {
+    font-size: 0.85rem;
 }
 </style><?php /**PATH C:\xampp\htdocs\exam1\resources\views/instructor/exam/question-modal.blade.php ENDPATH**/ ?>
