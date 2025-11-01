@@ -10,6 +10,7 @@ use App\Models\ExamAnswer;
 use App\Models\ExamItem;
 use App\Models\ClassEnrolment;
 use App\Models\UserStudent;
+use App\Services\EssayGradingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -600,6 +601,11 @@ class ExamController extends Controller
             $isCorrect = false;
             $pointsEarned = 0;
 
+            // Initialize AI grading fields
+            $aiFeedback = null;
+            $aiConfidence = null;
+            $requiresManualReview = false;
+
             // STEP 1: Convert/normalize student answer to match database format
             switch ($item->item_type) {
                 case 'mcq':
@@ -800,8 +806,48 @@ class ExamController extends Controller
                     break;
 
                 case 'essay':
-                    // Essays need manual grading - don't auto-grade
-                    $isCorrect = null; // null indicates needs manual grading
+                    // Try AI grading if available
+                    if (EssayGradingService::isAvailable()) {
+                        try {
+                            $gradingService = new EssayGradingService();
+                            $gradingResult = $gradingService->gradeEssay(
+                                $item->question,
+                                $item->expected_answer,
+                                $originalStudentAnswer,
+                                $item->points_awarded
+                            );
+
+                            // Store AI grading results
+                            $isCorrect = $gradingResult['is_correct'];
+                            $pointsEarned = $gradingResult['points_earned'];
+                            $aiFeedback = $gradingResult['feedback'];
+                            $aiConfidence = $gradingResult['confidence'];
+                            $requiresManualReview = ($isCorrect === null);
+
+                            Log::info('Essay graded by AI', [
+                                'item_id' => $item->item_id,
+                                'points_earned' => $pointsEarned,
+                                'confidence' => $aiConfidence,
+                                'requires_manual_review' => $requiresManualReview
+                            ]);
+                        } catch (\Exception $e) {
+                            Log::error('AI grading failed, falling back to manual', [
+                                'item_id' => $item->item_id,
+                                'error' => $e->getMessage()
+                            ]);
+                            // Fallback to manual grading
+                            $isCorrect = null;
+                            $aiFeedback = 'AI grading failed. Requires manual review.';
+                            $aiConfidence = 0;
+                            $requiresManualReview = true;
+                        }
+                    } else {
+                        // AI not available - manual grading needed
+                        $isCorrect = null;
+                        $aiFeedback = null;
+                        $aiConfidence = null;
+                        $requiresManualReview = true;
+                    }
                     break;
             }
 
@@ -836,6 +882,9 @@ class ExamController extends Controller
                 'answer_text' => is_array($studentAnswer) ? json_encode($studentAnswer) : $studentAnswer,
                 'is_correct' => $isCorrect,
                 'points_earned' => $pointsEarned,
+                'ai_feedback' => $aiFeedback,
+                'ai_confidence' => $aiConfidence,
+                'requires_manual_review' => $requiresManualReview,
             ]);
         }
 
