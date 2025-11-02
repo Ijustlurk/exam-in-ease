@@ -925,70 +925,465 @@ class ExamController extends Controller
      */
     public function getResults(Request $request, $attemptId)
     {
-        $studentId = $request->user()->id;
-
-        $attempt = ExamAttempt::with(['examAssignment.exam.subject', 'answers.examItem'])
-            ->find($attemptId);
-
-        if (!$attempt) {
-            return response()->json([
-                'message' => 'Exam attempt not found',
-            ], 404);
-        }
-
-        // Verify ownership
-        if ($attempt->student_id !== $studentId) {
-            return response()->json([
-                'message' => 'Unauthorized',
-            ], 403);
-        }
-
-        // Only show results if submitted
-        if ($attempt->status !== 'submitted') {
-            return response()->json([
-                'message' => 'Exam not yet submitted',
-            ], 400);
-        }
-
-        $exam = $attempt->examAssignment->exam;
-
-        // Format answers with question details
-        $answersData = $attempt->answers->map(function ($answer) {
-            $item = $answer->examItem;
-            return [
-                'item_id' => $item->item_id,
-                'question' => $item->item_content,
-                'item_type' => $item->item_type,
-                'student_answer' => json_decode($answer->answer_text) ?? $answer->answer_text,
-                'correct_answer' => $item->expected_answer,
-                'is_correct' => $answer->is_correct,
-                'points_awarded' => $item->points_awarded,
-                'points_earned' => $answer->points_earned,
-            ];
-        });
-
-        return response()->json([
-            'attempt' => [
-                'attempt_id' => $attempt->attempt_id,
-                'start_time' => $attempt->start_time,
-                'end_time' => $attempt->end_time,
-                'score' => $attempt->score,
-                'total_points' => $exam->total_points,
-                'percentage' => $exam->total_points > 0
-                    ? round(($attempt->score / $exam->total_points) * 100, 2)
-                    : 0,
-                'status' => $attempt->status,
-            ],
-            'exam' => [
-                'exam_id' => $exam->exam_id,
-                'title' => $exam->exam_title,
-                'subject' => [
-                    'code' => $exam->subject->subject_code ?? null,
-                    'name' => $exam->subject->subject_name ?? null,
-                ],
-            ],
-            'answers' => $answersData,
+        // Log incoming request
+        \Log::debug('=== EXAM RESULTS API REQUEST ===', [
+            'attempt_id' => $attemptId,
+            'student_id' => $request->user()->id,
+            'request_method' => $request->method(),
+            'request_url' => $request->fullUrl(),
+            'request_headers' => $request->headers->all(),
+            'request_ip' => $request->ip(),
+            'timestamp' => now()->toDateTimeString(),
         ]);
+
+        try {
+            $studentId = $request->user()->id;
+
+            $attempt = ExamAttempt::with([
+                'examAssignment.exam.sections.items',
+                'answers'
+            ])->find($attemptId);
+
+            if (!$attempt) {
+                $errorResponse = [
+                    'message' => 'Exam attempt not found',
+                ];
+                \Log::debug('=== EXAM RESULTS API RESPONSE (ERROR) ===', [
+                    'attempt_id' => $attemptId,
+                    'student_id' => $studentId,
+                    'status_code' => 404,
+                    'error' => 'Exam attempt not found',
+                    'response_data' => $errorResponse,
+                    'timestamp' => now()->toDateTimeString(),
+                ]);
+                return response()->json($errorResponse, 404);
+            }
+
+            // Verify ownership
+            if ($attempt->student_id !== $studentId) {
+                $errorResponse = [
+                    'message' => 'You do not have permission to view these results',
+                ];
+                \Log::debug('=== EXAM RESULTS API RESPONSE (ERROR) ===', [
+                    'attempt_id' => $attemptId,
+                    'student_id' => $studentId,
+                    'attempt_owner_id' => $attempt->student_id,
+                    'status_code' => 403,
+                    'error' => 'Permission denied - ownership mismatch',
+                    'response_data' => $errorResponse,
+                    'timestamp' => now()->toDateTimeString(),
+                ]);
+                return response()->json($errorResponse, 403);
+            }
+
+            // Only show results if submitted
+            if ($attempt->status !== 'submitted') {
+                $errorResponse = [
+                    'message' => 'Results not yet released',
+                ];
+                \Log::debug('=== EXAM RESULTS API RESPONSE (ERROR) ===', [
+                    'attempt_id' => $attemptId,
+                    'student_id' => $studentId,
+                    'attempt_status' => $attempt->status,
+                    'status_code' => 400,
+                    'error' => 'Results not released - attempt not submitted',
+                    'response_data' => $errorResponse,
+                    'timestamp' => now()->toDateTimeString(),
+                ]);
+                return response()->json($errorResponse, 400);
+            }
+
+            $exam = $attempt->examAssignment->exam;
+
+            // Create a map of student answers for quick lookup
+            $studentAnswersMap = [];
+            foreach ($attempt->answers as $answer) {
+                $studentAnswersMap[$answer->item_id] = $answer;
+            }
+
+            // Build results array with correctness data
+            $results = [];
+            $totalCorrect = 0;
+            $totalIncorrect = 0;
+            $totalUnanswered = 0;
+            $manuallyGraded = 0;
+            $totalPointsAwarded = 0;
+            $totalPointsPossible = 0;
+
+            foreach ($exam->sections as $section) {
+                foreach ($section->items as $item) {
+                    $mobileType = $this->mapToMobileType($item->item_type);
+                    $studentAnswer = $studentAnswersMap[$item->item_id] ?? null;
+                    
+                    // Determine correctness and points from database
+                    $isCorrect = null;
+                    $pointsAwarded = 0;
+                    
+                    if (!$studentAnswer || ($studentAnswer->answer_text === null || $studentAnswer->answer_text === '')) {
+                        // Unanswered question
+                        $isCorrect = false;
+                        $pointsAwarded = 0;
+                        $totalUnanswered++;
+                    } elseif ($item->item_type === 'essay') {
+                        // Essay - manually graded (isCorrect stays null)
+                        $isCorrect = null;
+                        $pointsAwarded = $studentAnswer->points_earned ?? 0;
+                        $manuallyGraded++;
+                    } else {
+                        // Auto-graded questions - ALWAYS use database values
+                        $isCorrect = $studentAnswer->is_correct !== null ? (bool) $studentAnswer->is_correct : false;
+                        $pointsAwarded = $studentAnswer->points_earned ?? 0;
+                        
+                        \Log::debug('Item grading details', [
+                            'item_id' => $item->item_id,
+                            'type' => $item->item_type,
+                            'db_is_correct' => $studentAnswer->is_correct,
+                            'computed_is_correct' => $isCorrect,
+                            'db_points_earned' => $studentAnswer->points_earned,
+                            'computed_points' => $pointsAwarded
+                        ]);
+                        
+                        // Count for statistics
+                        if ($isCorrect) {
+                            $totalCorrect++;
+                        } else {
+                            $totalIncorrect++;
+                        }
+                    }
+                    
+                    $totalPointsAwarded += $pointsAwarded;
+                    $totalPointsPossible += $item->points_awarded;
+                    
+                    // Resolve student answer to actual text for MCQ/TORF
+                    $studentAnswerText = null;
+                    if ($studentAnswer && ($studentAnswer->answer_text !== null && $studentAnswer->answer_text !== '')) {
+                        if (in_array($item->item_type, ['mcq', 'torf'])) {
+                            // For MCQ/TORF, resolve the key to the actual choice text
+                            $studentAnswerText = $this->resolveChoiceText(
+                                $item,
+                                $studentAnswer->answer_text
+                            );
+                            \Log::debug('Resolved student answer', [
+                                'item_id' => $item->item_id,
+                                'type' => $item->item_type,
+                                'raw_answer' => $studentAnswer->answer_text,
+                                'resolved_text' => $studentAnswerText
+                            ]);
+                        } else {
+                            // For other types (iden, enum, essay), use the raw text
+                            $studentAnswerText = $studentAnswer->answer_text;
+                        }
+                    }
+                    
+                    // Resolve correct answer to actual text for MCQ/TORF
+                    $correctAnswerText = null;
+                    if ($item->item_type !== 'essay' && ($item->expected_answer !== null && $item->expected_answer !== '')) {
+                        if (in_array($item->item_type, ['mcq', 'torf'])) {
+                            $correctAnswerText = $this->resolveChoiceText(
+                                $item,
+                                $item->expected_answer
+                            );
+                            \Log::debug('Resolved correct answer', [
+                                'item_id' => $item->item_id,
+                                'type' => $item->item_type,
+                                'raw_answer' => $item->expected_answer,
+                                'resolved_text' => $correctAnswerText,
+                                'options' => $item->options
+                            ]);
+                        } else {
+                            $correctAnswerText = $item->expected_answer;
+                        }
+                    }
+                    
+                    $resultItem = [
+                        'id' => 'item_' . $item->item_id,
+                        'itemId' => $item->item_id,
+                        'sectionId' => $section->section_id,
+                        'sectionTitle' => $section->section_title,
+                        'type' => $mobileType,
+                        'originalType' => $item->item_type,
+                        'question' => $item->question,
+                        'choices' => $this->formatChoices($item),
+                        'correctAnswer' => $correctAnswerText,
+                        'studentAnswer' => $studentAnswerText,
+                        'isCorrect' => $isCorrect,
+                        'pointsAwarded' => (float) $pointsAwarded,
+                        'maxPoints' => (float) $item->points_awarded,
+                        'order' => $item->order ?? 0,
+                    ];
+
+                    // Add directions if available
+                    if (!empty($section->section_directions)) {
+                        $resultItem['directions'] = $section->section_directions;
+                    }
+
+                    // Add feedback if available (for manually graded)
+                    if ($studentAnswer && !empty($studentAnswer->feedback)) {
+                        $resultItem['feedback'] = $studentAnswer->feedback;
+                    }
+
+                    $results[] = $resultItem;
+                }
+            }
+
+            $responseData = [
+                'attempt' => [
+                    'attempt_id' => $attempt->attempt_id,
+                    'student_id' => $attempt->student_id,
+                    'exam_assignment_id' => $attempt->exam_assignment_id,
+                    'status' => $attempt->status,
+                    'score' => (float) $attempt->score,
+                    'total_marks' => (float) $totalPointsPossible,
+                    'started_at' => $attempt->start_time,
+                    'submitted_at' => $attempt->end_time,
+                    'duration_taken' => $attempt->end_time && $attempt->start_time
+                        ? strtotime($attempt->end_time) - strtotime($attempt->start_time)
+                        : 0,
+                ],
+                'results' => $results,
+                'statistics' => [
+                    'totalQuestions' => count($results),
+                    'correctAnswers' => $totalCorrect,
+                    'incorrectAnswers' => $totalIncorrect,
+                    'unanswered' => $totalUnanswered,
+                    'manuallyGraded' => $manuallyGraded,
+                    'totalPointsAwarded' => (float) $totalPointsAwarded,
+                    'totalPointsPossible' => (float) $totalPointsPossible,
+                    'percentageScore' => $totalPointsPossible > 0 
+                        ? round(($totalPointsAwarded / $totalPointsPossible) * 100, 2)
+                        : 0,
+                ],
+            ];
+
+            // Log successful response
+            \Log::debug('=== EXAM RESULTS API RESPONSE (SUCCESS) ===', [
+                'attempt_id' => $attemptId,
+                'student_id' => $studentId,
+                'status_code' => 200,
+                'total_questions' => count($results),
+                'correct_answers' => $totalCorrect,
+                'incorrect_answers' => $totalIncorrect,
+                'unanswered' => $totalUnanswered,
+                'manually_graded' => $manuallyGraded,
+                'score' => $attempt->score,
+                'response_data' => $responseData,
+                'timestamp' => now()->toDateTimeString(),
+            ]);
+
+            return response()->json($responseData);
+        } catch (\Exception $e) {
+            $errorResponse = [
+                'message' => 'An error occurred while fetching results',
+                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error'
+            ];
+
+            \Log::error('=== EXAM RESULTS API RESPONSE (EXCEPTION) ===', [
+                'attempt_id' => $attemptId,
+                'student_id' => $request->user()->id ?? null,
+                'status_code' => 500,
+                'error_message' => $e->getMessage(),
+                'error_file' => $e->getFile(),
+                'error_line' => $e->getLine(),
+                'response_data' => $errorResponse,
+                'trace' => $e->getTraceAsString(),
+                'timestamp' => now()->toDateTimeString(),
+            ]);
+            
+            return response()->json($errorResponse, 500);
+        }
+    }
+
+    /**
+     * Map server question type to mobile app type
+     */
+    private function mapToMobileType($serverType)
+    {
+        $typeMap = [
+            'mcq' => 'mcq',
+            'torf' => 'true_false',
+            'iden' => 'identification',
+            'enum' => 'enumeration',
+            'enum_ordered' => 'enumeration',
+            'enum_unordered' => 'enumeration',
+            'essay' => 'essay',
+        ];
+
+        return $typeMap[$serverType] ?? $serverType;
+    }
+
+    /**
+     * Format choices for MCQ and True/False questions
+     */
+    private function formatChoices($item)
+    {
+        // Only MCQ and True/False have choices
+        if (!in_array($item->item_type, ['mcq', 'torf'])) {
+            return null;
+        }
+
+        if ($item->item_type === 'torf') {
+            return [
+                ['key' => 'True', 'text' => 'True'],
+                ['key' => 'False', 'text' => 'False'],
+            ];
+        }
+
+        // For MCQ, parse choices from options field
+        $options = is_string($item->options) 
+            ? json_decode($item->options, true) 
+            : $item->options;
+
+        if (!$options || !is_array($options)) {
+            return null;
+        }
+
+        $choices = [];
+        
+        // If options is an indexed array [0, 1, 2, 3], generate keys A, B, C, D
+        if (array_keys($options) === range(0, count($options) - 1)) {
+            foreach ($options as $index => $text) {
+                $key = chr(65 + $index); // 65 is ASCII for 'A'
+                $choices[] = [
+                    'key' => $key,
+                    'text' => (string) $text,
+                ];
+            }
+        } else {
+            // Options has custom keys (might be letters or numbers)
+            foreach ($options as $key => $text) {
+                // Convert numeric keys to letters (0->A, 1->B, etc.)
+                if (is_numeric($key)) {
+                    $key = chr(65 + intval($key));
+                }
+                
+                $choices[] = [
+                    'key' => (string) $key,
+                    'text' => (string) $text,
+                ];
+            }
+        }
+
+        return $choices;
+    }
+
+    /**
+     * Check if student answer is correct
+     */
+    private function checkAnswer($correctAnswer, $studentAnswer, $itemType)
+    {
+        if (empty($correctAnswer) || empty($studentAnswer)) {
+            return false;
+        }
+
+        // Normalize both answers
+        $correct = trim(strtolower($correctAnswer));
+        $student = trim(strtolower($studentAnswer));
+        
+        if ($itemType === 'mcq' || $itemType === 'torf') {
+            // Exact match for MCQ and True/False (case-insensitive)
+            return $correct === $student;
+        } elseif ($itemType === 'iden') {
+            // Case-insensitive match for identification
+            return $correct === $student;
+        } elseif (in_array($itemType, ['enum', 'enum_ordered', 'enum_unordered'])) {
+            // For enumeration, check if all expected items are present
+            $correctItems = array_map('trim', explode(',', $correct));
+            $studentItems = array_map('trim', explode(',', $student));
+            
+            // For ordered enumeration, order matters
+            if ($itemType === 'enum_ordered') {
+                return $correctItems === $studentItems;
+            }
+            
+            // For unordered enumeration, sort before comparing
+            sort($correctItems);
+            sort($studentItems);
+            
+            return $correctItems === $studentItems;
+        }
+        
+        return false;
+    }
+
+    /**
+     * Resolve choice key (A, B, C, True, False, 0, 1, 2) to actual text
+     */
+    private function resolveChoiceText($item, $answerKey)
+    {
+        if ($answerKey === null || $answerKey === '') {
+            return null;
+        }
+
+        // For True/False questions
+        if ($item->item_type === 'torf') {
+            // Return the key as-is since "True" and "False" are already text
+            return $answerKey;
+        }
+
+        // For MCQ questions, look up the text from options
+        if ($item->item_type === 'mcq') {
+            $options = is_string($item->options) 
+                ? json_decode($item->options, true) 
+                : $item->options;
+
+            if (!$options || !is_array($options)) {
+                \Log::warning('MCQ options not available for item', [
+                    'item_id' => $item->item_id,
+                    'answer_key' => $answerKey
+                ]);
+                return $answerKey; // Fallback to key if options unavailable
+            }
+
+            $answerKeyTrimmed = trim($answerKey);
+            
+            // Try direct lookup first (for both string and numeric keys)
+            if (isset($options[$answerKeyTrimmed])) {
+                return (string) $options[$answerKeyTrimmed];
+            }
+
+            // If answer key is numeric (like "0", "1", "2"), convert to integer and try
+            if (is_numeric($answerKeyTrimmed)) {
+                $numericKey = (int) $answerKeyTrimmed;
+                if (isset($options[$numericKey])) {
+                    return (string) $options[$numericKey];
+                }
+            }
+
+            // If answer key is a letter (A, B, C, D), convert to index
+            $normalizedKey = strtoupper($answerKeyTrimmed);
+            if (strlen($normalizedKey) === 1 && $normalizedKey >= 'A' && $normalizedKey <= 'Z') {
+                $index = ord($normalizedKey) - 65; // 'A' = 65 in ASCII
+                
+                // Try numeric index
+                if (isset($options[$index])) {
+                    return (string) $options[$index];
+                }
+                
+                // Try letter key
+                if (isset($options[$normalizedKey])) {
+                    return (string) $options[$normalizedKey];
+                }
+                
+                // Try lowercase letter key
+                $lowerKey = strtolower($normalizedKey);
+                if (isset($options[$lowerKey])) {
+                    return (string) $options[$lowerKey];
+                }
+            }
+
+            // Log if we couldn't resolve the choice
+            \Log::warning('Could not resolve MCQ choice text', [
+                'item_id' => $item->item_id,
+                'answer_key' => $answerKey,
+                'available_keys' => array_keys($options)
+            ]);
+
+            // Fallback: return the key itself if we can't resolve it
+            return $answerKey;
+        }
+
+        // For other types, return as-is
+        return $answerKey;
     }
 
     /**
