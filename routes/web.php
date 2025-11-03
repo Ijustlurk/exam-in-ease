@@ -187,6 +187,7 @@ Route::
         Route::get('/exams/{id}', [ExamController::class, 'show'])->middleware('throttle:60,1')->name('exams.show');
 
         // Create/Edit Exam - rate limited
+        Route::get('/exams/new', [ExamController::class, 'newExam'])->middleware('throttle:20,1')->name('exams.new'); // Auto-create draft
         Route::get('/exams/create/{examId?}', [ExamController::class, 'create'])->middleware('throttle:60,1')->name('exams.create');
         Route::post('/exams', [ExamController::class, 'store'])->middleware('throttle:20,1')->name('exams.store');
         Route::put('/exams/{id}', [ExamController::class, 'update'])->middleware('throttle:30,1')->name('exams.update');

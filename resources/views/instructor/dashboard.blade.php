@@ -989,9 +989,9 @@
 </div>
 
 <!-- Add Button -->
-<div class="add-button" onclick="openNewExamModal()">
+<a href="{{ route('instructor.exams.new') }}" class="add-button" style="text-decoration: none; color: inherit;" title="Create New Exam">
     <i class="bi bi-plus"></i>
-</div>
+</a>
 
 <!-- New Exam Modal -->
 <div class="modal fade" id="newExamModal" tabindex="-1" aria-labelledby="newExamModalLabel" aria-hidden="true">

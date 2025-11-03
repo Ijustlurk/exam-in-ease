@@ -1031,7 +1031,12 @@
         </div>
     </div>
     @endif
-    
+
+    <!-- Inline Metadata Panel (replaces modal) -->
+    <div class="container-fluid" style="max-width: 1400px; padding: 0 20px;">
+        @include('instructor.exam.partials.inline-metadata')
+    </div>
+
     <div class="container-fluid" style="max-width: 1400px;">
         @forelse($exam->sections as $section)
         <!-- Section Container -->
@@ -3033,6 +3038,12 @@ function downloadExam(format) {
 function showDownloadNotAvailable() {
     alert('Download feature is not yet available. This feature is currently under development.');
 }
+
+// Set exam ID for auto-save
+window.examId = {{ $exam->exam_id }};
 </script>
+
+<!-- Auto-save functionality -->
+<script src="{{ asset('js/exam-autosave.js') }}"></script>
 
 @endsection

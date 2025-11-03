@@ -101,6 +101,50 @@ class ExamController extends Controller
         return view('instructor.exam.create', compact('exam'));
     }
 
+    /**
+     * Create a new draft exam and redirect to builder
+     * Part of inline builder flow - auto-creates draft
+     */
+    public function newExam()
+    {
+        DB::beginTransaction();
+        try {
+            // Auto-create draft exam with defaults
+            $exam = Exam::create([
+                'exam_title' => 'Untitled Exam',
+                'exam_desc' => null,
+                'subject_id' => null, // Will be set in builder
+                'schedule_start' => now()->addDay(),
+                'schedule_end' => now()->addDays(2),
+                'duration' => 60,
+                'total_points' => 0,
+                'no_of_items' => 0,
+                'teacher_id' => Auth::id(),
+                'status' => 'draft'
+            ]);
+
+            // Create exam collaboration entry for the creator/author
+            ExamCollaboration::create([
+                'exam_id' => $exam->exam_id,
+                'teacher_id' => Auth::id(),
+                'role' => 'owner'
+            ]);
+
+            DB::commit();
+
+            // Redirect to inline builder
+            return redirect()
+                ->route('instructor.exams.create', $exam->exam_id)
+                ->with('success', 'Draft exam created! Start building your exam below.');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()
+                ->route('instructor.exams.index')
+                ->with('error', 'Failed to create draft exam: ' . $e->getMessage());
+        }
+    }
+
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -199,16 +243,17 @@ class ExamController extends Controller
                 'request_data' => $request->all()
             ]);
 
+            // More lenient validation for drafts - allow partial updates
             $validated = $request->validate([
-                'exam_title' => 'sometimes|required|string|max:200',
+                'exam_title' => 'sometimes|string|max:200',
                 'exam_desc' => 'nullable|string',
-                'subject_id' => 'sometimes|required|exists:subjects,subject_id',
+                'subject_id' => 'nullable|exists:subjects,subject_id',
                 'term' => 'nullable|string',
-                'duration' => 'sometimes|required|integer|min:0',
-                'schedule_start' => 'sometimes|required|date',
-                'schedule_end' => 'sometimes|required|date|after:schedule_start',
+                'duration' => 'sometimes|integer|min:1',
+                'schedule_start' => 'sometimes|date',
+                'schedule_end' => 'sometimes|date|after:schedule_start',
                 'selected_classes' => 'nullable|string', // Comma-separated class IDs
-                'status' => 'sometimes|required|in:draft,for approval,approved,ongoing,archived',
+                'status' => 'sometimes|in:draft,for approval,approved,ongoing,archived',
             ]);
 
             DB::beginTransaction();
