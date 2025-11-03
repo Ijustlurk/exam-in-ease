@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Instructor;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Exam;
+use App\Models\ExamAnswer;
 use Illuminate\Support\Facades\Auth;
 
 class ExamStatisticsController extends Controller
@@ -293,23 +294,43 @@ class ExamStatisticsController extends Controller
      */
     public function getFilteredStats(Request $request, $id)
     {
-        $classId = $request->input('class_id');
+        // Validate inputs
+        $validated = $request->validate([
+            'class_id' => 'nullable|string|max:255'
+        ]);
         
-        $exam = Exam::with(['subject', 'examItems', 'examAssignments.class'])
-            ->where('exam_id', $id)
-            ->where('teacher_id', Auth::id())
-            ->firstOrFail();
+        $classId = $validated['class_id'] ?? null;
         
-        // Get total items and points from exam table
-        $totalItems = $exam->no_of_items;
-        $totalPoints = $exam->total_points;
-        
-        // Filter by class if specified
-        $assignmentsQuery = $exam->examAssignments();
-        if ($classId && $classId !== 'all') {
-            $assignmentsQuery->where('class_id', $classId);
+        // Validate exam ID
+        if (!is_numeric($id)) {
+            return response()->json(['error' => 'Invalid exam ID'], 400);
         }
-        $assignments = $assignmentsQuery->get();
+        
+        try {
+            $exam = Exam::with(['subject', 'examItems', 'examAssignments.class'])
+                ->where('exam_id', $id)
+                ->where('teacher_id', Auth::id())
+                ->firstOrFail();
+            
+            // Get total items and points from exam table
+            $totalItems = $exam->no_of_items;
+            $totalPoints = $exam->total_points;
+            
+            // Filter by class if specified
+            $assignmentsQuery = $exam->examAssignments();
+            if ($classId && $classId !== 'all') {
+                // Verify class belongs to this exam
+                $validClass = $exam->examAssignments()
+                    ->where('class_id', $classId)
+                    ->exists();
+                
+                if (!$validClass) {
+                    return response()->json(['error' => 'Unauthorized access to class data'], 403);
+                }
+                
+                $assignmentsQuery->where('class_id', $classId);
+            }
+            $assignments = $assignmentsQuery->get();
         
         // Get total number of students enrolled in filtered classes
         $totalStudents = 0;
@@ -485,6 +506,18 @@ class ExamStatisticsController extends Controller
             'easiestQuestion' => $easiestQuestion,
             'totalPoints' => $totalPoints
         ]);
+            
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json(['error' => 'Exam not found'], 404);
+        } catch (\Exception $e) {
+            \Log::error('Error in getFilteredStats: ' . $e->getMessage(), [
+                'exam_id' => $id,
+                'class_id' => $classId,
+                'instructor_id' => Auth::id()
+            ]);
+            
+            return response()->json(['error' => 'Failed to fetch statistics'], 500);
+        }
     }
 
     /**
@@ -492,19 +525,39 @@ class ExamStatisticsController extends Controller
      */
     public function getQuestionStats(Request $request, $id)
     {
-        $classId = $request->input('class_id');
+        // Validate inputs
+        $validated = $request->validate([
+            'class_id' => 'nullable|string|max:255'
+        ]);
         
-        $exam = Exam::with(['subject', 'examItems', 'examAssignments.class'])
-            ->where('exam_id', $id)
-            ->where('teacher_id', Auth::id())
-            ->firstOrFail();
+        $classId = $validated['class_id'] ?? null;
         
-        // Filter by class if specified
-        $assignmentsQuery = $exam->examAssignments();
-        if ($classId && $classId !== 'all') {
-            $assignmentsQuery->where('class_id', $classId);
+        // Validate exam ID
+        if (!is_numeric($id)) {
+            return response()->json(['error' => 'Invalid exam ID'], 400);
         }
-        $assignments = $assignmentsQuery->get();
+        
+        try {
+            $exam = Exam::with(['subject', 'examItems', 'examAssignments.class'])
+                ->where('exam_id', $id)
+                ->where('teacher_id', Auth::id())
+                ->firstOrFail();
+            
+            // Filter by class if specified
+            $assignmentsQuery = $exam->examAssignments();
+            if ($classId && $classId !== 'all') {
+                // Verify class belongs to this exam
+                $validClass = $exam->examAssignments()
+                    ->where('class_id', $classId)
+                    ->exists();
+                
+                if (!$validClass) {
+                    return response()->json(['error' => 'Unauthorized access to class data'], 403);
+                }
+                
+                $assignmentsQuery->where('class_id', $classId);
+            }
+            $assignments = $assignmentsQuery->get();
         
         // Get assignment IDs for filtering attempts
         $assignmentIds = $assignments->pluck('assignment_id');
@@ -661,6 +714,18 @@ class ExamStatisticsController extends Controller
         return response()->json([
             'questions' => $questions
         ]);
+            
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json(['error' => 'Exam not found'], 404);
+        } catch (\Exception $e) {
+            \Log::error('Error in getQuestionStats: ' . $e->getMessage(), [
+                'exam_id' => $id,
+                'class_id' => $classId,
+                'instructor_id' => Auth::id()
+            ]);
+            
+            return response()->json(['error' => 'Failed to fetch question statistics'], 500);
+        }
     }
 
     /**
@@ -668,19 +733,39 @@ class ExamStatisticsController extends Controller
      */
     public function getIndividualStats(Request $request, $id)
     {
-        $classId = $request->input('class_id');
+        // Validate inputs
+        $validated = $request->validate([
+            'class_id' => 'nullable|string|max:255'
+        ]);
         
-        $exam = Exam::with(['subject', 'examItems', 'examAssignments.class'])
-            ->where('exam_id', $id)
-            ->where('teacher_id', Auth::id())
-            ->firstOrFail();
+        $classId = $validated['class_id'] ?? null;
         
-        // Filter by class if specified
-        $assignmentsQuery = $exam->examAssignments();
-        if ($classId && $classId !== 'all') {
-            $assignmentsQuery->where('class_id', $classId);
+        // Validate exam ID
+        if (!is_numeric($id)) {
+            return response()->json(['error' => 'Invalid exam ID'], 400);
         }
-        $assignments = $assignmentsQuery->get();
+        
+        try {
+            $exam = Exam::with(['subject', 'examItems', 'examAssignments.class'])
+                ->where('exam_id', $id)
+                ->where('teacher_id', Auth::id())
+                ->firstOrFail();
+            
+            // Filter by class if specified
+            $assignmentsQuery = $exam->examAssignments();
+            if ($classId && $classId !== 'all') {
+                // Verify class belongs to this exam
+                $validClass = $exam->examAssignments()
+                    ->where('class_id', $classId)
+                    ->exists();
+                
+                if (!$validClass) {
+                    return response()->json(['error' => 'Unauthorized access to class data'], 403);
+                }
+                
+                $assignmentsQuery->where('class_id', $classId);
+            }
+            $assignments = $assignmentsQuery->get();
         
         // Get assignment IDs for filtering attempts
         $assignmentIds = $assignments->pluck('assignment_id');
@@ -828,6 +913,18 @@ class ExamStatisticsController extends Controller
             'students' => $students,
             'total_points' => $exam->total_points
         ]);
+            
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json(['error' => 'Exam not found'], 404);
+        } catch (\Exception $e) {
+            \Log::error('Error in getIndividualStats: ' . $e->getMessage(), [
+                'exam_id' => $id,
+                'class_id' => $classId,
+                'instructor_id' => Auth::id()
+            ]);
+            
+            return response()->json(['error' => 'Failed to fetch individual statistics'], 500);
+        }
     }
 
     /**
@@ -851,41 +948,332 @@ class ExamStatisticsController extends Controller
      */
     public function overrideAnswer(Request $request, $examId, $answerId)
     {
-        $request->validate([
+        // Validate inputs
+        $validated = $request->validate([
             'is_correct' => 'required|boolean',
             'points_earned' => 'required|numeric|min:0'
         ]);
         
-        // Get the exam to verify ownership
-        $exam = Exam::where('exam_id', $examId)
-            ->where('teacher_id', Auth::id())
-            ->firstOrFail();
+        // Validate IDs are numeric
+        if (!is_numeric($examId) || !is_numeric($answerId)) {
+            return response()->json(['error' => 'Invalid ID format'], 400);
+        }
         
-        // Get the answer and verify it belongs to this exam
-        $answer = ExamAnswer::where('answer_id', $answerId)
-            ->whereHas('attempt.examAssignment', function($query) use ($examId) {
-                $query->where('exam_id', $examId);
-            })
-            ->firstOrFail();
+        try {
+            // Use database transaction with row locking to prevent race conditions
+            return \DB::transaction(function () use ($examId, $answerId, $validated) {
+                // Get the exam to verify ownership
+                $exam = Exam::where('exam_id', $examId)
+                    ->where('teacher_id', Auth::id())
+                    ->lockForUpdate() // Lock the exam row
+                    ->firstOrFail();
+                
+                // Get the answer and verify it belongs to this exam
+                $answer = ExamAnswer::where('answer_id', $answerId)
+                    ->whereHas('attempt.examAssignment', function($query) use ($examId) {
+                        $query->where('exam_id', $examId);
+                    })
+                    ->lockForUpdate() // Lock the answer row
+                    ->firstOrFail();
+                
+                // Get the item to validate max points
+                $item = $answer->item;
+                if (!$item) {
+                    return response()->json(['error' => 'Question not found'], 404);
+                }
+                
+                // Validate points don't exceed maximum
+                if ($validated['points_earned'] > $item->points_awarded) {
+                    return response()->json([
+                        'error' => 'Points earned cannot exceed maximum points',
+                        'max_points' => $item->points_awarded
+                    ], 422);
+                }
+                
+                // Log the override for audit trail
+                \Log::info('Answer override', [
+                    'exam_id' => $examId,
+                    'answer_id' => $answerId,
+                    'old_correct' => $answer->is_correct,
+                    'new_correct' => $validated['is_correct'],
+                    'old_points' => $answer->points_earned,
+                    'new_points' => $validated['points_earned'],
+                    'instructor_id' => Auth::id(),
+                    'student_id' => $answer->attempt->student_id
+                ]);
+                
+                // Update the answer
+                $answer->is_correct = $validated['is_correct'];
+                $answer->points_earned = $validated['points_earned'];
+                $answer->save();
+                
+                // Recalculate attempt score with lock
+                $attempt = $answer->attempt()->lockForUpdate()->first();
+                $totalScore = ExamAnswer::where('attempt_id', $attempt->attempt_id)
+                    ->sum('points_earned');
+                
+                $attempt->score = $totalScore;
+                $attempt->save();
+                
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Answer updated successfully',
+                    'new_score' => $totalScore
+                ]);
+            });
+            
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json(['error' => 'Resource not found'], 404);
+        } catch (\Exception $e) {
+            \Log::error('Error in overrideAnswer: ' . $e->getMessage(), [
+                'exam_id' => $examId,
+                'answer_id' => $answerId,
+                'instructor_id' => Auth::id()
+            ]);
+            
+            return response()->json(['error' => 'Failed to update answer'], 500);
+        }
+    }
+
+    /**
+     * Calculate optimal score ranges based on total points
+     * Returns array of range labels and boundaries
+     */
+    private function calculateScoreRanges($totalPoints)
+    {
+        // Validate and sanitize input
+        $totalPoints = (int) $totalPoints;
         
-        // Update the answer
-        $answer->is_correct = $request->is_correct;
-        $answer->points_earned = $request->points_earned;
-        $answer->save();
+        if ($totalPoints <= 0) {
+            return [];
+        }
         
-        // Recalculate attempt score
-        $attempt = $answer->attempt;
-        $totalScore = ExamAnswer::where('attempt_id', $attempt->attempt_id)
-            ->sum('points_earned');
+        // Prevent extremely large values that could cause performance issues
+        if ($totalPoints > 10000) {
+            $totalPoints = 10000; // Cap at reasonable maximum
+        }
         
-        $attempt->score = $totalScore;
-        $attempt->save();
+        // Determine optimal range width
+        if ($totalPoints <= 25) {
+            // For small exams (≤25 points): 5-point ranges
+            $rangeWidth = 5;
+        } elseif ($totalPoints <= 50) {
+            // For medium exams (26-50 points): 10-point ranges
+            $rangeWidth = 10;
+        } elseif ($totalPoints <= 100) {
+            // For standard exams (51-100 points): 10-point ranges
+            $rangeWidth = 10;
+        } else {
+            // For large exams (>100 points): 20-point ranges
+            $rangeWidth = 20;
+        }
         
-        return response()->json([
-            'success' => true,
-            'message' => 'Answer updated successfully',
-            'new_score' => $totalScore
+        // Calculate number of ranges
+        $numRanges = ceil($totalPoints / $rangeWidth);
+        
+        // Ensure minimum 5 ranges, maximum 10 ranges
+        if ($numRanges < 5) {
+            $rangeWidth = ceil($totalPoints / 5);
+            $numRanges = 5;
+        } elseif ($numRanges > 10) {
+            $rangeWidth = ceil($totalPoints / 10);
+            $numRanges = 10;
+        }
+        
+        // Generate range labels and boundaries
+        $ranges = [];
+        for ($i = 0; $i < $numRanges; $i++) {
+            $start = $i * $rangeWidth;
+            $end = min(($i + 1) * $rangeWidth - 1, $totalPoints);
+            
+            // Last range should always end at totalPoints
+            if ($i === $numRanges - 1) {
+                $end = $totalPoints;
+            }
+            
+            $label = "{$start}-{$end}";
+            $ranges[$label] = [
+                'label' => $label,
+                'start' => $start,
+                'end' => $end,
+                'count' => 0
+            ];
+        }
+        
+        return $ranges;
+    }
+
+    /**
+     * Categorize a score into the appropriate range
+     */
+    private function categorizeScore($score, $ranges)
+    {
+        foreach ($ranges as $label => $range) {
+            if ($score >= $range['start'] && $score <= $range['end']) {
+                return $label;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Get score distribution for histogram
+     */
+    public function getScoreDistribution(Request $request, $examId)
+    {
+        // Validate inputs
+        $validated = $request->validate([
+            'class_id' => 'nullable|string|max:255'
         ]);
+        
+        $classId = $validated['class_id'] ?? 'all';
+        
+        // Validate exam_id is numeric
+        if (!is_numeric($examId)) {
+            return response()->json(['error' => 'Invalid exam ID'], 400);
+        }
+        
+        try {
+            // Get exam and verify ownership (authorization check)
+            $exam = Exam::where('exam_id', $examId)
+                ->where('teacher_id', Auth::id())
+                ->firstOrFail();
+            
+            $totalPoints = $exam->total_points;
+            
+            // Validate total points
+            if (!$totalPoints || $totalPoints <= 0) {
+                return response()->json([
+                    'error' => 'Invalid exam configuration',
+                    'distribution' => [],
+                    'totalPoints' => 0,
+                    'rangeWidth' => 0,
+                    'statistics' => [
+                        'totalStudents' => 0,
+                        'average' => 0,
+                        'median' => 0,
+                        'passRate' => 0,
+                        'passingScore' => 0,
+                        'highestScore' => 0,
+                        'lowestScore' => 0
+                    ]
+                ], 200);
+            }
+            
+            // Calculate dynamic ranges based on total points
+            $ranges = $this->calculateScoreRanges($totalPoints);
+            
+            // Get all scores for this exam
+            $assignmentsQuery = $exam->examAssignments();
+            
+            // Verify class_id belongs to this exam's assignments (authorization check)
+            if ($classId !== 'all') {
+                // Verify the class is actually assigned to this exam
+                $validClass = $exam->examAssignments()
+                    ->where('class_id', $classId)
+                    ->exists();
+                
+                if (!$validClass) {
+                    return response()->json(['error' => 'Unauthorized access to class data'], 403);
+                }
+                
+                $assignmentsQuery->where('class_id', $classId);
+            }
+            
+            $assignmentIds = $assignmentsQuery->pluck('assignment_id');
+            
+            // Check if there are any assignments
+            if ($assignmentIds->isEmpty()) {
+                return response()->json([
+                    'distribution' => array_fill_keys(array_keys($ranges), 0),
+                    'totalPoints' => $totalPoints,
+                    'rangeWidth' => !empty($ranges) ? ($ranges[array_key_first($ranges)]['end'] - $ranges[array_key_first($ranges)]['start'] + 1) : 0,
+                    'statistics' => [
+                        'totalStudents' => 0,
+                        'average' => 0,
+                        'median' => 0,
+                        'passRate' => 0,
+                        'passingScore' => round($totalPoints * 0.6, 2),
+                        'highestScore' => 0,
+                        'lowestScore' => 0
+                    ]
+                ]);
+            }
+            
+            // Get submitted attempts with proper binding to prevent SQL injection
+            $scores = \DB::table('exam_attempts')
+                ->whereIn('exam_assignment_id', $assignmentIds)
+                ->where('status', 'submitted')
+                ->pluck('score')
+                ->toArray();
+            
+            // Distribute scores into ranges
+            foreach ($scores as $score) {
+                // Sanitize score value
+                if (!is_numeric($score) || $score < 0 || $score > $totalPoints) {
+                    continue; // Skip invalid scores
+                }
+                
+                $rangeLabel = $this->categorizeScore($score, $ranges);
+                if ($rangeLabel && isset($ranges[$rangeLabel])) {
+                    $ranges[$rangeLabel]['count']++;
+                }
+            }
+            
+            // Format distribution for frontend (label => count)
+            $distribution = [];
+            foreach ($ranges as $label => $range) {
+                $distribution[$label] = $range['count'];
+            }
+            
+            // Calculate statistics
+            $total = count($scores);
+            $average = $total > 0 ? round(array_sum($scores) / $total, 2) : 0;
+            
+            // Calculate pass rate (60% of total points)
+            $passingScore = $totalPoints * 0.6;
+            $passing = array_filter($scores, fn($s) => $s >= $passingScore);
+            $passRate = $total > 0 ? round((count($passing) / $total) * 100, 2) : 0;
+            
+            // Calculate median
+            sort($scores);
+            $median = 0;
+            if ($total > 0) {
+                if ($total % 2 === 0) {
+                    $median = ($scores[$total/2 - 1] + $scores[$total/2]) / 2;
+                } else {
+                    $median = $scores[floor($total/2)];
+                }
+            }
+            
+            return response()->json([
+                'distribution' => $distribution,
+                'totalPoints' => $totalPoints,
+                'rangeWidth' => !empty($ranges) ? ($ranges[array_key_first($ranges)]['end'] - $ranges[array_key_first($ranges)]['start'] + 1) : 0,
+                'statistics' => [
+                    'totalStudents' => $total,
+                    'average' => $average,
+                    'median' => round($median, 2),
+                    'passRate' => $passRate,
+                    'passingScore' => round($passingScore, 2),
+                    'highestScore' => $total > 0 ? max($scores) : 0,
+                    'lowestScore' => $total > 0 ? min($scores) : 0
+                ]
+            ]);
+            
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            // Exam not found or doesn't belong to this instructor
+            return response()->json(['error' => 'Exam not found'], 404);
+        } catch (\Exception $e) {
+            // Log the error for debugging but don't expose details to user
+            \Log::error('Error in getScoreDistribution: ' . $e->getMessage(), [
+                'exam_id' => $examId,
+                'class_id' => $classId,
+                'teacher_id' => Auth::id()
+            ]);
+            
+            return response()->json(['error' => 'An error occurred while fetching score distribution'], 500);
+        }
     }
 
     /**

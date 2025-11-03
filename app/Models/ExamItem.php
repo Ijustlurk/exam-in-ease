@@ -46,4 +46,12 @@ class ExamItem extends Model
     {
         return $this->belongsTo(ExamSection::class, 'exam_section_id', 'section_id');
     }
+
+    /**
+     * Relationship with Comments
+     */
+    public function comments()
+    {
+        return $this->hasMany(CollabComment::class, 'question_id', 'item_id');
+    }
 }

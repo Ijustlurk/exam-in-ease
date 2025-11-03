@@ -241,18 +241,9 @@
                     
                     <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
                         <li>
-                            <a class="dropdown-item" href="{{ route('profile.edit') }}">
-                                <i class="bi bi-person me-2"></i>Profile
-                            </a>
-                        </li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li>
-                            <form method="POST" action="{{ route('logout') }}" id="logout-form">
-                                @csrf
-                                <button type="submit" class="dropdown-item">
-                                    <i class="bi bi-box-arrow-right me-2"></i>Log Out
-                                </button>
-                            </form>
+                            <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#logoutModal">
+                                <i class="bi bi-box-arrow-right me-2"></i>Log Out
+                            </button>
                         </li>
                         <li><hr class="dropdown-divider"></li>
                         <li>
@@ -290,10 +281,10 @@
         <span class="nav-label">Your Classes</span>
     </a> --}}
 
-    <a href="{{ route('profile.edit') }}" class="nav-item mt-auto mb-3 {{ request()->routeIs('profile.*') ? 'active' : '' }}">
-        <i class="bi bi-gear-fill nav-icon"></i>
-        <span class="nav-label">Account Options</span>
-    </a>
+    <button type="button" class="nav-item mt-auto mb-3" style="width: 100%;" data-bs-toggle="modal" data-bs-target="#logoutModal">
+        <i class="bi bi-power nav-icon"></i>
+        <span class="nav-label">Logout</span>
+    </button>
 </div>
 @endif
 
@@ -302,7 +293,46 @@
     @yield('main-content')
 </div>
 
+<!-- Logout Confirmation Modal -->
+<div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius: 12px; border: none;">
+            <div class="modal-header" style="background: linear-gradient(135deg, #6b9aac 0%, #7ca5b8 100%); color: white; border-radius: 12px 12px 0 0;">
+                <h5 class="modal-title" id="logoutModalLabel">
+                    <i class="bi bi-box-arrow-right me-2"></i>Confirm Logout
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" style="padding: 2rem;">
+                <div class="text-center mb-3">
+                    <i class="bi bi-question-circle-fill" style="font-size: 3rem; color: #7ca5b8;"></i>
+                </div>
+                <p class="text-center mb-0" style="font-size: 1.1rem; color: #374151;">
+                    Are you sure you want to log out?
+                </p>
+            </div>
+            <div class="modal-footer" style="border-top: 1px solid #e5e7eb; padding: 1rem 1.5rem;">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="border-radius: 8px; padding: 0.5rem 1.5rem;">
+                    Cancel
+                </button>
+                <button type="button" class="btn btn-danger" onclick="confirmLogout()" style="border-radius: 8px; padding: 0.5rem 1.5rem; background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); border: none;">
+                    <i class="bi bi-power me-1"></i>Log Out
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden logout form -->
+<form method="POST" action="{{ route('logout') }}" id="logout-form" style="display: none;">
+    @csrf
+</form>
+
 <script>
+    function confirmLogout() {
+        document.getElementById('logout-form').submit();
+    }
+    
     function toggleSidebar() {
         const sidebar = document.getElementById('sidebar');
         const main = document.getElementById('mainContent');
@@ -394,11 +424,25 @@
     }, 30000);
 
     // Ensure Bootstrap dropdowns work properly
-    document.addEventListener('DOMContentLoaded', function() {
-        // Initialize all dropdowns
-        var dropdownElementList = [].slice.call(document.querySelectorAll('[data-bs-toggle="dropdown"]'));
-        var dropdownList = dropdownElementList.map(function (dropdownToggleEl) {
-            return new bootstrap.Dropdown(dropdownToggleEl);
-        });
-    });
+    // Wait for both DOM and Bootstrap to be ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initializeBootstrapComponents);
+    } else {
+        // DOM already loaded, check if Bootstrap is available
+        initializeBootstrapComponents();
+    }
+
+    function initializeBootstrapComponents() {
+        // Check if Bootstrap is loaded
+        if (typeof bootstrap !== 'undefined') {
+            // Initialize all dropdowns
+            var dropdownElementList = [].slice.call(document.querySelectorAll('[data-bs-toggle="dropdown"]'));
+            var dropdownList = dropdownElementList.map(function (dropdownToggleEl) {
+                return new bootstrap.Dropdown(dropdownToggleEl);
+            });
+        } else {
+            // Bootstrap not loaded yet, try again after a short delay
+            setTimeout(initializeBootstrapComponents, 100);
+        }
+    }
 </script>

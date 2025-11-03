@@ -711,9 +711,14 @@
                 <!-- Score Distribution Chart -->
                 <div class="chart-container">
                     <div class="chart-title">Score Distribution</div>
-                    <div class="chart-placeholder">
-                        Chart will be rendered here (use Chart.js or similar library)
+                    <div style="position: relative; height: 350px;">
+                        <canvas id="scoreDistributionChart"></canvas>
                     </div>
+                </div>
+
+                <!-- Statistics Display Grid -->
+                <div id="chartStatistics" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; padding: 20px; background: #f8f9fa; border-radius: 12px; border: 1px solid #e5e7eb;">
+                    <!-- Statistics will be dynamically rendered here -->
                 </div>
 
                 <!-- Highest Scoring Students -->
@@ -870,9 +875,15 @@
         </div>
     </div>
 
+    <!-- Chart.js Library -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
     <script>
         // Store exam ID for AJAX requests
         const examId = {{ $exam->exam_id }};
+        
+        // Chart instance variable
+        let scoreDistributionChart = null;
         
         // Initialize the sliding indicator position
         document.addEventListener('DOMContentLoaded', function() {
@@ -880,6 +891,9 @@
             restoreUserSelection();
             
             updateIndicatorPosition();
+            
+            // Load score distribution histogram
+            fetchScoreDistribution();
             
             // Handle sidebar expansion
             const sidebar = document.querySelector('.sidebar');
@@ -983,6 +997,9 @@
             
             // Fetch filtered statistics for Summary tab
             fetchFilteredStats(filterValue);
+            
+            // Reload histogram with new filter
+            fetchScoreDistribution();
             
             // Save filter selection to localStorage (but not tab selection)
             if (shouldSave) {
@@ -1101,6 +1118,270 @@
                     Success Rate: ${question.success_rate}%
                 </div>
             `;
+        }
+
+        // Fetch score distribution data for histogram
+        function fetchScoreDistribution() {
+            const classId = document.getElementById('classFilter').value;
+            
+            // Validate class_id on client side
+            if (classId && classId !== 'all' && !/^[a-zA-Z0-9_-]+$/.test(classId)) {
+                console.error('Invalid class ID format');
+                return;
+            }
+            
+            fetch(`/instructor/exams-statistics/${examId}/score-distribution?class_id=${encodeURIComponent(classId)}`, {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    if (response.status === 403) {
+                        throw new Error('Unauthorized access to class data');
+                    } else if (response.status === 404) {
+                        throw new Error('Exam not found');
+                    } else if (response.status === 429) {
+                        throw new Error('Too many requests. Please wait a moment.');
+                    } else if (response.status === 500) {
+                        throw new Error('Server error occurred');
+                    }
+                    throw new Error('Failed to load score distribution');
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Validate response data structure
+                if (!data || typeof data !== 'object') {
+                    throw new Error('Invalid response format');
+                }
+                
+                if (data.error) {
+                    console.error('Server error:', data.error);
+                    showChartError(data.error);
+                    return;
+                }
+                
+                if (!data.distribution || !data.statistics) {
+                    throw new Error('Incomplete data received');
+                }
+                
+                renderScoreDistributionChart(data);
+                renderChartStatistics(data.statistics, data.totalPoints);
+            })
+            .catch(error => {
+                console.error('Error fetching score distribution:', error);
+                showChartError(error.message || 'Failed to load chart data. Please try again.');
+            });
+        }
+
+        // Show error message in chart area
+        function showChartError(message) {
+            const ctx = document.getElementById('scoreDistributionChart');
+            const container = ctx.parentElement;
+            
+            if (scoreDistributionChart) {
+                scoreDistributionChart.destroy();
+                scoreDistributionChart = null;
+            }
+            
+            ctx.style.display = 'none';
+            
+            const existingError = container.querySelector('.chart-error-message');
+            if (existingError) {
+                existingError.remove();
+            }
+            
+            container.insertAdjacentHTML('beforeend',
+                `<div class="chart-error-message" style="text-align: center; color: #dc3545; padding: 40px; margin: 0; background: #fff3f3; border: 1px dashed #dc3545; border-radius: 8px;">
+                    <i class="bi bi-exclamation-triangle" style="font-size: 2rem; margin-bottom: 10px; display: block;"></i>
+                    <p style="margin: 0; font-weight: 500;">${message}</p>
+                </div>`
+            );
+            
+            // Clear statistics
+            document.getElementById('chartStatistics').innerHTML = '';
+        }
+
+        // Render the score distribution histogram
+        function renderScoreDistributionChart(data) {
+            const ctx = document.getElementById('scoreDistributionChart').getContext('2d');
+            
+            // Destroy existing chart if it exists
+            if (scoreDistributionChart) {
+                scoreDistributionChart.destroy();
+            }
+            
+            const labels = Object.keys(data.distribution);
+            const values = Object.values(data.distribution);
+            const totalPoints = data.totalPoints;
+            
+            // Check if there's any data
+            if (data.statistics.totalStudents === 0) {
+                ctx.canvas.style.display = 'none';
+                const chartContainer = ctx.canvas.parentElement;
+                const noDataMsg = chartContainer.querySelector('.no-data-message');
+                if (!noDataMsg) {
+                    chartContainer.insertAdjacentHTML('beforeend',
+                        '<p class="no-data-message" style="text-align: center; color: #6c757d; padding: 40px; margin: 0;">No submissions yet. Chart will appear once students submit.</p>');
+                }
+                return;
+            } else {
+                ctx.canvas.style.display = 'block';
+                const noDataMsg = ctx.canvas.parentElement.querySelector('.no-data-message');
+                if (noDataMsg) {
+                    noDataMsg.remove();
+                }
+            }
+            
+            scoreDistributionChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Number of Students',
+                        data: values,
+                        backgroundColor: labels.map((label) => {
+                            // Extract the end score from the range label
+                            const endScore = parseInt(label.split('-')[1]);
+                            const percentage = (endScore / totalPoints) * 100;
+                            
+                            // Color based on percentage of total points
+                            if (percentage < 60) return '#f44336';      // Red - Failing (<60%)
+                            if (percentage < 70) return '#ff9800';      // Orange - Below Average (60-69%)
+                            if (percentage < 80) return '#ffc107';      // Yellow - Average (70-79%)
+                            if (percentage < 90) return '#4caf50';      // Green - Good (80-89%)
+                            return '#2196f3';                           // Blue - Excellent (90-100%)
+                        }),
+                        borderColor: '#ffffff',
+                        borderWidth: 2,
+                        borderRadius: 6,
+                        barPercentage: 0.9,
+                        categoryPercentage: 0.95
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: false
+                        },
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            padding: 12,
+                            titleFont: { size: 14, weight: 'bold' },
+                            bodyFont: { size: 13 },
+                            callbacks: {
+                                title: function(context) {
+                                    const label = context[0].label;
+                                    const endScore = parseInt(label.split('-')[1]);
+                                    const percentage = ((endScore / totalPoints) * 100).toFixed(1);
+                                    return `Score Range: ${label} (${percentage}% of total)`;
+                                },
+                                label: function(context) {
+                                    const count = context.parsed.y;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = total > 0 ? ((count / total) * 100).toFixed(1) : 0;
+                                    
+                                    return [
+                                        `Students: ${count}`,
+                                        `Percentage: ${percentage}%`
+                                    ];
+                                },
+                                afterLabel: function(context) {
+                                    const label = context.label;
+                                    const endScore = parseInt(label.split('-')[1]);
+                                    const percentage = (endScore / totalPoints) * 100;
+                                    
+                                    if (percentage < 60) return '(Failing)';
+                                    if (percentage < 70) return '(Below Average)';
+                                    if (percentage < 80) return '(Average)';
+                                    if (percentage < 90) return '(Good)';
+                                    return '(Excellent)';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1,
+                                font: { size: 13 },
+                                color: '#495057'
+                            },
+                            title: {
+                                display: true,
+                                text: 'Number of Students',
+                                font: { size: 14, weight: '600' },
+                                color: '#1a1a1a'
+                            },
+                            grid: {
+                                color: '#e5e7eb',
+                                drawBorder: false
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                font: { size: 13 },
+                                color: '#495057',
+                                maxRotation: 45,
+                                minRotation: 0
+                            },
+                            title: {
+                                display: true,
+                                text: `Score Range (out of ${totalPoints} points)`,
+                                font: { size: 14, weight: '600' },
+                                color: '#1a1a1a'
+                            },
+                            grid: {
+                                display: false
+                            }
+                        }
+                    },
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    }
+                }
+            });
+        }
+
+        // Render histogram statistics
+        function renderChartStatistics(stats, totalPoints) {
+            const container = document.getElementById('chartStatistics');
+            
+            const html = `
+                <div style="text-align: center;">
+                    <div style="font-size: 12px; color: #6c757d; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px;">Average</div>
+                    <div style="font-size: 20px; font-weight: 700; color: #1a1a1a;">${stats.average} / ${totalPoints}</div>
+                    <div style="font-size: 11px; color: #9ca3af;">(${((stats.average / totalPoints) * 100).toFixed(1)}%)</div>
+                </div>
+                <div style="text-align: center;">
+                    <div style="font-size: 12px; color: #6c757d; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px;">Median</div>
+                    <div style="font-size: 20px; font-weight: 700; color: #1a1a1a;">${stats.median} / ${totalPoints}</div>
+                    <div style="font-size: 11px; color: #9ca3af;">(${((stats.median / totalPoints) * 100).toFixed(1)}%)</div>
+                </div>
+                <div style="text-align: center;">
+                    <div style="font-size: 12px; color: #6c757d; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px;">Pass Rate</div>
+                    <div style="font-size: 20px; font-weight: 700; color: ${stats.passRate >= 75 ? '#4caf50' : stats.passRate >= 60 ? '#ff9800' : '#f44336'};">${stats.passRate}%</div>
+                    <div style="font-size: 11px; color: #9ca3af;">(≥${stats.passingScore} pts)</div>
+                </div>
+                <div style="text-align: center;">
+                    <div style="font-size: 12px; color: #6c757d; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px;">Score Range</div>
+                    <div style="font-size: 20px; font-weight: 700; color: #1a1a1a;">${stats.lowestScore} - ${stats.highestScore}</div>
+                    <div style="font-size: 11px; color: #9ca3af;">out of ${totalPoints}</div>
+                </div>
+            `;
+            
+            container.innerHTML = html;
         }
 
         // Switch between tabs

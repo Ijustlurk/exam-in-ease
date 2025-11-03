@@ -3,7 +3,6 @@
 use App\Http\Controllers\Admin\ManageClassesController;
 use App\Http\Controllers\Admin\ManageSubjectController;
 use App\Http\Controllers\Admin\MonitoringController;
-use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Instructor\ExamStatisticsController;
 use App\Http\Controllers\ProgramChair\ManageApprovalController;
 use Illuminate\Support\Facades\Route;
@@ -75,75 +74,70 @@ Route::get('/dashboard', [DashboardController::class, 'index'])
 
 
 
-Route::middleware('auth')->group(function () {
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-});
-
-
-
 // admin routes here 
 Route::
         namespace('App\Http\Controllers\Admin')->prefix('admin')->name('admin.')->middleware('can:admin-access')->group(function () {
-            Route::get('/users', [UserController::class, 'index'])->name('users.index');
-            Route::post('/users', [UserController::class, 'store'])->name('users.store');
-            Route::get('/users/{userId}/edit', [UserController::class, 'edit'])->name('users.edit');
-            Route::put('/users/{userId}', [UserController::class, 'update'])->name('users.update');
-            Route::delete('/users/{userId}', [UserController::class, 'destroy'])->name('users.destroy');
-            Route::get('/users/template/{role}', [UserController::class, 'downloadTemplate'])->name('users.download-template');
-            Route::post('/users/import', [UserController::class, 'import'])->name('users.import');
-            Route::post('/users/import', [UserController::class, 'import'])->name('users.import');
-            Route::post('/users/{id}/reset-password', [UserController::class, 'resetPassword'])
+            // User Management - rate limited
+            Route::get('/users', [UserController::class, 'index'])->middleware('throttle:60,1')->name('users.index');
+            Route::post('/users', [UserController::class, 'store'])->middleware('throttle:20,1')->name('users.store');
+            Route::get('/users/{userId}/edit', [UserController::class, 'edit'])->middleware('throttle:60,1')->name('users.edit');
+            Route::put('/users/{userId}', [UserController::class, 'update'])->middleware('throttle:30,1')->name('users.update');
+            Route::delete('/users/{userId}', [UserController::class, 'destroy'])->middleware('throttle:10,1')->name('users.destroy');
+            Route::get('/users/template/{role}', [UserController::class, 'downloadTemplate'])->middleware('throttle:10,1')->name('users.download-template');
+            Route::post('/users/import', [UserController::class, 'import'])->middleware('throttle:5,1')->name('users.import');
+            Route::post('/users/{id}/reset-password', [UserController::class, 'resetPassword'])->middleware('throttle:10,1')
                 ->name('users.reset-password');
 
-            Route::get('admin/{exam}', [MonitoringController::class, 'show'])->name('monitor.show');
+            // Monitoring - rate limited
+            Route::get('admin/{exam}', [MonitoringController::class, 'show'])->middleware('throttle:60,1')->name('monitor.show');
 
 
             Route::controller(ManageClassesController::class)->group(function () {
-                // Basic CRUD
-                Route::get('/manage-classes', 'index')->name('manage-classes.index');
-                Route::post('/manage-classes', 'store')->name('manage-classes.store');
-                Route::get('/manage-classes/{id}', 'show')->name('manage-classes.show');
-                Route::put('/manage-classes/{id}', 'update')->name('manage-classes.update');
-                Route::delete('/manage-classes/{id}', 'destroy')->name('manage-classes.destroy');
+                // Basic CRUD - rate limited
+                Route::get('/manage-classes', 'index')->middleware('throttle:60,1')->name('manage-classes.index');
+                Route::post('/manage-classes', 'store')->middleware('throttle:20,1')->name('manage-classes.store');
+                Route::get('/manage-classes/{id}', 'show')->middleware('throttle:60,1')->name('manage-classes.show');
+                Route::put('/manage-classes/{id}', 'update')->middleware('throttle:30,1')->name('manage-classes.update');
+                Route::delete('/manage-classes/{id}', 'destroy')->middleware('throttle:10,1')->name('manage-classes.destroy');
 
-                // Archive/Unarchive
-                Route::post('/manage-classes/{id}/archive', 'archive')->name('manage-classes.archive');
-                Route::post('/manage-classes/{id}/unarchive', 'unarchive')->name('manage-classes.unarchive');
+                // Archive/Unarchive - rate limited
+                Route::post('/manage-classes/{id}/archive', 'archive')->middleware('throttle:20,1')->name('manage-classes.archive');
+                Route::post('/manage-classes/{id}/unarchive', 'unarchive')->middleware('throttle:20,1')->name('manage-classes.unarchive');
 
-                // Student Management
-                Route::get('/manage-classes/{id}/students', 'manageStudents')->name('manage-classes.students');
-                Route::get('/manage-classes/{id}/available-students', 'getAvailableStudents')->name('manage-classes.available-students');
-                Route::get('/manage-classes/{id}/class-members', 'getClassMembers')->name('manage-classes.class-members');
-                Route::post('/manage-classes/{id}/add-students', 'addStudents')->name('manage-classes.add-students');
-                Route::delete('/manage-classes/{classId}/remove-student/{studentId}', 'removeStudent')->name('manage-classes.remove-student');
+                // Student Management - rate limited
+                Route::get('/manage-classes/{id}/students', 'manageStudents')->middleware('throttle:60,1')->name('manage-classes.students');
+                Route::get('/manage-classes/{id}/available-students', 'getAvailableStudents')->middleware('throttle:60,1')->name('manage-classes.available-students');
+                Route::get('/manage-classes/{id}/class-members', 'getClassMembers')->middleware('throttle:60,1')->name('manage-classes.class-members');
+                Route::post('/manage-classes/{id}/add-students', 'addStudents')->middleware('throttle:30,1')->name('manage-classes.add-students');
+                Route::delete('/manage-classes/{classId}/remove-student/{studentId}', 'removeStudent')->middleware('throttle:30,1')->name('manage-classes.remove-student');
 
-                // Copy Students
-                Route::get('/manage-classes/{id}/other-classes', 'getOtherClasses')->name('manage-classes.other-classes');
-                Route::post('/manage-classes/{id}/copy-students/{sourceClassId}', 'copyStudentsFromClass')->name('manage-classes.copy-students');
+                // Copy Students - rate limited
+                Route::get('/manage-classes/{id}/other-classes', 'getOtherClasses')->middleware('throttle:60,1')->name('manage-classes.other-classes');
+                Route::post('/manage-classes/{id}/copy-students/{sourceClassId}', 'copyStudentsFromClass')->middleware('throttle:20,1')->name('manage-classes.copy-students');
             });
 
-            Route::get('/manage-subject', [ManageSubjectController::class, 'index'])
+            // Subject Management - rate limited
+            Route::get('/manage-subject', [ManageSubjectController::class, 'index'])->middleware('throttle:60,1')
                 ->name('manage-subject.index');
-            Route::post('/manage-subject', [ManageSubjectController::class, 'store'])
+            Route::post('/manage-subject', [ManageSubjectController::class, 'store'])->middleware('throttle:20,1')
                 ->name('manage-subject.store');
-            Route::get('/manage-subject/{id}', [ManageSubjectController::class, 'show'])
+            Route::get('/manage-subject/{id}', [ManageSubjectController::class, 'show'])->middleware('throttle:60,1')
                 ->name('manage-subject.show');
-            Route::put('/manage-subject/{id}', [ManageSubjectController::class, 'update'])
+            Route::put('/manage-subject/{id}', [ManageSubjectController::class, 'update'])->middleware('throttle:30,1')
                 ->name('manage-subject.update');
-            Route::delete('/manage-subject/{id}', [ManageSubjectController::class, 'destroy'])
+            Route::delete('/manage-subject/{id}', [ManageSubjectController::class, 'destroy'])->middleware('throttle:10,1')
                 ->name('manage-subject.destroy');
 
   
 
-            Route::get('/exam-statistics', [AdminExamStatisticsController::class, 'index'])
+            // Exam Statistics - rate limited
+            Route::get('/exam-statistics', [AdminExamStatisticsController::class, 'index'])->middleware('throttle:60,1')
                 ->name('exam-statistics.index');
-            Route::get('/exam-statistics/{id}/show', [AdminExamStatisticsController::class, 'show'])
+            Route::get('/exam-statistics/{id}/show', [AdminExamStatisticsController::class, 'show'])->middleware('throttle:60,1')
                 ->name('exam-statistics.show');
-            Route::get('/exam-statistics/{id}/stats', [AdminExamStatisticsController::class, 'stats'])
+            Route::get('/exam-statistics/{id}/stats', [AdminExamStatisticsController::class, 'stats'])->middleware('throttle:60,1')
                 ->name('exam-statistics.stats');
-            Route::post('/exam-statistics/{id}/approve', [AdminExamStatisticsController::class, 'approve'])
+            Route::post('/exam-statistics/{id}/approve', [AdminExamStatisticsController::class, 'approve'])->middleware('throttle:20,1')
                 ->name('exam-statistics.approve');
 
 
@@ -157,22 +151,23 @@ Route::
         namespace('App\Http\Controllers\ProgramChair')->prefix('programchair')->name('programchair.')->middleware('can:programchair-access')->group(function () {
             Route::prefix('manage-approval')->name('manage-approval.')->group(function () {
 
-                // List all exams for approval
-                Route::get('/programchair', [ManageApprovalController::class, 'index'])
+                // List all exams for approval - rate limited
+                Route::get('/programchair', [ManageApprovalController::class, 'index'])->middleware('throttle:60,1')
                     ->name('index');
-                // Details route must come before the show route to avoid {exam} catching "details"
-                Route::get('/programchair/{exam}/details', [ManageApprovalController::class, 'getDetails'])
+                // Details route must come before the show route to avoid {exam} catching "details" - rate limited
+                Route::get('/programchair/{exam}/details', [ManageApprovalController::class, 'getDetails'])->middleware('throttle:60,1')
                     ->name('details');
-                Route::get('/programchair/{exam}', [ManageApprovalController::class, 'show'])
+                Route::get('/programchair/{exam}', [ManageApprovalController::class, 'show'])->middleware('throttle:60,1')
                     ->name('show');
-                Route::post('/{exam}/approve', [ManageApprovalController::class, 'approve'])
+                Route::post('/{exam}/approve', [ManageApprovalController::class, 'approve'])->middleware('throttle:20,1')
                     ->name('approve');
-                Route::post('/programchair/{exam}/revise', [ManageApprovalController::class, 'revise'])
+                Route::post('/programchair/{exam}/revise', [ManageApprovalController::class, 'revise'])->middleware('throttle:20,1')
                     ->name('revise');
-                Route::post('/{exam}/rescind', [ManageApprovalController::class, 'rescind'])
+                Route::post('/{exam}/rescind', [ManageApprovalController::class, 'rescind'])->middleware('throttle:20,1')
                     ->name('rescind');
             });
-            Route::get('/exam-statistics', [ProgramChairExamStatisticsController::class, 'index'])->name('exam-statistics.index');
+            // Exam Statistics - rate limited
+            Route::get('/exam-statistics', [ProgramChairExamStatisticsController::class, 'index'])->middleware('throttle:60,1')->name('exam-statistics.index');
 
 
         });
@@ -186,69 +181,85 @@ Route::
     ->name('instructor.')
     ->middleware(['auth', 'can:instructor-access'])
     ->group(function () {
-        // Exam Dashboard
-        Route::get('/exams', [ExamController::class, 'index'])->name('exams.index');
-        Route::delete('/exams/{examId}', [ExamController::class, 'destroy'])->name('exams.destroy');
-        Route::get('/exams/{id}', [ExamController::class, 'show'])->name('exams.show');
+        // Exam Dashboard - rate limited
+        Route::get('/exams', [ExamController::class, 'index'])->middleware('throttle:60,1')->name('exams.index');
+        Route::delete('/exams/{examId}', [ExamController::class, 'destroy'])->middleware('throttle:10,1')->name('exams.destroy');
+        Route::get('/exams/{id}', [ExamController::class, 'show'])->middleware('throttle:60,1')->name('exams.show');
 
-        // Create/Edit Exam
-        Route::get('/exams/create/{examId?}', [ExamController::class, 'create'])->name('exams.create');
-        Route::post('/exams', [ExamController::class, 'store'])->name('exams.store');
-        Route::put('/exams/{id}', [ExamController::class, 'update'])->name('exams.update');
-        Route::post('/exams/{id}/duplicate', [ExamController::class, 'duplicate'])->name('exams.duplicate');
+        // Create/Edit Exam - rate limited
+        Route::get('/exams/create/{examId?}', [ExamController::class, 'create'])->middleware('throttle:60,1')->name('exams.create');
+        Route::post('/exams', [ExamController::class, 'store'])->middleware('throttle:20,1')->name('exams.store');
+        Route::put('/exams/{id}', [ExamController::class, 'update'])->middleware('throttle:30,1')->name('exams.update');
+        Route::post('/exams/{id}/duplicate', [ExamController::class, 'duplicate'])->middleware('throttle:10,1')->name('exams.duplicate');
 
-        // Questions
-        Route::get('/exams/{examId}/questions/{itemId}', [ExamController::class, 'getQuestion'])->name('exams.questions.get');
-        Route::post('/exams/{examId}/questions', [ExamController::class, 'addQuestion'])->name('exams.questions.add');
-        Route::put('/exams/{examId}/questions/{itemId}', [ExamController::class, 'updateQuestion'])->name('exams.questions.update');
-        Route::delete('/exams/{examId}/questions/{itemId}', [ExamController::class, 'deleteQuestion'])->name('exams.questions.delete');
-        Route::post('/exams/{examId}/questions/{itemId}/duplicate', [ExamController::class, 'duplicateQuestion'])->name('exams.questions.duplicate');
-        Route::post('/exams/{examId}/questions/reorder', [ExamController::class, 'reorderQuestions'])->name('exams.questions.reorder');
-        Route::post('/exams/{examId}/questions/reorder-drag', [ExamController::class, 'reorderQuestionsByDrag'])->name('exams.questions.reorder.drag');
+        // Questions - rate limited
+        Route::get('/exams/{examId}/questions/{itemId}', [ExamController::class, 'getQuestion'])->middleware('throttle:60,1')->name('exams.questions.get');
+        Route::post('/exams/{examId}/questions', [ExamController::class, 'addQuestion'])->middleware('throttle:30,1')->name('exams.questions.add');
+        Route::put('/exams/{examId}/questions/{itemId}', [ExamController::class, 'updateQuestion'])->middleware('throttle:30,1')->name('exams.questions.update');
+        Route::delete('/exams/{examId}/questions/{itemId}', [ExamController::class, 'deleteQuestion'])->middleware('throttle:20,1')->name('exams.questions.delete');
+        Route::post('/exams/{examId}/questions/{itemId}/duplicate', [ExamController::class, 'duplicateQuestion'])->middleware('throttle:20,1')->name('exams.questions.duplicate');
+        Route::post('/exams/{examId}/questions/reorder', [ExamController::class, 'reorderQuestions'])->middleware('throttle:30,1')->name('exams.questions.reorder');
+        Route::post('/exams/{examId}/questions/reorder-drag', [ExamController::class, 'reorderQuestionsByDrag'])->middleware('throttle:30,1')->name('exams.questions.reorder.drag');
 
-        // Sections
-        Route::post('/exams/{examId}/sections', [ExamController::class, 'addSection'])->name('exams.sections.add');
-        Route::put('/exams/{examId}/sections/{sectionId}', [ExamController::class, 'updateSection'])->name('exams.sections.update');
-        Route::delete('/exams/{examId}/sections/{sectionId}', [ExamController::class, 'deleteSection'])->name('exams.sections.delete');
-        Route::post('/exams/{examId}/sections/{sectionId}/duplicate', [ExamController::class, 'duplicateSection'])->name('exams.sections.duplicate');
-        Route::post('/exams/{examId}/sections/reorder', [ExamController::class, 'reorderSections'])->name('exams.sections.reorder');
+        // Sections - rate limited
+        Route::post('/exams/{examId}/sections', [ExamController::class, 'addSection'])->middleware('throttle:30,1')->name('exams.sections.add');
+        Route::put('/exams/{examId}/sections/{sectionId}', [ExamController::class, 'updateSection'])->middleware('throttle:30,1')->name('exams.sections.update');
+        Route::delete('/exams/{examId}/sections/{sectionId}', [ExamController::class, 'deleteSection'])->middleware('throttle:20,1')->name('exams.sections.delete');
+        Route::post('/exams/{examId}/sections/{sectionId}/duplicate', [ExamController::class, 'duplicateSection'])->middleware('throttle:20,1')->name('exams.sections.duplicate');
+        Route::post('/exams/{examId}/sections/reorder', [ExamController::class, 'reorderSections'])->middleware('throttle:30,1')->name('exams.sections.reorder');
         
-        // Preview and Download
-        Route::get('/exams/{examId}/preview', [ExamController::class, 'preview'])->name('exams.preview');
-        Route::get('/exams/{examId}/download/{format}', [ExamController::class, 'download'])->name('exams.download');
+        // Preview and Download - rate limited
+        Route::get('/exams/{examId}/preview', [ExamController::class, 'preview'])->middleware('throttle:20,1')->name('exams.preview');
+        Route::get('/exams/{examId}/download/{format}', [ExamController::class, 'download'])->middleware('throttle:10,1')->name('exams.download');
         
-        // Comments
-        Route::get('/exams/{examId}/questions/{itemId}/comments', [ExamController::class, 'getComments'])->name('exams.comments.get');
-        Route::post('/exams/{examId}/questions/{itemId}/comments', [ExamController::class, 'addComment'])->name('exams.comments.add');
-        Route::delete('/comments/{commentId}', [ExamController::class, 'deleteComment'])->name('comments.delete');
-        Route::put('/comments/{commentId}/resolve', [ExamController::class, 'toggleResolveComment'])->name('comments.resolve');
+        // Comments - rate limited
+        Route::get('/exams/{examId}/questions/{itemId}/comments', [ExamController::class, 'getComments'])->middleware('throttle:60,1')->name('exams.comments.get');
+        Route::post('/exams/{examId}/questions/{itemId}/comments', [ExamController::class, 'addComment'])->middleware('throttle:30,1')->name('exams.comments.add');
+        Route::delete('/comments/{commentId}', [ExamController::class, 'deleteComment'])->middleware('throttle:20,1')->name('comments.delete');
+        Route::put('/comments/{commentId}/resolve', [ExamController::class, 'toggleResolveComment'])->middleware('throttle:30,1')->name('comments.resolve');
         
-        Route::get('/api/exams/{id}/details', [ExamController::class, 'getExamDetails'])->name('exams.details');
-        Route::get('/api/teachers/search', [ExamController::class, 'searchTeachers'])->name('teachers.search');
-        Route::post('/exams/{examId}/collaborators', [ExamController::class, 'addCollaborators'])->name('exams.collaborators.add');
-        Route::delete('/exams/{examId}/collaborators/{teacherId}', [ExamController::class, 'removeCollaborator'])->name('exams.collaborators.remove');
-        Route::get('/exams/{examId}/collaborators', [ExamController::class, 'getCollaborators'])->name('exams.collaborators.get');
+        // API Routes - rate limited
+        Route::get('/api/exams/{id}/details', [ExamController::class, 'getExamDetails'])->middleware('throttle:60,1')->name('exams.details');
+        Route::get('/api/teachers/search', [ExamController::class, 'searchTeachers'])->middleware('throttle:60,1')->name('teachers.search');
+        Route::post('/exams/{examId}/collaborators', [ExamController::class, 'addCollaborators'])->middleware('throttle:20,1')->name('exams.collaborators.add');
+        Route::delete('/exams/{examId}/collaborators/{teacherId}', [ExamController::class, 'removeCollaborator'])->middleware('throttle:20,1')->name('exams.collaborators.remove');
+        Route::get('/exams/{examId}/collaborators', [ExamController::class, 'getCollaborators'])->middleware('throttle:60,1')->name('exams.collaborators.get');
 
-        // Notifications
-        Route::get('/notifications', [\App\Http\Controllers\Instructor\NotificationController::class, 'index'])->name('notifications.index');
-        Route::get('/notifications/{id}', [\App\Http\Controllers\Instructor\NotificationController::class, 'show'])->name('notifications.show');
-        Route::post('/notifications/{id}/mark-as-read', [\App\Http\Controllers\Instructor\NotificationController::class, 'markAsRead'])->name('notifications.mark-as-read');
-        Route::post('/notifications/mark-all-read', [\App\Http\Controllers\Instructor\NotificationController::class, 'markAllAsRead'])->name('notifications.mark-all-read');
-        Route::delete('/notifications/{id}', [\App\Http\Controllers\Instructor\NotificationController::class, 'destroy'])->name('notifications.destroy');
-        Route::get('/notifications/unread/count', [\App\Http\Controllers\Instructor\NotificationController::class, 'getUnreadCount'])->name('notifications.unread-count');
+        // Notifications - rate limited
+        Route::get('/notifications', [\App\Http\Controllers\Instructor\NotificationController::class, 'index'])->middleware('throttle:60,1')->name('notifications.index');
+        Route::get('/notifications/{id}', [\App\Http\Controllers\Instructor\NotificationController::class, 'show'])->middleware('throttle:60,1')->name('notifications.show');
+        Route::post('/notifications/{id}/mark-as-read', [\App\Http\Controllers\Instructor\NotificationController::class, 'markAsRead'])->middleware('throttle:60,1')->name('notifications.mark-as-read');
+        Route::post('/notifications/mark-all-read', [\App\Http\Controllers\Instructor\NotificationController::class, 'markAllAsRead'])->middleware('throttle:30,1')->name('notifications.mark-all-read');
+        Route::delete('/notifications/{id}', [\App\Http\Controllers\Instructor\NotificationController::class, 'destroy'])->middleware('throttle:20,1')->name('notifications.destroy');
+        Route::get('/notifications/unread/count', [\App\Http\Controllers\Instructor\NotificationController::class, 'getUnreadCount'])->middleware('throttle:60,1')->name('notifications.unread-count');
 
-        // Get classes by subject (for the create exam modal)
-        Route::get('/api/classes', [ExamController::class, 'getClasses'])->name('classes.get');
+        // Get classes by subject (for the create exam modal) - rate limited
+        Route::get('/api/classes', [ExamController::class, 'getClasses'])->middleware('throttle:60,1')->name('classes.get');
 
         // Exam Statistics
         Route::get('/exams-statistics', [ExamStatisticsController::class, 'index'])->name('exam-statistics.index');
         Route::get('/exams-statistics/{id}', [ExamStatisticsController::class, 'show'])->name('exam-statistics.show');
-        Route::get('/exams-statistics/{id}/filter', [ExamStatisticsController::class, 'getFilteredStats'])->name('exam-statistics.filter');
-        Route::get('/exams-statistics/{id}/questions', [ExamStatisticsController::class, 'getQuestionStats'])->name('exam-statistics.questions');
-        Route::get('/exams-statistics/{id}/individual', [ExamStatisticsController::class, 'getIndividualStats'])->name('exam-statistics.individual');
-        Route::post('/exams-statistics/{id}/answer/{answerId}/override', [ExamStatisticsController::class, 'overrideAnswer'])->name('exam-statistics.override-answer');
-        Route::delete('/exams-statistics/{id}/attempt/{attemptId}', [ExamStatisticsController::class, 'deleteAttempt'])->name('exam-statistics.delete-attempt');
-        Route::get('/exams-statistics/{id}/download', [ExamStatisticsController::class, 'downloadExcel'])->name('exam-statistics.download');
+        Route::get('/exams-statistics/{id}/filter', [ExamStatisticsController::class, 'getFilteredStats'])
+            ->middleware('throttle:60,1')
+            ->name('exam-statistics.filter');
+        Route::get('/exams-statistics/{id}/questions', [ExamStatisticsController::class, 'getQuestionStats'])
+            ->middleware('throttle:60,1')
+            ->name('exam-statistics.questions');
+        Route::get('/exams-statistics/{id}/individual', [ExamStatisticsController::class, 'getIndividualStats'])
+            ->middleware('throttle:60,1')
+            ->name('exam-statistics.individual');
+        Route::get('/exams-statistics/{id}/score-distribution', [ExamStatisticsController::class, 'getScoreDistribution'])
+            ->middleware('throttle:60,1')
+            ->name('exam-statistics.score-distribution');
+        Route::post('/exams-statistics/{id}/answer/{answerId}/override', [ExamStatisticsController::class, 'overrideAnswer'])
+            ->middleware('throttle:30,1')
+            ->name('exam-statistics.override-answer');
+        Route::delete('/exams-statistics/{id}/attempt/{attemptId}', [ExamStatisticsController::class, 'deleteAttempt'])
+            ->middleware('throttle:20,1')
+            ->name('exam-statistics.delete-attempt');
+        Route::get('/exams-statistics/{id}/download', [ExamStatisticsController::class, 'downloadExcel'])
+            ->middleware('throttle:10,1')
+            ->name('exam-statistics.download');
         Route::get('/instructor/exam-statistics/{exam}', [App\Http\Controllers\Instructor\ExamStatisticsController::class, 'show'])->name('instructor.exam-statistics.show');
 
     });

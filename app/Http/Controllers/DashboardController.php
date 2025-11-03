@@ -70,7 +70,7 @@ class DashboardController extends Controller
             $teacherId = Auth::id();
 
             // Get exams created by OR collaborated on by the current teacher
-            $exams = Exam::with(['user', 'subject'])
+            $exams = Exam::with(['user', 'subject', 'collaborations'])
                 ->where(function($query) use ($teacherId) {
                     $query->where('teacher_id', $teacherId)
                           ->orWhereHas('collaborations', function($q) use ($teacherId) {
@@ -83,6 +83,12 @@ class DashboardController extends Controller
                 })
                 ->orderBy('updated_at', 'desc')
                 ->get();
+
+            // Add ownership flags to each exam
+            foreach ($exams as $exam) {
+                $exam->is_owner = $exam->isCreator($teacherId);
+                $exam->is_collaborator = $exam->isCollaborator($teacherId);
+            }
 
             // Get the first exam for initial display
             $selectedExam = $exams->first();

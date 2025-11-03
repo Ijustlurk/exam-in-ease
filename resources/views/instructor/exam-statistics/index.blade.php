@@ -1,16 +1,19 @@
 ﻿@extends('layouts.Instructor.app')
 
-@section('content')
+@section('main-content')
 
 <style>
     .exam-content {
         padding: 30px;
         min-height: 100vh;
+    }
+
+    .main-content {
         margin-left: 60px;
         transition: margin-left 0.3s;
     }
 
-    .exam-content.expanded {
+    .main-content.expanded {
         margin-left: 220px;
     }
 
@@ -141,7 +144,7 @@
     }
 </style>
 
-<div id="mainContent" class="exam-content">
+<div class="exam-content">
     <div class="exams-header">
         <h1 class="page-title">Your Exams</h1>
     </div>
@@ -193,9 +196,9 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const sidebar = document.querySelector('.sidebar');
-    const mainContent = document.getElementById('mainContent');
+    const mainContent = document.querySelector('.main-content');
     
-    if (sidebar) {
+    if (sidebar && mainContent) {
         const observer = new MutationObserver(function(mutations) {
             mutations.forEach(function(mutation) {
                 if (mutation.attributeName === 'class') {
@@ -232,4 +235,5 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
+</script>
 @endsection
