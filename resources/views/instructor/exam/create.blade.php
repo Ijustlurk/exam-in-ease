@@ -472,6 +472,9 @@
     
     /* Floating Action Pane */
     .floating-action-pane {
+        position: absolute;
+        right: -70px;
+        top: 0;
         background-color: white;
         border-radius: 12px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.15);
@@ -480,6 +483,7 @@
         flex-direction: column;
         gap: 4px;
         min-width: fit-content;
+        z-index: 10;
     }
     
     /* Show floating pane when question card is active */
@@ -530,6 +534,175 @@
     
     .floating-btn:hover {
         background-color: #f3f4f6;
+    }
+    
+    /* Floating Comments Box */
+    .floating-comments-box {
+        position: absolute;
+        right: 0px;
+        top: 0;
+        background-color: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        width: 280px;
+        max-height: 400px;
+        display: none;
+        flex-direction: column;
+        z-index: 1002;
+    }
+    
+    .floating-comments-box.show {
+        display: flex;
+    }
+    
+    .comments-header {
+        background-color: #7ca5b8;
+        color: white;
+        padding: 12px 16px;
+        border-radius: 8px 8px 0 0;
+        font-weight: 600;
+        font-size: 0.95rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    
+    .comments-close-btn {
+        background: transparent;
+        border: none;
+        color: white;
+        font-size: 1.2rem;
+        cursor: pointer;
+        padding: 0;
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 4px;
+        transition: background-color 0.2s;
+    }
+    
+    .comments-close-btn:hover {
+        background-color: rgba(0,0,0,0.2);
+    }
+    
+    .comments-body {
+        flex: 1;
+        padding: 12px;
+        overflow-y: auto;
+        min-height: 200px;
+        max-height: 280px;
+        background-color: #f9fafb;
+    }
+    
+    .comments-empty {
+        text-align: center;
+        color: #9ca3af;
+        font-size: 0.85rem;
+        padding: 40px 20px;
+    }
+    
+    .comment-item {
+        background-color: white;
+        border-radius: 6px;
+        padding: 10px;
+        margin-bottom: 8px;
+        border: 1px solid #e5e7eb;
+    }
+    
+    .comment-author {
+        font-weight: 600;
+        font-size: 0.8rem;
+        color: #374151;
+        margin-bottom: 4px;
+    }
+    
+    .comment-text {
+        font-size: 0.85rem;
+        color: #6b7280;
+        line-height: 1.4;
+    }
+    
+    .comment-time {
+        font-size: 0.7rem;
+        color: #9ca3af;
+        margin-top: 4px;
+    }
+    
+    .comments-input-container {
+        padding: 12px;
+        border-top: 1px solid #e5e7eb;
+        background-color: white;
+        border-radius: 0 0 8px 8px;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+    
+    .comments-input {
+        flex: 1;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        padding: 8px 12px;
+        font-size: 0.85rem;
+        outline: none;
+        transition: border-color 0.2s;
+    }
+    
+    .comments-input:focus {
+        border-color: #7ca5b8;
+        box-shadow: 0 0 0 2px rgba(124,165,184,0.1);
+    }
+    
+    .comments-send-btn {
+        background-color: #7ca5b8;
+        border: none;
+        color: white;
+        width: 36px;
+        height: 36px;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: background-color 0.2s;
+        font-size: 1rem;
+    }
+    
+    .comments-send-btn:hover {
+        background-color: #6a94a6;
+    }
+    
+    .comments-send-btn:disabled {
+        background-color: #d1d5db;
+        cursor: not-allowed;
+    }
+    
+    /* Comment action buttons */
+    .comment-action-btn {
+        background: none;
+        border: none;
+        padding: 4px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: transform 0.2s;
+    }
+    
+    .comment-action-btn:hover {
+        transform: scale(1.1);
+    }
+    
+    .comment-action-btn i {
+        font-size: 1.1rem;
+    }
+    
+    .comment-text.resolved {
+        opacity: 0.6;
+        text-decoration: line-through;
     }
     
     /* Add Section */
@@ -816,13 +989,17 @@
             <button class="header-icon-btn" title="Save">
                 <i class="bi bi-floppy"></i>
             </button>
+            @if($exam->is_owner)
             <button class="header-icon-btn" title="Settings" onclick="openExamSettings()">
                 <i class="bi bi-gear"></i>
             </button>
+            @endif
             <button class="header-icon-btn" title="Download" onclick="showDownloadNotAvailable()">
                 <i class="bi bi-download"></i>
             </button>
+            @if($exam->is_owner)
             <button class="approval-btn" id="approvalBtn">Request for Approval</button>
+            @endif
         </div>
     </div>
     
@@ -867,7 +1044,7 @@
                  onclick="setActiveSection(this, {{ $section->section_id }})">
                 <div class="section-header">
                     <h3 class="section-title">Section {{ $loop->iteration }} of {{ $exam->sections->count() }}</h3>
-                    @if($exam->status !== 'for approval' && $exam->status !== 'approved' && $exam->status !== 'archived')
+                    @if($exam->is_owner)
                     <button class="section-delete-btn" onclick="event.stopPropagation(); deleteSection({{ $section->section_id }})">
                         <i class="bi bi-trash"></i>
                     </button>
@@ -878,7 +1055,7 @@
                            class="section-title-input" 
                            placeholder="(Write your exam title here or exam section title: eg. Part I)"
                            value="{{ $section->section_title ?? '' }}"
-                           @if($exam->status === 'for approval' || $exam->status === 'approved' || $exam->status === 'archived')
+                           @if(!$exam->is_owner)
                            readonly
                            style="cursor: not-allowed; color: #6b7280;"
                            @else
@@ -887,7 +1064,7 @@
                            @endif>
                     <textarea class="section-directions" 
                               placeholder="You can put your directions here."
-                              @if($exam->status === 'for approval' || $exam->status === 'approved' || $exam->status === 'archived')
+                              @if(!$exam->is_owner)
                               readonly
                               style="cursor: not-allowed; color: #6b7280;"
                               @else
@@ -898,8 +1075,8 @@
             </div>
 
             <!-- Floating Action Pane for Section -->
-            @if($exam->status !== 'for approval' && $exam->status !== 'approved' && $exam->status !== 'archived')
             <div class="floating-action-pane">
+                @if($exam->is_owner)
                 <button class="floating-btn" title="Add Question" onclick="event.stopPropagation(); toggleFloatingSectionDropdown(this, {{ $section->section_id }})">
                     <i class="bi bi-plus-lg"></i>
                 </button>
@@ -924,8 +1101,10 @@
                         @endif>
                     <i class="bi bi-arrow-down"></i>
                 </button>
+                @endif
             </div>
             <!-- Floating dropdown for section add button -->
+            @if($exam->is_owner)
             <div class="floating-question-dropdown" id="floatingSectionDropdown_{{ $section->section_id }}" style="display: none;">
                 <button class="dropdown-item" onclick="event.stopPropagation(); openQuestionModal('mcq', {{ $section->section_id }}, 'start')">
                     <i class="bi bi-ui-radios"></i>
@@ -954,7 +1133,7 @@
         <!-- Question Cards -->
         @forelse($section->items->sortBy('order') as $item)
         <div class="question-wrapper" data-item-id="{{ $item->item_id }}">
-            @if($exam->status !== 'for approval' && $exam->status !== 'approved' && $exam->status !== 'archived')
+            @if($exam->is_owner)
             <div class="drag-handle" draggable="true" title="Drag to reorder">
                 <i class="bi bi-grip-vertical"></i>
             </div>
@@ -964,7 +1143,7 @@
                  onclick="setActiveQuestion(this)">
                 <div class="question-header">
                     <h4 class="question-header-title">Exam Item {{ $loop->iteration }}</h4>
-                    @if($exam->status !== 'for approval' && $exam->status !== 'approved' && $exam->status !== 'archived')
+                    @if($exam->is_owner)
                     <div class="question-header-actions">
                         <button class="question-header-btn" onclick="event.stopPropagation(); editQuestion({{ $item->item_id }})" title="Edit">
                             <i class="bi bi-pencil"></i>
@@ -1070,8 +1249,8 @@
                 </div>
             </div>
             
-            @if($exam->status !== 'for approval' && $exam->status !== 'approved' && $exam->status !== 'archived')
             <div class="floating-action-pane">
+                @if($exam->is_owner)
                 <button class="floating-btn" title="Add Question" onclick="event.stopPropagation(); toggleFloatingDropdown(this, {{ $section->section_id }}, {{ $item->item_id }})">
                     <i class="bi bi-plus-lg"></i>
                 </button>
@@ -1084,8 +1263,14 @@
                 <button class="floating-btn" title="Move Down" onclick="event.stopPropagation(); moveQuestion({{ $item->item_id }}, 'down')">
                     <i class="bi bi-arrow-down"></i>
                 </button>
+                @endif
+                <button class="floating-btn" title="View Comments" onclick="event.stopPropagation(); openCommentsModal({{ $item->item_id }})" style="position: relative;">
+                    <i class="bi bi-chat-left-text"></i>
+                    <span id="commentBadge_{{ $item->item_id }}" style="position: absolute; top: -4px; right: -4px; background-color: #ef4444; color: white; border-radius: 10px; padding: 2px 6px; font-size: 0.7rem; font-weight: 600; min-width: 18px; text-align: center; {{ $item->comments_count > 0 ? '' : 'display: none;' }}">{{ $item->comments_count }}</span>
+                </button>
             </div>
             <!-- Floating dropdown for add button -->
+            @if($exam->is_owner)
             <div class="floating-question-dropdown" id="floatingDropdown_{{ $item->item_id }}" style="display: none;">
                 <button class="dropdown-item" onclick="event.stopPropagation(); openQuestionModalAfter('mcq', {{ $section->section_id }}, {{ $item->item_id }})">
                     <i class="bi bi-ui-radios"></i>
@@ -1109,6 +1294,31 @@
                 </button>
             </div>
             @endif
+            <!-- Floating Comments Box -->
+            <div class="floating-comments-box" id="commentsBox_{{ $item->item_id }}">
+                <div class="comments-header">
+                    <span>Comments</span>
+                    <button class="comments-close-btn" onclick="event.stopPropagation(); closeCommentsBox({{ $item->item_id }})">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+                <div class="comments-body" id="commentsBody_{{ $item->item_id }}">
+                    <div class="comments-empty">
+                        <i class="bi bi-chat-left-dots" style="font-size: 2rem; display: block; margin-bottom: 8px;"></i>
+                        No comments yet
+                    </div>
+                </div>
+                <div class="comments-input-container">
+                    <input type="text" 
+                           class="comments-input" 
+                           id="commentInput_{{ $item->item_id }}"
+                           placeholder="Add comment..." 
+                           onkeypress="if(event.key === 'Enter') addComment({{ $item->item_id }})">
+                    <button class="comments-send-btn" onclick="event.stopPropagation(); addComment({{ $item->item_id }})">
+                        <i class="bi bi-send-fill"></i>
+                    </button>
+                </div>
+            </div>
         </div>
         @empty
         @php
@@ -1302,7 +1512,7 @@
                     </div>
 
                     <div class="d-flex justify-content-end gap-2 mt-4">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="border-radius: 8px; padding: 10px 24px;">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="border-radius: 8px; padding: 10px 24px; background-color: #6c757d; color: white; border: none;">
                             {{ ($exam->status === 'for approval' || $exam->status === 'approved' || $exam->status === 'archived') ? 'Close' : 'Cancel' }}
                         </button>
                         @if($exam->status !== 'for approval' && $exam->status !== 'approved' && $exam->status !== 'archived')
@@ -1341,7 +1551,7 @@
                 </div>
             </div>
             <div class="modal-footer" style="padding: 20px 24px; background-color: #f8f9fa; border-top: 1px solid #dee2e6;">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="border-radius: 8px; padding: 10px 24px;">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="border-radius: 8px; padding: 10px 24px; background-color: #6c757d; color: white; border: none;">
                     Close
                 </button>
                 <button type="button" class="btn btn-primary" onclick="downloadExam('pdf')" style="border-radius: 8px; padding: 10px 24px; background-color: #dc3545; border-color: #dc3545;">
@@ -1357,18 +1567,26 @@
 
 @include('instructor.exam.question-modal')
 
-@endsection
-
-@push('scripts')
 <script>
-const examId = {{ $exam->exam_id }};
-let approvalStatus = '{{ $exam->status }}';
-const isLocked = (approvalStatus === 'for approval' || approvalStatus === 'approved' || approvalStatus === 'archived');
+// Exam variables
+var examId = {{ $exam->exam_id ?? 0 }};
+var approvalStatus = '{{ $exam->status ?? "draft" }}';
+var isLocked = (approvalStatus === 'for approval' || approvalStatus === 'approved' || approvalStatus === 'archived');
+var isOwner = @json($exam->is_owner ?? false);
+var isCollaborator = @json($exam->is_collaborator ?? false);
+
+console.log('Exam Debug:', {
+    examId: examId,
+    status: approvalStatus,
+    isLocked: isLocked,
+    isOwner: isOwner,
+    isCollaborator: isCollaborator
+});
 
 // Header Scroll Behavior
-let lastScrollTop = 0;
-const header = document.querySelector('.builder-header');
-const scrollThreshold = 5; // Minimum scroll distance to trigger
+var lastScrollTop = 0;
+var header = document.querySelector('.builder-header');
+var scrollThreshold = 5; // Minimum scroll distance to trigger
 
 window.addEventListener('scroll', function() {
     const currentScroll = window.pageYOffset || document.documentElement.scrollTop;
@@ -1408,7 +1626,7 @@ function setActiveQuestion(card) {
 
 // Set Active Section
 // Track the currently active section ID
-let activeSectionId = {{ $exam->sections->last()->section_id ?? 'null' }};
+var activeSectionId = @json($exam->sections->last()->section_id ?? null);
 
 function setActiveSection(card, sectionId) {
     if (isLocked) return;
@@ -1705,6 +1923,224 @@ function moveQuestion(itemId, direction) {
     });
 }
 
+// Open Comments Modal
+function openCommentsModal(itemId) {
+    // Close all other comment boxes first
+    document.querySelectorAll('.floating-comments-box').forEach(box => {
+        box.classList.remove('show');
+    });
+    
+    // Toggle the comments box for this item
+    const commentsBox = document.getElementById('commentsBox_' + itemId);
+    if (commentsBox) {
+        const isShowing = commentsBox.classList.toggle('show');
+        
+        // Load comments if opening
+        if (isShowing) {
+            loadComments(itemId);
+        }
+    }
+}
+
+// Update Comment Badge
+function updateCommentBadge(itemId, count) {
+    const badge = document.getElementById('commentBadge_' + itemId);
+    if (badge) {
+        badge.textContent = count;
+        if (count > 0) {
+            badge.style.display = '';
+        } else {
+            badge.style.display = 'none';
+        }
+    }
+}
+
+// Load comments from server
+function loadComments(itemId) {
+    console.log('Loading comments for item:', itemId);
+    fetch(`/instructor/exams/${examId}/questions/${itemId}/comments`, {
+        headers: {
+            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+        }
+    })
+    .then(response => {
+        console.log('Comments response status:', response.status);
+        return response.json();
+    })
+    .then(data => {
+        console.log('Comments data received:', data);
+        console.log('Comments array:', data.comments);
+        const commentsBody = document.getElementById('commentsBody_' + itemId);
+        commentsBody.innerHTML = '';
+        
+        // Update badge count
+        updateCommentBadge(itemId, data.comments.length);
+        
+        if (data.comments && data.comments.length > 0) {
+            data.comments.forEach((comment, index) => {
+                console.log(`Comment ${index}:`, comment);
+                console.log(`  - Author: ${comment.author}`);
+                console.log(`  - Text: ${comment.comment_text}`);
+                const commentItem = document.createElement('div');
+                commentItem.className = 'comment-item';
+                commentItem.style.position = 'relative';
+                
+                const resolvedClass = comment.resolved ? 'resolved' : '';
+                const resolvedIcon = comment.resolved ? '<i class="bi bi-check-circle-fill" style="color: #10b981;"></i>' : '<i class="bi bi-check-circle" style="color: #d1d5db;"></i>';
+                
+                commentItem.innerHTML = `
+                    <div class="comment-author">${escapeHtml(comment.author)}</div>
+                    <div class="comment-text ${resolvedClass}">${escapeHtml(comment.comment_text)}</div>
+                    <div class="comment-time">${comment.created_at}</div>
+                    <div style="position: absolute; bottom: 8px; right: 8px; display: flex; gap: 8px; align-items: center;">
+                        <button class="comment-action-btn" onclick="event.stopPropagation(); toggleResolveComment(${comment.comment_id}, ${itemId})" title="${comment.resolved ? 'Mark as unresolved' : 'Mark as resolved'}">
+                            ${resolvedIcon}
+                        </button>
+                        ${comment.is_own || isOwner ? `
+                            <button class="comment-action-btn" onclick="event.stopPropagation(); deleteComment(${comment.comment_id}, ${itemId})" title="Delete comment">
+                                <i class="bi bi-trash" style="color: #ef4444;"></i>
+                            </button>
+                        ` : ''}
+                    </div>
+                `;
+                commentsBody.appendChild(commentItem);
+            });
+            
+            // Scroll to bottom
+            commentsBody.scrollTop = commentsBody.scrollHeight;
+        } else {
+            commentsBody.innerHTML = `
+                <div class="comments-empty">
+                    <i class="bi bi-chat-left-dots" style="font-size: 2rem; display: block; margin-bottom: 8px;"></i>
+                    No comments yet
+                </div>
+            `;
+        }
+    })
+    .catch(error => {
+        console.error('Error loading comments:', error);
+    });
+}
+
+// Close Comments Box
+function closeCommentsBox(itemId) {
+    const commentsBox = document.getElementById('commentsBox_' + itemId);
+    if (commentsBox) {
+        commentsBox.classList.remove('show');
+    }
+}
+
+// Add Comment
+function addComment(itemId) {
+    const input = document.getElementById('commentInput_' + itemId);
+    const commentText = input.value.trim();
+    
+    if (!commentText) {
+        return;
+    }
+    
+    // Send comment to server
+    fetch(`/instructor/exams/${examId}/questions/${itemId}/comments`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify({
+            comment_text: commentText
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            // Clear input
+            input.value = '';
+            
+            // Reload comments
+            loadComments(itemId);
+        } else if (data.error) {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error adding comment:', error);
+        alert('Failed to add comment. Please try again.');
+    });
+}
+
+// Helper function to escape HTML
+function escapeHtml(text) {
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return text.replace(/[&<>"']/g, m => map[m]);
+}
+
+// Delete Comment
+function deleteComment(commentId, itemId) {
+    fetch(`/instructor/comments/${commentId}`, {
+        method: 'DELETE',
+        headers: {
+            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            // Reload comments
+            loadComments(itemId);
+        } else if (data.error) {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error deleting comment:', error);
+        alert('Failed to delete comment. Please try again.');
+    });
+}
+
+// Toggle Resolve Comment
+function toggleResolveComment(commentId, itemId) {
+    fetch(`/instructor/comments/${commentId}/resolve`, {
+        method: 'PUT',
+        headers: {
+            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            // Reload comments
+            loadComments(itemId);
+        } else if (data.error) {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error toggling comment resolution:', error);
+        alert('Failed to update comment. Please try again.');
+    });
+}
+
 // Drag and Drop Functionality
 let draggedItem = null;
 let placeholder = null;
@@ -1712,6 +2148,15 @@ let lastDropTarget = null;
 
 document.addEventListener('DOMContentLoaded', function() {
     initDragAndDrop();
+    
+    // Close comments box when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.floating-comments-box') && !e.target.closest('[title="View Comments"]')) {
+            document.querySelectorAll('.floating-comments-box').forEach(box => {
+                box.classList.remove('show');
+            });
+        }
+    });
 });
 
 function initDragAndDrop() {
@@ -2589,4 +3034,5 @@ function showDownloadNotAvailable() {
     alert('Download feature is not yet available. This feature is currently under development.');
 }
 </script>
-@endpush
+
+@endsection

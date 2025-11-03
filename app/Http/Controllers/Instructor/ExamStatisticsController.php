@@ -653,7 +653,8 @@ class ExamStatisticsController extends Controller
                     'response_breakdown' => $responseBreakdown,
                     'options' => $options,
                     'expected_answer' => $expectedAnswer,
-                    'enum_type' => $item->enum_type ?? null
+                    'enum_type' => $item->enum_type ?? null,
+                    'rubric' => $item->item_type === 'essay' ? $item->expected_answer : null
                 ];
             });
         
@@ -804,7 +805,10 @@ class ExamStatisticsController extends Controller
                     'correct_answer' => $correctAnswer,
                     'is_correct' => $studentAnswer ? $studentAnswer->is_correct : 0,
                     'points_earned' => $studentAnswer ? $studentAnswer->points_earned : 0,
-                    'points_possible' => $item->points_awarded
+                    'points_possible' => $item->points_awarded,
+                    'ai_feedback' => $studentAnswer && isset($studentAnswer->ai_feedback) ? $studentAnswer->ai_feedback : null,
+                    'ai_confidence' => $studentAnswer && isset($studentAnswer->ai_confidence) ? $studentAnswer->ai_confidence : null,
+                    'requires_manual_review' => $studentAnswer && isset($studentAnswer->requires_manual_review) ? $studentAnswer->requires_manual_review : false
                 ];
             });
             

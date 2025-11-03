@@ -169,7 +169,7 @@ Route::
                     ->name('approve');
                 Route::post('/programchair/{exam}/revise', [ManageApprovalController::class, 'revise'])
                     ->name('revise');
-                Route::post('/programchair/{exam}/rescind', [ManageApprovalController::class, 'rescind'])
+                Route::post('/{exam}/rescind', [ManageApprovalController::class, 'rescind'])
                     ->name('rescind');
             });
             Route::get('/exam-statistics', [ProgramChairExamStatisticsController::class, 'index'])->name('exam-statistics.index');
@@ -217,6 +217,12 @@ Route::
         Route::get('/exams/{examId}/preview', [ExamController::class, 'preview'])->name('exams.preview');
         Route::get('/exams/{examId}/download/{format}', [ExamController::class, 'download'])->name('exams.download');
         
+        // Comments
+        Route::get('/exams/{examId}/questions/{itemId}/comments', [ExamController::class, 'getComments'])->name('exams.comments.get');
+        Route::post('/exams/{examId}/questions/{itemId}/comments', [ExamController::class, 'addComment'])->name('exams.comments.add');
+        Route::delete('/comments/{commentId}', [ExamController::class, 'deleteComment'])->name('comments.delete');
+        Route::put('/comments/{commentId}/resolve', [ExamController::class, 'toggleResolveComment'])->name('comments.resolve');
+        
         Route::get('/api/exams/{id}/details', [ExamController::class, 'getExamDetails'])->name('exams.details');
         Route::get('/api/teachers/search', [ExamController::class, 'searchTeachers'])->name('teachers.search');
         Route::post('/exams/{examId}/collaborators', [ExamController::class, 'addCollaborators'])->name('exams.collaborators.add');
@@ -241,6 +247,8 @@ Route::
         Route::get('/exams-statistics/{id}/questions', [ExamStatisticsController::class, 'getQuestionStats'])->name('exam-statistics.questions');
         Route::get('/exams-statistics/{id}/individual', [ExamStatisticsController::class, 'getIndividualStats'])->name('exam-statistics.individual');
         Route::post('/exams-statistics/{id}/answer/{answerId}/override', [ExamStatisticsController::class, 'overrideAnswer'])->name('exam-statistics.override-answer');
+        Route::delete('/exams-statistics/{id}/attempt/{attemptId}', [ExamStatisticsController::class, 'deleteAttempt'])->name('exam-statistics.delete-attempt');
+        Route::get('/exams-statistics/{id}/download', [ExamStatisticsController::class, 'downloadExcel'])->name('exam-statistics.download');
         Route::get('/instructor/exam-statistics/{exam}', [App\Http\Controllers\Instructor\ExamStatisticsController::class, 'show'])->name('instructor.exam-statistics.show');
 
     });

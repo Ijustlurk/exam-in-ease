@@ -125,6 +125,28 @@
         overflow: hidden;
         text-overflow: ellipsis;
     }
+    .ownership-badge {
+        position: absolute;
+        top: 12px;
+        left: 12px;
+        padding: 4px 10px;
+        border-radius: 4px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        z-index: 5;
+    }
+    .badge-owner {
+        background-color: #dbeafe;
+        color: #1e40af;
+        border: 1px solid #93c5fd;
+    }
+    .badge-collaborator {
+        background-color: #fef3c7;
+        color: #92400e;
+        border: 1px solid #fcd34d;
+    }
     .menu-dots {
         position: absolute;
         top: 16px;
@@ -269,6 +291,59 @@
         font-size: 0.875rem;
         color: #212529;
         font-weight: 400;
+    }
+    .collaborator-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-top: 12px;
+    }
+    .collaborator-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px;
+        background-color: #f9fafb;
+        border-radius: 6px;
+    }
+    .collaborator-item-avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: #374151;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        font-size: 0.75rem;
+        flex-shrink: 0;
+    }
+    .collaborator-item-info {
+        flex: 1;
+        min-width: 0;
+    }
+    .collaborator-item-name {
+        font-size: 0.8rem;
+        color: #212529;
+        font-weight: 500;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .collaborator-item-role {
+        font-size: 0.7rem;
+        color: #6b7280;
+    }
+    .role-badge-owner {
+        background-color: #dbeafe;
+        color: #1e40af;
+        padding: 2px 8px;
+        border-radius: 3px;
+        font-size: 0.65rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
     }
     .detail-section-title {
         font-size: 0.875rem;
@@ -741,6 +816,13 @@
                                     <i class="bi bi-file-text"></i>
                                 </div>
                                 
+                                <!-- Ownership Badge -->
+                                @if($exam->is_owner)
+                                    <span class="ownership-badge badge-owner">Owner</span>
+                                @elseif($exam->is_collaborator)
+                                    <span class="ownership-badge badge-collaborator">Collaborator</span>
+                                @endif
+                                
                                 <div class="exam-footer">
                                     <div class="exam-info">
                                         <div class="exam-title-text">
@@ -811,22 +893,46 @@
 
                         <div class="collaborator-section">
                             <div class="collaborator-header">
-                                <div class="collaborator-label">Collaborator</div>
+                                <div class="collaborator-label">People</div>
                                 @if($selectedExam->status === 'draft')
                                 <button class="add-collab-btn" onclick="openAddCollaboratorModal({{ $selectedExam->exam_id }})">
                                     <i class="bi bi-people"></i> Manage Collaborators
                                 </button>
                                 @endif
                             </div>
-                            <div class="collaborator-display" id="collaborator-display">
-                                <div class="collaborator-avatars" id="collaborator-avatars">
-                                    <div class="collab-avatar-circle">
-                                        <i class="bi bi-person-fill"></i>
+                            
+                            <div class="collaborator-list">
+                                {{-- Owner --}}
+                                <div class="collaborator-item">
+                                    <div class="collaborator-item-avatar">
+                                        {{ strtoupper(substr($selectedExam->user->first_name ?? 'U', 0, 1)) }}{{ strtoupper(substr($selectedExam->user->last_name ?? 'N', 0, 1)) }}
+                                    </div>
+                                    <div class="collaborator-item-info">
+                                        <div class="collaborator-item-name">
+                                            {{ $selectedExam->user->first_name ?? 'Unknown' }} {{ $selectedExam->user->last_name ?? 'User' }}
+                                        </div>
+                                        <div class="collaborator-item-role">
+                                            <span class="role-badge-owner">Owner</span>
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="collaborator-text" id="collaborator-text">
-                                    Only you
-                                </div>
+                                
+                                {{-- Collaborators --}}
+                                @foreach($selectedExam->collaborations as $collaboration)
+                                    <div class="collaborator-item">
+                                        <div class="collaborator-item-avatar">
+                                            {{ strtoupper(substr($collaboration->teacher->first_name ?? 'C', 0, 1)) }}{{ strtoupper(substr($collaboration->teacher->last_name ?? 'U', 0, 1)) }}
+                                        </div>
+                                        <div class="collaborator-item-info">
+                                            <div class="collaborator-item-name">
+                                                {{ $collaboration->teacher->first_name ?? 'Unknown' }} {{ $collaboration->teacher->last_name ?? 'User' }}
+                                            </div>
+                                            <div class="collaborator-item-role">
+                                                Collaborator
+                                            </div>
+                                        </div>
+                                    </div>
+                                @endforeach
                             </div>
                         </div>
 
@@ -1834,11 +1940,12 @@
     }
 
     function updateCollaboratorDisplay(collaborators, creatorName, examStatus, examId) {
-        const avatarsContainer = document.getElementById('collaborator-avatars');
-        const textContainer = document.getElementById('collaborator-text');
+        const listContainer = document.querySelector('.collaborator-list');
         
-        // Clear existing avatars
-        avatarsContainer.innerHTML = '';
+        if (!listContainer) return;
+        
+        // Clear existing list
+        listContainer.innerHTML = '';
         
         // Update or create the "Manage Collaborators" button based on status
         const collaboratorHeader = document.querySelector('.collaborator-header');
@@ -1860,33 +1967,50 @@
             }
         }
         
-        // Filter out the owner from collaborators (only show additional collaborators)
-        const additionalCollaborators = collaborators.filter(collab => collab.role !== 'owner');
+        // Get creator initials
+        const nameParts = creatorName.split(' ');
+        const creatorInitials = nameParts.map(part => part.charAt(0).toUpperCase()).join('');
         
-        // Add creator avatar (you)
-        const youAvatar = document.createElement('div');
-        youAvatar.className = 'collab-avatar-circle';
-        youAvatar.innerHTML = '<i class="bi bi-person-fill"></i>';
-        avatarsContainer.appendChild(youAvatar);
+        // Add owner item
+        const ownerItem = document.createElement('div');
+        ownerItem.className = 'collaborator-item';
+        ownerItem.innerHTML = `
+            <div class="collaborator-item-avatar">
+                ${creatorInitials}
+            </div>
+            <div class="collaborator-item-info">
+                <div class="collaborator-item-name">
+                    ${creatorName}
+                </div>
+                <div class="collaborator-item-role">
+                    <span class="role-badge-owner">Owner</span>
+                </div>
+            </div>
+        `;
+        listContainer.appendChild(ownerItem);
         
-        // Add collaborator avatars (excluding owner)
-        additionalCollaborators.forEach((collab, index) => {
-            if (index < 2) { // Show max 3 avatars including creator
-                const avatar = document.createElement('div');
-                avatar.className = 'collab-avatar-circle';
-                avatar.innerHTML = '<i class="bi bi-person-fill"></i>';
-                avatarsContainer.appendChild(avatar);
-            }
+        // Add collaborator items
+        collaborators.forEach(collab => {
+            const collabNameParts = collab.name.split(' ');
+            const collabInitials = collabNameParts.map(part => part.charAt(0).toUpperCase()).join('');
+            
+            const collabItem = document.createElement('div');
+            collabItem.className = 'collaborator-item';
+            collabItem.innerHTML = `
+                <div class="collaborator-item-avatar">
+                    ${collabInitials}
+                </div>
+                <div class="collaborator-item-info">
+                    <div class="collaborator-item-name">
+                        ${collab.name}
+                    </div>
+                    <div class="collaborator-item-role">
+                        Collaborator
+                    </div>
+                </div>
+            `;
+            listContainer.appendChild(collabItem);
         });
-        
-        // Update text based on additional collaborators (excluding owner)
-        if (additionalCollaborators.length === 0) {
-            textContainer.textContent = 'Only you';
-        } else if (additionalCollaborators.length === 1) {
-            textContainer.textContent = 'You and 1 other';
-        } else {
-            textContainer.textContent = `You and ${additionalCollaborators.length} others`;
-        }
     }
 
     function downloadExam(examId) {

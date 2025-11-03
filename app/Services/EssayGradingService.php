@@ -30,7 +30,7 @@ class EssayGradingService
 
         $this->client = new Client([
             'timeout' => Config::get('ai.grading.timeout', 30),
-            'verify' => true,
+            'verify' => Config::get('ai.ssl_verify', true),
         ]);
     }
 
@@ -187,7 +187,9 @@ class EssayGradingService
      */
     protected function callOpenAI(string $prompt): string
     {
-        $endpoint = $this->apiEndpoint ?? 'https://api.openai.com/v1/chat/completions';
+        $endpoint = !empty($this->apiEndpoint) 
+            ? $this->apiEndpoint 
+            : 'https://api.openai.com/v1/chat/completions';
 
         $headers = [
             'Authorization' => 'Bearer ' . $this->apiKey,
@@ -226,7 +228,9 @@ class EssayGradingService
      */
     protected function callClaude(string $prompt): string
     {
-        $endpoint = $this->apiEndpoint ?? 'https://api.anthropic.com/v1/messages';
+        $endpoint = !empty($this->apiEndpoint) 
+            ? $this->apiEndpoint 
+            : 'https://api.anthropic.com/v1/messages';
 
         $response = $this->client->post($endpoint, [
             'headers' => [
@@ -256,7 +260,10 @@ class EssayGradingService
      */
     protected function callGemini(string $prompt): string
     {
-        $endpoint = $this->apiEndpoint ?? "https://generativelanguage.googleapis.com/v1/models/{$this->model}:generateContent";
+        // Use default endpoint if apiEndpoint is empty or null
+        $endpoint = !empty($this->apiEndpoint) 
+            ? $this->apiEndpoint 
+            : "https://generativelanguage.googleapis.com/v1/models/{$this->model}:generateContent";
 
         $response = $this->client->post($endpoint, [
             'headers' => [

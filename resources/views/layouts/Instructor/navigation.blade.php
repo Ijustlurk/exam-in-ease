@@ -1,5 +1,40 @@
 <!-- Styles -->
 <style>
+    /* Navbar fixes */
+    .sticky-top {
+        position: sticky;
+        top: 0;
+        z-index: 1020;
+    }
+
+    .notification-badge {
+        font-size: 0.65rem;
+    }
+
+    /* Ensure dropdowns appear above other content */
+    .dropdown-menu {
+        z-index: 1030;
+    }
+
+    /* Custom dropdown styling */
+    .dropdown-item:hover,
+    .dropdown-item:focus {
+        background-color: #f8f9fa;
+    }
+
+    /* Mobile menu styles */
+    @media (max-width: 640px) {
+        .sm\\:hidden {
+            display: none !important;
+        }
+    }
+
+    @media (min-width: 640px) {
+        .hidden.sm\\:flex {
+            display: flex !important;
+        }
+    }
+
     .sidebar {
         background-color: rgb(207, 218, 225);
         height: 550px;
@@ -90,7 +125,7 @@
 </style>
 
 <!-- Top Navbar -->
-<nav x-data="{ open: false }" class="bg-white border-b border-gray-100 sticky-top">
+<nav class="bg-white border-b border-gray-100 sticky-top">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between h-16">
             <div class="flex items-center">
@@ -101,94 +136,92 @@
 
             <div class="hidden sm:flex sm:items-center sm:ms-6 gap-4">
                 <!-- Notification Bell -->
-                <div class="relative" x-data="{ open: false }">
-                    <button @click="open = !open" class="relative p-2 text-gray-500 hover:text-gray-700 focus:outline-none transition">
+                <div class="dropdown">
+                    <button class="relative p-2 text-gray-500 hover:text-gray-700 focus:outline-none transition dropdown-toggle" 
+                            type="button" 
+                            id="notificationDropdown" 
+                            data-bs-toggle="dropdown" 
+                            aria-expanded="false"
+                            data-bs-auto-close="outside">
                         <i class="bi bi-bell text-xl"></i>
                         @php
                             $unreadCount = Auth::user()->notifications()->unread()->count();
                         @endphp
                         @if($unreadCount > 0)
-                            <span class="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-red-500 rounded-full">
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge">
                                 {{ $unreadCount > 99 ? '99+' : $unreadCount }}
                             </span>
                         @endif
                     </button>
 
                     <!-- Notification Dropdown -->
-                    <div x-show="open" 
-                         @click.away="open = false"
-                         x-transition:enter="transition ease-out duration-200"
-                         x-transition:enter-start="opacity-0 scale-95"
-                         x-transition:enter-end="opacity-100 scale-100"
-                         x-transition:leave="transition ease-in duration-75"
-                         x-transition:leave-start="opacity-100 scale-100"
-                         x-transition:leave-end="opacity-0 scale-95"
-                         class="absolute right-0 mt-2 bg-white rounded-lg shadow-lg border border-gray-200 z-50"
-                         style="display: none; width: 320px;">
+                    <div class="dropdown-menu dropdown-menu-end shadow-lg border" 
+                         aria-labelledby="notificationDropdown"
+                         style="width: 320px; max-height: 400px; overflow-y: auto;">
                         
-                        <div class="p-4 border-b border-gray-200 flex items-center justify-between">
-                            <h4 class="font-semibold text-gray-800">Notifications</h4>
+                        <div class="p-3 border-bottom d-flex align-items-center justify-content-between">
+                            <h6 class="mb-0 fw-semibold">Notifications</h6>
                             @if($unreadCount > 0)
                                 <a href="{{ route('instructor.notifications.mark-all-read') }}" 
-                                   class="text-xs text-blue-600 hover:text-blue-800"
+                                   class="text-decoration-none small text-primary"
                                    onclick="event.preventDefault(); markAllAsRead();">
                                     Mark all as read
                                 </a>
                             @endif
                         </div>
 
-                        <div style="max-height: 180px; overflow-y: auto;">
+                        <div style="max-height: 300px; overflow-y: auto;">
                             @php
-                                $notifications = Auth::user()->notifications()->latest()->limit(2)->get();
+                                $notifications = Auth::user()->notifications()->latest()->limit(5)->get();
                             @endphp
                             
                             @forelse($notifications as $notification)
                                 <a href="{{ route('instructor.notifications.show', $notification->notification_id) }}" 
-                                   class="block p-3 hover:bg-gray-50 border-b border-gray-100 {{ !$notification->is_read ? 'bg-blue-50' : '' }}"
+                                   class="dropdown-item border-bottom py-3 {{ !$notification->is_read ? 'bg-light' : '' }}"
                                    onclick="event.preventDefault(); markAsReadAndRedirect({{ $notification->notification_id }}, '{{ $notification->data['url'] ?? route('dashboard') }}');">
-                                    <div class="flex items-start gap-3">
+                                    <div class="d-flex align-items-start gap-2">
                                         <div class="flex-shrink-0">
                                             @if($notification->type === 'exam_approved')
-                                                <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                                                    <i class="bi bi-check-circle text-green-600"></i>
+                                                <div class="rounded-circle bg-success bg-opacity-10 p-2">
+                                                    <i class="bi bi-check-circle text-success"></i>
                                                 </div>
                                             @elseif($notification->type === 'exam_rejected')
-                                                <div class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-                                                    <i class="bi bi-x-circle text-red-600"></i>
+                                                <div class="rounded-circle bg-danger bg-opacity-10 p-2">
+                                                    <i class="bi bi-x-circle text-danger"></i>
                                                 </div>
                                             @elseif($notification->type === 'collaborator_added')
-                                                <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                                                    <i class="bi bi-people text-blue-600"></i>
+                                                <div class="rounded-circle bg-primary bg-opacity-10 p-2">
+                                                    <i class="bi bi-people text-primary"></i>
                                                 </div>
                                             @else
-                                                <div class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
-                                                    <i class="bi bi-info-circle text-gray-600"></i>
+                                                <div class="rounded-circle bg-secondary bg-opacity-10 p-2">
+                                                    <i class="bi bi-info-circle text-secondary"></i>
                                                 </div>
                                             @endif
                                         </div>
-                                        <div class="flex-1 min-w-0">
-                                            <p class="text-sm font-medium text-gray-800">{{ $notification->title }}</p>
-                                            <p class="text-xs text-gray-600 mt-1">{{ $notification->message }}</p>
-                                            <p class="text-xs text-gray-400 mt-1">{{ $notification->time_ago }}</p>
+                                        <div class="flex-grow-1">
+                                            <p class="mb-1 small fw-semibold text-dark">{{ $notification->title }}</p>
+                                            <p class="mb-1 small text-muted">{{ $notification->message }}</p>
+                                            <p class="mb-0 small text-muted">{{ $notification->time_ago }}</p>
                                         </div>
                                         @if(!$notification->is_read)
                                             <div class="flex-shrink-0">
-                                                <span class="inline-block w-2 h-2 bg-blue-600 rounded-full"></span>
+                                                <span class="badge bg-primary rounded-circle p-1" style="width: 8px; height: 8px;"></span>
                                             </div>
                                         @endif
                                     </div>
                                 </a>
                             @empty
-                                <div class="p-8 text-center text-gray-500">
-                                    <i class="bi bi-bell-slash text-4xl mb-2"></i>
-                                    <p class="text-sm">No notifications yet</p>
+                                <div class="p-4 text-center text-muted">
+                                    <i class="bi bi-bell-slash fs-1 mb-2 d-block"></i>
+                                    <p class="small mb-0">No notifications yet</p>
                                 </div>
                             @endforelse
                         </div>
 
                         @if($notifications->count() > 0)
-                            <div class="p-3 border-t border-gray-200 text-center">
-                                <a href="{{ route('instructor.notifications.index') }}" class="text-sm text-blue-600 hover:text-blue-800">
+                            <div class="p-2 border-top text-center">
+                                <a href="{{ route('instructor.notifications.index') }}" class="text-decoration-none small text-primary">
                                     View all notifications
                                 </a>
                             </div>
@@ -197,76 +230,38 @@
                 </div>
 
                 <!-- User Dropdown -->
-                <x-dropdown align="right" width="48">
-                    <x-slot name="trigger">
-                        <button
-                            class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 bg-white hover:text-gray-700 focus:outline-none transition">
-                            {{ Auth::user()->name }}
-                            <svg class="ms-1 h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg"
-                                viewBox="0 0 20 20">
-                                <path fill-rule="evenodd"
-                                    d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                                    clip-rule="evenodd" />
-                            </svg>
-                        </button>
-                    </x-slot>
-
-                    <x-slot name="content">
-                        <x-dropdown-link :href="route('profile.edit')">{{ __('Profile') }}</x-dropdown-link>
-
-                        <form method="POST" action="{{ route('logout') }}">
-                            @csrf
-                            <x-dropdown-link :href="route('logout')"
-                                onclick="event.preventDefault(); this.closest('form').submit();">
-                                {{ __('Log Out') }}
-                            </x-dropdown-link>
-                        </form>
-
-                        <x-dropdown-link>Logged in as {{ Auth::user()->roles[0]->name }}</x-dropdown-link>
-                    </x-slot>
-                </x-dropdown>
-            </div>
-
-            <!-- Hamburger (mobile) -->
-            <div class="-me-2 flex items-center sm:hidden">
-                <button @click="open = !open"
-                    class="p-2 rounded-md text-gray-400 hover:text-gray-500 focus:outline-none">
-                    <svg class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
-                        <path :class="{ 'hidden': open, 'inline-flex': !open }" class="inline-flex"
-                            stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M4 6h16M4 12h16M4 18h16" />
-                        <path :class="{ 'hidden': !open, 'inline-flex': open }" class="hidden" stroke-linecap="round"
-                            stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Responsive Nav -->
-    <div :class="{ 'block': open, 'hidden': !open }" class="hidden sm:hidden">
-        <div class="pt-2 pb-3 space-y-1">
-            <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
-                {{ __('Dashboard') }}
-            </x-responsive-nav-link>
-        </div>
-
-        <div class="pt-4 pb-1 border-t border-gray-200">
-            <div class="px-4">
-                <div class="font-medium text-base text-gray-800">{{ Auth::user()->name }}</div>
-                <div class="font-medium text-sm text-gray-500">{{ Auth::user()->email }}</div>
-            </div>
-
-            <div class="mt-3 space-y-1">
-                <x-responsive-nav-link :href="route('profile.edit')">{{ __('Profile') }}</x-responsive-nav-link>
-
-                <form method="POST" action="{{ route('logout') }}">
-                    @csrf
-                    <x-responsive-nav-link :href="route('logout')"
-                        onclick="event.preventDefault(); this.closest('form').submit();">
-                        {{ __('Log Out') }}
-                    </x-responsive-nav-link>
-                </form>
+                <div class="dropdown">
+                    <button class="btn btn-link text-decoration-none d-inline-flex align-items-center px-3 py-2 text-secondary dropdown-toggle" 
+                            type="button" 
+                            id="userDropdown" 
+                            data-bs-toggle="dropdown" 
+                            aria-expanded="false">
+                        {{ Auth::user()->name }}
+                    </button>
+                    
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                        <li>
+                            <a class="dropdown-item" href="{{ route('profile.edit') }}">
+                                <i class="bi bi-person me-2"></i>Profile
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <form method="POST" action="{{ route('logout') }}" id="logout-form">
+                                @csrf
+                                <button type="submit" class="dropdown-item">
+                                    <i class="bi bi-box-arrow-right me-2"></i>Log Out
+                                </button>
+                            </form>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <span class="dropdown-item-text small text-muted">
+                                Logged in as {{ Auth::user()->roles[0]->name }}
+                            </span>
+                        </li>
+                    </ul>
+                </div>
             </div>
         </div>
     </div>
@@ -379,9 +374,17 @@
             .then(response => response.json())
             .then(data => {
                 const badge = document.querySelector('.notification-badge');
+                const bellButton = document.getElementById('notificationDropdown');
+                
                 if (data.count > 0) {
                     if (badge) {
                         badge.textContent = data.count > 99 ? '99+' : data.count;
+                    } else if (bellButton) {
+                        // Create badge if it doesn't exist
+                        const newBadge = document.createElement('span');
+                        newBadge.className = 'position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge';
+                        newBadge.textContent = data.count > 99 ? '99+' : data.count;
+                        bellButton.appendChild(newBadge);
                     }
                 } else if (badge) {
                     badge.remove();
@@ -389,4 +392,13 @@
             })
             .catch(error => console.error('Error fetching notification count:', error));
     }, 30000);
+
+    // Ensure Bootstrap dropdowns work properly
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize all dropdowns
+        var dropdownElementList = [].slice.call(document.querySelectorAll('[data-bs-toggle="dropdown"]'));
+        var dropdownList = dropdownElementList.map(function (dropdownToggleEl) {
+            return new bootstrap.Dropdown(dropdownToggleEl);
+        });
+    });
 </script>

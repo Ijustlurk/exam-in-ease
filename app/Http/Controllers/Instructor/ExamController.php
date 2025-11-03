@@ -31,9 +31,16 @@ class ExamController extends Controller
             ->when($search, function($query, $search) {
                 $query->where('exam_title', 'like', "%{$search}%");
             })
-            ->with(['user', 'subject'])
+            ->with(['user', 'subject', 'collaborations.teacher'])
             ->orderBy('updated_at', 'desc')
             ->get();
+
+        // Add flag to indicate if teacher is owner or collaborator
+        $exams = $exams->map(function($exam) use ($teacherId) {
+            $exam->is_owner = $exam->teacher_id == $teacherId;
+            $exam->is_collaborator = !$exam->is_owner && $exam->collaborations->contains('teacher_id', $teacherId);
+            return $exam;
+        });
 
         $selectedExam = $exams->first();
         
@@ -59,7 +66,7 @@ class ExamController extends Controller
     public function create($examId)
     {
         $exam = Exam::with(['sections.items' => function($query) {
-                $query->orderBy('order', 'asc');
+                $query->withCount('comments')->orderBy('order', 'asc');
             }, 'subject'])
             ->findOrFail($examId);
         
@@ -72,6 +79,10 @@ class ExamController extends Controller
             abort(403, 'Unauthorized access to this exam.');
         }
 
+        // Add ownership flags
+        $exam->is_owner = ($exam->teacher_id == $teacherId);
+        $exam->is_collaborator = !$exam->is_owner && $exam->collaborations->contains('teacher_id', $teacherId);
+
         // If no sections exist, create a default section
         if ($exam->sections->count() === 0) {
             Section::create([
@@ -82,7 +93,9 @@ class ExamController extends Controller
             ]);
             
             // Reload exam with sections
-            $exam->load('sections.items');
+            $exam->load(['sections.items' => function($query) {
+                $query->withCount('comments')->orderBy('order', 'asc');
+            }]);
         }
 
         return view('instructor.exam.create', compact('exam'));
@@ -1655,5 +1668,106 @@ class ExamController extends Controller
         $phpWord->save($tempFile, 'Word2007');
         
         return response()->download($tempFile, $filename . '.docx')->deleteFileAfterSend(true);
+    }
+
+    // Get comments for a question
+    public function getComments($examId, $itemId)
+    {
+        $teacherId = Auth::id();
+        
+        // Verify access to exam
+        $exam = Exam::where('exam_id', $examId)
+            ->where(function($query) use ($teacherId) {
+                $query->where('teacher_id', $teacherId)
+                      ->orWhereHas('collaborations', function($q) use ($teacherId) {
+                          $q->where('teacher_id', $teacherId);
+                      });
+            })
+            ->firstOrFail();
+        
+        $comments = \App\Models\CollabComment::where('exam_id', $examId)
+            ->where('question_id', $itemId)
+            ->with('teacher')
+            ->orderBy('created_at', 'asc')
+            ->get()
+            ->map(function($comment) use ($teacherId) {
+                $authorName = 'Unknown';
+                if ($comment->teacher) {
+                    $authorName = $comment->teacher->full_name ?? 
+                                 ($comment->teacher->first_name . ' ' . $comment->teacher->last_name);
+                }
+                
+                return [
+                    'comment_id' => $comment->comment_id,
+                    'comment_text' => $comment->comment_text,
+                    'author' => $authorName,
+                    'created_at' => $comment->created_at->diffForHumans(),
+                    'resolved' => $comment->resolved,
+                    'is_own' => $comment->teacher_id == $teacherId
+                ];
+            });
+        
+        return response()->json([
+            'success' => true,
+            'comments' => $comments
+        ]);
+    }
+
+    // Add a comment to a question
+    public function addComment(Request $request, $examId, $itemId)
+    {
+        $teacherId = Auth::id();
+        
+        // Verify access to exam
+        $exam = Exam::where('exam_id', $examId)
+            ->where(function($query) use ($teacherId) {
+                $query->where('teacher_id', $teacherId)
+                      ->orWhereHas('collaborations', function($q) use ($teacherId) {
+                          $q->where('teacher_id', $teacherId);
+                      });
+            })
+            ->firstOrFail();
+        
+        $request->validate([
+            'comment_text' => 'required|string|max:1000'
+        ]);
+        
+        $comment = \App\Models\CollabComment::create([
+            'exam_id' => $examId,
+            'question_id' => $itemId,
+            'teacher_id' => $teacherId,
+            'comment_text' => $request->comment_text
+        ]);
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Comment added successfully'
+        ]);
+    }
+
+    // Delete a comment
+    public function deleteComment($commentId)
+    {
+        $comment = \App\Models\CollabComment::findOrFail($commentId);
+        $comment->delete();
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Comment deleted successfully'
+        ]);
+    }
+
+    // Toggle resolve status of a comment
+    public function toggleResolveComment($commentId)
+    {
+        $comment = \App\Models\CollabComment::findOrFail($commentId);
+        $comment->resolved = !$comment->resolved;
+        $comment->save();
+        
+        return response()->json([
+            'success' => true,
+            'resolved' => $comment->resolved,
+            'message' => $comment->resolved ? 'Comment marked as resolved' : 'Comment marked as unresolved'
+        ]);
     }
 }

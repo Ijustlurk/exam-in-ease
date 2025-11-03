@@ -55,6 +55,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | SSL Configuration
+    |--------------------------------------------------------------------------
+    |
+    | SSL certificate verification for API calls
+    | Set to false for local development if you encounter SSL errors
+    | Set to true or path to CA bundle for production
+    |
+    */
+
+    'ssl_verify' => env('AI_SSL_VERIFY', true),
+
+    /*
+    |--------------------------------------------------------------------------
     | Essay Grading Configuration
     |--------------------------------------------------------------------------
     */

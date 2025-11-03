@@ -1340,22 +1340,90 @@
                         </ol>
                     </div>
                 `;
+            } else if (question.item_type === 'essay' && question.rubric) {
+                // Show rubric for essay questions
+                let rubricContent = '';
+                
+                try {
+                    // Try to parse as JSON (structured rubric)
+                    const rubricData = JSON.parse(question.rubric);
+                    
+                    if (Array.isArray(rubricData)) {
+                        // Array format: [{"talking_point": "...", "weight": 5}, ...]
+                        rubricContent = `
+                            <div style="margin-top: 10px;">
+                                ${rubricData.map((item, index) => `
+                                    <div style="display: flex; align-items: start; gap: 12px; padding: 10px; background: rgba(255, 255, 255, 0.7); border-radius: 6px; margin-bottom: 8px; border-left: 3px solid #9c27b0;">
+                                        <div style="flex-shrink: 0; width: 24px; height: 24px; background: #9c27b0; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600;">
+                                            ${index + 1}
+                                        </div>
+                                        <div style="flex: 1; color: #4a148c;">
+                                            ${escapeHtml(item.talking_point || item.description || item.criterion || '')}
+                                        </div>
+                                        <div style="flex-shrink: 0; background: #6a1b9a; color: white; padding: 4px 12px; border-radius: 12px; font-weight: 600; font-size: 13px;">
+                                            ${item.weight || item.points || 0} pts
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        `;
+                    } else {
+                        // Object format or other JSON structure - display as formatted text
+                        rubricContent = `
+                            <div style="white-space: pre-wrap; line-height: 1.6; color: #4a148c; background: rgba(255, 255, 255, 0.6); padding: 12px; border-radius: 6px;">
+                                ${escapeHtml(JSON.stringify(rubricData, null, 2))}
+                            </div>
+                        `;
+                    }
+                } catch (e) {
+                    // Not JSON, display as plain text
+                    rubricContent = `
+                        <div style="white-space: pre-wrap; line-height: 1.6; color: #4a148c; background: rgba(255, 255, 255, 0.6); padding: 12px; border-radius: 6px;">
+                            ${escapeHtml(question.rubric)}
+                        </div>
+                    `;
+                }
+                
+                expectedAnswerHtml = `
+                    <div style="margin-bottom: 15px; padding: 15px; background: linear-gradient(135deg, #f3e5f5 0%, #fce4ec 100%); border-left: 4px solid #9c27b0; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                            <i class="bi bi-clipboard-check" style="font-size: 20px; color: #9c27b0;"></i>
+                            <strong style="font-size: 16px; color: #6a1b9a;">Grading Rubric (${question.points_awarded} points)</strong>
+                        </div>
+                        ${rubricContent}
+                    </div>
+                `;
             }
             
             return `
                 ${expectedAnswerHtml}
                 <div style="padding: 15px; background: #f8f9fa; border-radius: 8px; margin-top: 15px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <div>
-                            <strong>Correct Responses:</strong> ${question.correct_count} / ${question.total_responses}
-                        </div>
-                        <div>
-                            <strong>Wrong Responses:</strong> ${question.wrong_count} / ${question.total_responses}
-                        </div>
-                        <div>
-                            <strong>Success Rate:</strong> ${question.success_rate}%
-                        </div>
-                    </div>
+                    ${question.item_type === 'essay' 
+                        ? `<div style="text-align: center;">
+                            <div style="font-size: 14px; color: #6c757d; margin-bottom: 5px;">Average Score</div>
+                            <div style="font-size: 28px; font-weight: 700; color: #1a1a1a;">
+                                ${question.total_responses > 0 
+                                    ? ((question.correct_count * question.points_awarded / question.total_responses) || 0).toFixed(1)
+                                    : '0.0'
+                                } 
+                                <span style="font-size: 16px; color: #6c757d;">/ ${question.points_awarded}</span>
+                            </div>
+                            <div style="font-size: 13px; color: #6c757d; margin-top: 5px;">
+                                Based on ${question.total_responses} ${question.total_responses === 1 ? 'response' : 'responses'}
+                            </div>
+                          </div>`
+                        : `<div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <strong>Correct Responses:</strong> ${question.correct_count} / ${question.total_responses}
+                            </div>
+                            <div>
+                                <strong>Wrong Responses:</strong> ${question.wrong_count} / ${question.total_responses}
+                            </div>
+                            <div>
+                                <strong>Success Rate:</strong> ${question.success_rate}%
+                            </div>
+                          </div>`
+                    }
                 </div>
             `;
         }
@@ -1597,6 +1665,45 @@
                             </div>
                         </div>
                     `;
+                    
+                    // Add AI feedback section for essay questions
+                    if (answer.item_type === 'essay') {
+                        if (answer.ai_feedback) {
+                            const confidenceColor = answer.ai_confidence >= 80 ? '#059669' : 
+                                                   answer.ai_confidence >= 60 ? '#f59e0b' : '#dc2626';
+                            const requiresReview = answer.requires_manual_review || answer.ai_confidence < 70;
+                            
+                            optionsHtml += `
+                                <div style="margin-top: 15px; padding: 15px; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 1px solid #7dd3fc; border-radius: 8px;">
+                                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+                                        <i class="bi bi-robot" style="color: #0284c7; font-size: 18px;"></i>
+                                        <strong style="color: #0369a1; font-size: 15px;">AI Grading Feedback</strong>
+                                        ${requiresReview ? '<span style="background: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; margin-left: auto;">MANUAL REVIEW NEEDED</span>' : ''}
+                                    </div>
+                                    <div style="color: #0c4a6e; line-height: 1.6; margin-bottom: 10px;">
+                                        ${escapeHtml(answer.ai_feedback)}
+                                    </div>
+                                    ${answer.ai_confidence ? `
+                                    <div style="display: flex; align-items: center; gap: 10px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #bae6fd;">
+                                        <span style="font-size: 13px; color: #475569;">AI Confidence:</span>
+                                        <div style="flex: 1; background: #e2e8f0; border-radius: 10px; height: 8px; overflow: hidden;">
+                                            <div style="background: ${confidenceColor}; height: 100%; width: ${answer.ai_confidence}%; border-radius: 10px; transition: width 0.3s;"></div>
+                                        </div>
+                                        <span style="font-weight: 600; color: ${confidenceColor}; font-size: 13px;">${answer.ai_confidence}%</span>
+                                    </div>
+                                    ` : ''}
+                                </div>
+                            `;
+                        } else {
+                            // No AI feedback available
+                            optionsHtml += `
+                                <div style="margin-top: 15px; padding: 12px; background: #f8f9fa; border: 1px dashed #d1d5db; border-radius: 8px; text-align: center;">
+                                    <i class="bi bi-info-circle" style="color: #6c757d; font-size: 16px; margin-right: 6px;"></i>
+                                    <span style="color: #6c757d; font-size: 14px; font-style: italic;">No AI feedback available - Manual grading required</span>
+                                </div>
+                            `;
+                        }
+                    }
                 }
                 
                 return `
