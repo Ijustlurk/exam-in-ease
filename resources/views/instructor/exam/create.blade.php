@@ -1111,23 +1111,23 @@
             <!-- Floating dropdown for section add button -->
             @if($exam->is_owner)
             <div class="floating-question-dropdown" id="floatingSectionDropdown_{{ $section->section_id }}" style="display: none;">
-                <button class="dropdown-item" onclick="event.stopPropagation(); openQuestionModal('mcq', {{ $section->section_id }}, 'start')">
+                <button class="dropdown-item" onclick="event.stopPropagation(); openInlineQuestionForm('mcq', {{ $section->section_id }})">
                     <i class="bi bi-ui-radios"></i>
                     <span>New MCQ</span>
                 </button>
-                <button class="dropdown-item" onclick="event.stopPropagation(); openQuestionModal('torf', {{ $section->section_id }}, 'start')">
+                <button class="dropdown-item" onclick="event.stopPropagation(); openInlineQuestionForm('torf', {{ $section->section_id }})">
                     <i class="bi bi-toggle-on"></i>
                     <span>New True or False</span>
                 </button>
-                <button class="dropdown-item" onclick="event.stopPropagation(); openQuestionModal('iden', {{ $section->section_id }}, 'start')">
+                <button class="dropdown-item" onclick="event.stopPropagation(); openInlineQuestionForm('iden', {{ $section->section_id }})">
                     <i class="bi bi-pencil-square"></i>
                     <span>New Identification</span>
                 </button>
-                <button class="dropdown-item" onclick="event.stopPropagation(); openQuestionModal('enum', {{ $section->section_id }}, 'start')">
+                <button class="dropdown-item" onclick="event.stopPropagation(); openInlineQuestionForm('enum', {{ $section->section_id }})">
                     <i class="bi bi-list-ol"></i>
                     <span>New Enumeration</span>
                 </button>
-                <button class="dropdown-item" onclick="event.stopPropagation(); openQuestionModal('essay', {{ $section->section_id }}, 'start')">
+                <button class="dropdown-item" onclick="event.stopPropagation(); openInlineQuestionForm('essay', {{ $section->section_id }})">
                     <i class="bi bi-textarea-t"></i>
                     <span>New Essay</span>
                 </button>
@@ -1150,7 +1150,7 @@
                     <h4 class="question-header-title">Exam Item {{ $loop->iteration }}</h4>
                     @if($exam->is_owner)
                     <div class="question-header-actions">
-                        <button class="question-header-btn" onclick="event.stopPropagation(); editQuestion({{ $item->item_id }})" title="Edit">
+                        <button class="question-header-btn" onclick="event.stopPropagation(); editQuestionInline({{ $item->item_id }})" title="Edit">
                             <i class="bi bi-pencil"></i>
                         </button>
                         @if($item->item_type !== 'enum' || ($item->enum_type ?? 'ordered') === 'ordered')
@@ -1277,23 +1277,23 @@
             <!-- Floating dropdown for add button -->
             @if($exam->is_owner)
             <div class="floating-question-dropdown" id="floatingDropdown_{{ $item->item_id }}" style="display: none;">
-                <button class="dropdown-item" onclick="event.stopPropagation(); openQuestionModalAfter('mcq', {{ $section->section_id }}, {{ $item->item_id }})">
+                <button class="dropdown-item" onclick="event.stopPropagation(); openInlineQuestionForm('mcq', {{ $section->section_id }}, {{ $item->item_id }})">
                     <i class="bi bi-ui-radios"></i>
                     <span>New MCQ</span>
                 </button>
-                <button class="dropdown-item" onclick="event.stopPropagation(); openQuestionModalAfter('torf', {{ $section->section_id }}, {{ $item->item_id }})">
+                <button class="dropdown-item" onclick="event.stopPropagation(); openInlineQuestionForm('torf', {{ $section->section_id }}, {{ $item->item_id }})">
                     <i class="bi bi-toggle-on"></i>
                     <span>New True or False</span>
                 </button>
-                <button class="dropdown-item" onclick="event.stopPropagation(); openQuestionModalAfter('iden', {{ $section->section_id }}, {{ $item->item_id }})">
+                <button class="dropdown-item" onclick="event.stopPropagation(); openInlineQuestionForm('iden', {{ $section->section_id }}, {{ $item->item_id }})">
                     <i class="bi bi-pencil-square"></i>
                     <span>New Identification</span>
                 </button>
-                <button class="dropdown-item" onclick="event.stopPropagation(); openQuestionModalAfter('enum', {{ $section->section_id }}, {{ $item->item_id }})">
+                <button class="dropdown-item" onclick="event.stopPropagation(); openInlineQuestionForm('enum', {{ $section->section_id }}, {{ $item->item_id }})">
                     <i class="bi bi-list-ol"></i>
                     <span>New Enumeration</span>
                 </button>
-                <button class="dropdown-item" onclick="event.stopPropagation(); openQuestionModalAfter('essay', {{ $section->section_id }}, {{ $item->item_id }})">
+                <button class="dropdown-item" onclick="event.stopPropagation(); openInlineQuestionForm('essay', {{ $section->section_id }}, {{ $item->item_id }})">
                     <i class="bi bi-textarea-t"></i>
                     <span>New Essay</span>
                 </button>
@@ -1362,23 +1362,23 @@
                         <i class="bi bi-file-earmark-plus"></i>
                         <span>New Section</span>
                     </button>
-                    <button class="dropdown-item" onclick="openQuestionModal('mcq', activeSectionId)">
+                    <button class="dropdown-item" onclick="openInlineQuestionForm('mcq', activeSectionId)">
                         <i class="bi bi-ui-radios"></i>
                         <span>New MCQ</span>
                     </button>
-                    <button class="dropdown-item" onclick="openQuestionModal('torf', activeSectionId)">
+                    <button class="dropdown-item" onclick="openInlineQuestionForm('torf', activeSectionId)">
                         <i class="bi bi-toggle-on"></i>
                         <span>New True or False</span>
                     </button>
-                    <button class="dropdown-item" onclick="openQuestionModal('iden', activeSectionId)">
+                    <button class="dropdown-item" onclick="openInlineQuestionForm('iden', activeSectionId)">
                         <i class="bi bi-pencil-square"></i>
                         <span>New Identification</span>
                     </button>
-                    <button class="dropdown-item" onclick="openQuestionModal('enum', activeSectionId)">
+                    <button class="dropdown-item" onclick="openInlineQuestionForm('enum', activeSectionId)">
                         <i class="bi bi-list-ol"></i>
                         <span>New Enumeration</span>
                     </button>
-                    <button class="dropdown-item" onclick="openQuestionModal('essay', activeSectionId)">
+                    <button class="dropdown-item" onclick="openInlineQuestionForm('essay', activeSectionId)">
                         <i class="bi bi-textarea-t"></i>
                         <span>New Essay</span>
                     </button>
@@ -3045,5 +3045,33 @@ window.examId = {{ $exam->exam_id }};
 
 <!-- Auto-save functionality -->
 <script src="{{ asset('js/exam-autosave.js') }}"></script>
+
+<!-- Phase 2: Inline Question Forms -->
+<script src="{{ asset('js/inline-question-forms.js') }}"></script>
+
+<!-- Phase 3: Drag and Drop -->
+<script src="{{ asset('js/drag-and-drop.js') }}"></script>
+
+<!-- Phase 4: Undo/Redo -->
+<script src="{{ asset('js/undo-redo.js') }}"></script>
+
+<!-- Phase 5: Keyboard Shortcuts -->
+<link rel="stylesheet" href="{{ asset('css/keyboard-shortcuts.css') }}">
+<script src="{{ asset('js/keyboard-shortcuts.js') }}"></script>
+
+<script>
+// Initialize all systems after page load
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 Exam Builder Phase 2-5 Initialized');
+    console.log('✅ Inline question forms enabled');
+    console.log('✅ Drag & drop enabled');
+    console.log('✅ Undo/Redo enabled (Ctrl+Z / Ctrl+Y)');
+    console.log('✅ Keyboard shortcuts enabled (Press ? for help)');
+
+    // Add data attributes for exam status
+    document.body.setAttribute('data-exam-status', '{{ $exam->status }}');
+    document.body.setAttribute('data-is-owner', '{{ $exam->is_owner ? "true" : "false" }}');
+});
+</script>
 
 @endsection
