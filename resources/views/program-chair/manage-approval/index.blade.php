@@ -1,6 +1,7 @@
 @extends('layouts.ProgramChair.app')
 
 @section('main-content')
+<div style="padding: 2rem;">
 <div class="container-fluid px-4 py-4">
 
     @if(session('success'))
@@ -377,4 +378,6 @@
     }
 </script>
 @endpush
+
+</div>
 @endsection

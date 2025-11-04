@@ -421,6 +421,175 @@ class ExamController extends Controller
         }
     }
 
+    /**
+     * Create a question instantly with default MCQ configuration
+     * For Google Forms-style inline editing
+     */
+    public function createQuestionInstantly(Request $request, $examId)
+    {
+        $exam = Exam::findOrFail($examId);
+        
+        $teacherId = Auth::id();
+        $hasAccess = $exam->teacher_id == $teacherId || 
+                     $exam->collaborations->contains('teacher_id', $teacherId);
+        
+        if (!$hasAccess) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        // Prevent editing archived exams
+        if ($exam->status === 'archived') {
+            return response()->json(['error' => 'Cannot edit archived exams'], 403);
+        }
+
+        $validated = $request->validate([
+            'section_id' => 'required|integer',
+            'after_item_id' => 'nullable'
+        ]);
+
+        // Verify section belongs to this exam
+        $section = Section::where('section_id', $validated['section_id'])
+            ->where('exam_id', $examId)
+            ->first();
+            
+        if (!$section) {
+            return response()->json(['error' => 'Invalid section'], 400);
+        }
+
+        DB::beginTransaction();
+        try {
+            $newOrder = 0;
+            
+            // Check if after_item_id is provided
+            if (!empty($validated['after_item_id'])) {
+                // Special case: 'start' means insert at beginning
+                if ($validated['after_item_id'] === 'start') {
+                    ExamItem::where('exam_section_id', $validated['section_id'])
+                        ->increment('order');
+                    $newOrder = 1;
+                } else {
+                    // Insert after a specific item
+                    $afterItem = ExamItem::where('item_id', $validated['after_item_id'])
+                        ->where('exam_section_id', $validated['section_id'])
+                        ->first();
+                    
+                    if ($afterItem) {
+                        $afterOrder = $afterItem->order;
+                        ExamItem::where('exam_section_id', $validated['section_id'])
+                            ->where('order', '>', $afterOrder)
+                            ->increment('order');
+                        $newOrder = $afterOrder + 1;
+                    } else {
+                        $maxOrder = ExamItem::where('exam_section_id', $validated['section_id'])
+                            ->max('order');
+                        $newOrder = ($maxOrder ?? 0) + 1;
+                    }
+                }
+            } else {
+                // Add to end of section
+                $maxOrder = ExamItem::where('exam_section_id', $validated['section_id'])
+                    ->max('order');
+                $newOrder = ($maxOrder ?? 0) + 1;
+            }
+
+            // Create question with default MCQ configuration
+            $defaultOptions = json_encode(['', '', '', '']);  // 4 empty options
+            $defaultAnswer = json_encode([]);  // No correct answer yet
+
+            $item = ExamItem::create([
+                'exam_id' => $examId,
+                'exam_section_id' => $validated['section_id'],
+                'question' => '',  // Empty question text
+                'item_type' => 'mcq',  // Default to MCQ
+                'points_awarded' => 1,  // Default 1 point
+                'options' => $defaultOptions,
+                'answer' => $defaultAnswer,
+                'expected_answer' => null,
+                'enum_type' => null,
+                'order' => $newOrder
+            ]);
+
+            $exam->increment('no_of_items');
+            $exam->increment('total_points', 1);
+
+            DB::commit();
+
+            // Render the question card component
+            $questionCardHtml = view('instructor.exam.components.question-card', [
+                'item' => $item
+            ])->render();
+            
+            // Build the complete wrapper HTML inline
+            $isOwner = $exam->is_owner;
+            $commentsCount = 0;
+            
+            $html = '<div class="question-wrapper" data-item-id="' . $item->item_id . '">
+                <div class="drag-handle" draggable="true" title="Drag to reorder">
+                    <i class="bi bi-grip-vertical"></i>
+                </div>
+                
+                ' . $questionCardHtml . '
+                
+                <div class="floating-action-pane">';
+            
+            if ($isOwner) {
+                $html .= '<button class="floating-btn floating-btn-danger" title="Delete Question" onclick="event.stopPropagation(); deleteQuestion(' . $exam->exam_id . ', ' . $item->item_id . ')">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                    <button class="floating-btn" title="Add Question After" onclick="event.stopPropagation(); addQuestionInstantly(' . $item->exam_section_id . ', ' . $item->item_id . ')">
+                        <i class="bi bi-plus-lg"></i>
+                    </button>
+                    <button class="floating-btn" title="Duplicate" onclick="event.stopPropagation(); duplicateQuestion(' . $exam->exam_id . ', ' . $item->item_id . ')">
+                        <i class="bi bi-files"></i>
+                    </button>
+                    <button class="floating-btn" title="Move Up" onclick="event.stopPropagation(); moveQuestion(' . $item->item_id . ', \'up\')">
+                        <i class="bi bi-arrow-up"></i>
+                    </button>
+                    <button class="floating-btn" title="Move Down" onclick="event.stopPropagation(); moveQuestion(' . $item->item_id . ', \'down\')">
+                        <i class="bi bi-arrow-down"></i>
+                    </button>';
+            }
+            
+            $html .= '<button class="floating-btn" title="View Comments" onclick="event.stopPropagation(); openCommentsModal(' . $item->item_id . ')" style="position: relative;">
+                    <i class="bi bi-chat-left-text"></i>
+                    <span id="commentBadge_' . $item->item_id . '" style="position: absolute; top: -4px; right: -4px; background-color: #ef4444; color: white; border-radius: 10px; padding: 2px 6px; font-size: 0.7rem; font-weight: 600; min-width: 18px; text-align: center; display: none;">0</span>
+                </button>
+            </div>
+            
+            <div class="floating-comments-box" id="commentsBox_' . $item->item_id . '">
+                <div class="comments-header">
+                    <span>Comments</span>
+                    <button class="comments-close-btn" onclick="event.stopPropagation(); closeCommentsBox(' . $item->item_id . ')">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+                <div class="comments-list" id="commentsList_' . $item->item_id . '">
+                    <p class="text-muted">No comments yet</p>
+                </div>
+                <div class="comment-input-box">
+                    <textarea id="commentInput_' . $item->item_id . '" class="comment-input" placeholder="Add a comment..."></textarea>
+                    <button class="comment-submit-btn" onclick="submitComment(' . $item->item_id . ')">
+                        <i class="bi bi-send"></i>
+                    </button>
+                </div>
+            </div>
+        </div>';
+
+            return response()->json([
+                'success' => true,
+                'item' => $item,
+                'html' => $html,
+                'message' => 'Question created instantly'
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'error' => 'Failed to create question: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
     public function getQuestion($examId, $itemId)
     {
         $exam = Exam::findOrFail($examId);
@@ -560,9 +729,71 @@ class ExamController extends Controller
 
             DB::commit();
 
+            // Render just the question card component (wrapper will be added by JS)
+            $questionCardHtml = view('instructor.exam.components.question-card', [
+                'item' => $newItem
+            ])->render();
+            
+            // Build the complete wrapper HTML inline
+            $isOwner = $exam->is_owner;
+            $commentsCount = $newItem->comments_count ?? 0;
+            
+            $html = '<div class="question-wrapper" data-item-id="' . $newItem->item_id . '">
+                <div class="drag-handle" draggable="true" title="Drag to reorder">
+                    <i class="bi bi-grip-vertical"></i>
+                </div>
+                
+                ' . $questionCardHtml . '
+                
+                <div class="floating-action-pane">';
+            
+            if ($isOwner) {
+                $html .= '<button class="floating-btn floating-btn-danger" title="Delete Question" onclick="event.stopPropagation(); deleteQuestion(' . $exam->exam_id . ', ' . $newItem->item_id . ')">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                    <button class="floating-btn" title="Add Question After" onclick="event.stopPropagation(); addQuestionInstantly(' . $newItem->exam_section_id . ', ' . $newItem->item_id . ')">
+                        <i class="bi bi-plus-lg"></i>
+                    </button>
+                    <button class="floating-btn" title="Duplicate" onclick="event.stopPropagation(); duplicateQuestion(' . $exam->exam_id . ', ' . $newItem->item_id . ')">
+                        <i class="bi bi-files"></i>
+                    </button>
+                    <button class="floating-btn" title="Move Up" onclick="event.stopPropagation(); moveQuestion(' . $newItem->item_id . ', \'up\')">
+                        <i class="bi bi-arrow-up"></i>
+                    </button>
+                    <button class="floating-btn" title="Move Down" onclick="event.stopPropagation(); moveQuestion(' . $newItem->item_id . ', \'down\')">
+                        <i class="bi bi-arrow-down"></i>
+                    </button>';
+            }
+            
+            $html .= '<button class="floating-btn" title="View Comments" onclick="event.stopPropagation(); openCommentsModal(' . $newItem->item_id . ')" style="position: relative;">
+                    <i class="bi bi-chat-left-text"></i>
+                    <span id="commentBadge_' . $newItem->item_id . '" style="position: absolute; top: -4px; right: -4px; background-color: #ef4444; color: white; border-radius: 10px; padding: 2px 6px; font-size: 0.7rem; font-weight: 600; min-width: 18px; text-align: center; ' . ($commentsCount > 0 ? '' : 'display: none;') . '">' . $commentsCount . '</span>
+                </button>
+            </div>
+            
+            <div class="floating-comments-box" id="commentsBox_' . $newItem->item_id . '">
+                <div class="comments-header">
+                    <span>Comments</span>
+                    <button class="comments-close-btn" onclick="event.stopPropagation(); closeCommentsBox(' . $newItem->item_id . ')">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+                <div class="comments-list" id="commentsList_' . $newItem->item_id . '">
+                    <p class="text-muted">No comments yet</p>
+                </div>
+                <div class="comment-input-box">
+                    <textarea id="commentInput_' . $newItem->item_id . '" class="comment-input" placeholder="Add a comment..."></textarea>
+                    <button class="comment-submit-btn" onclick="submitComment(' . $newItem->item_id . ')">
+                        <i class="bi bi-send"></i>
+                    </button>
+                </div>
+            </div>
+        </div>';
+
             return response()->json([
                 'success' => true,
                 'item' => $newItem,
+                'html' => $html,
                 'message' => 'Question duplicated successfully'
             ]);
 

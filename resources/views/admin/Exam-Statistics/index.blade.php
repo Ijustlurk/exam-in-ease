@@ -267,12 +267,12 @@
                     </td>
                     <td>
                         <div class="actions-cell">
-                            <a href="{{ route('admin.exam-statistics.show', $exam->exam_id) }}" class="action-btn">
+                            <a href="{{ route('admin.exams.show', $exam->exam_id) }}" class="action-btn">
                                 <i class="fas fa-search"></i>
                                 <span>View</span>
                             </a>
                             @if($exam->status === 'archived')
-                            <a href="{{ route('admin.exam-statistics.stats', $exam->exam_id) }}" class="action-btn">
+                            <a href="{{ route('admin.exams.stats', $exam->exam_id) }}" class="action-btn">
                                 <i class="fas fa-chart-bar"></i>
                                 <span>See Stats</span>
                             </a>

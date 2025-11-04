@@ -918,7 +918,7 @@
                                 </div>
                                 
                                 {{-- Collaborators --}}
-                                @foreach($selectedExam->collaborations as $collaboration)
+                                @foreach($selectedExam->collaborations->filter(fn($collab) => $collab->teacher_id !== $selectedExam->teacher_id) as $collaboration)
                                     <div class="collaborator-item">
                                         <div class="collaborator-item-avatar">
                                             {{ strtoupper(substr($collaboration->teacher->first_name ?? 'C', 0, 1)) }}{{ strtoupper(substr($collaboration->teacher->last_name ?? 'U', 0, 1)) }}
@@ -1085,6 +1085,17 @@
                                 <input type="datetime-local" class="form-control" name="schedule_end" id="scheduleEnd" required 
                                        style="border-radius: 8px; padding: 10px 14px; border: 1px solid #d1d5db; font-size: 0.875rem;">
                                 <small class="text-danger" id="endDateError" style="display: none;"></small>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <label style="font-size: 0.875rem; color: #374151; font-weight: 500; margin-bottom: 6px; display: block;">
+                                    <i class="bi bi-key-fill me-1"></i>Exam Password <span class="text-muted">(Optional)</span>
+                                </label>
+                                <input type="text" class="form-control" name="exam_password" placeholder="Enter password for exam access" 
+                                       style="border-radius: 8px; padding: 10px 14px; border: 1px solid #d1d5db; font-size: 0.875rem;">
+                                <small class="text-muted" style="font-size: 0.75rem;">Leave empty if no password is required</small>
                             </div>
                         </div>
                     </div>
@@ -1274,6 +1285,17 @@
                             <input type="datetime-local" class="form-control" name="schedule_end" id="editScheduleEnd" required 
                                    style="border-radius: 8px; padding: 10px 14px; border: 1px solid #d1d5db; font-size: 0.875rem;">
                             <small class="text-danger" id="editEndDateError" style="display: none;"></small>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label style="font-size: 0.875rem; color: #374151; font-weight: 500; margin-bottom: 6px; display: block;">
+                                <i class="bi bi-key-fill me-1"></i>Exam Password <span class="text-muted">(Optional)</span>
+                            </label>
+                            <input type="text" class="form-control" name="exam_password" id="editExamPassword" placeholder="Enter password for exam access" 
+                                   style="border-radius: 8px; padding: 10px 14px; border: 1px solid #d1d5db; font-size: 0.875rem;">
+                            <small class="text-muted" style="font-size: 0.75rem;">Leave empty if no password is required</small>
                         </div>
                     </div>
 
@@ -2032,6 +2054,7 @@
                 document.getElementById('editSubjectSelect').value = exam.subject_id;
                 document.getElementById('editTermSelect').value = exam.term;
                 document.getElementById('editDuration').value = exam.duration;
+                document.getElementById('editExamPassword').value = exam.exam_password || '';
                 
                 // Format and set dates
                 if (exam.schedule_start) {

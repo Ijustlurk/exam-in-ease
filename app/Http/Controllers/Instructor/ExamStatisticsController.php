@@ -1036,6 +1036,73 @@ class ExamStatisticsController extends Controller
     }
 
     /**
+     * Delete an exam attempt
+     */
+    public function deleteAttempt(Request $request, $examId, $attemptId)
+    {
+        // Validate IDs are numeric
+        if (!is_numeric($examId) || !is_numeric($attemptId)) {
+            return response()->json(['error' => 'Invalid ID format'], 400);
+        }
+        
+        try {
+            // Use database transaction to ensure data integrity
+            return \DB::transaction(function () use ($examId, $attemptId) {
+                // Get the exam to verify ownership
+                $exam = Exam::where('exam_id', $examId)
+                    ->where('teacher_id', Auth::id())
+                    ->lockForUpdate()
+                    ->firstOrFail();
+                
+                // Get the attempt and verify it belongs to this exam
+                $attempt = \App\Models\ExamAttempt::where('attempt_id', $attemptId)
+                    ->whereHas('examAssignment', function($query) use ($examId) {
+                        $query->where('exam_id', $examId);
+                    })
+                    ->lockForUpdate()
+                    ->firstOrFail();
+                
+                // Get student info for logging
+                $studentId = $attempt->student_id;
+                $attemptScore = $attempt->score;
+                
+                // Log the deletion for audit trail
+                \Log::info('Exam attempt deleted', [
+                    'exam_id' => $examId,
+                    'attempt_id' => $attemptId,
+                    'student_id' => $studentId,
+                    'score' => $attemptScore,
+                    'instructor_id' => Auth::id(),
+                    'deleted_at' => now()
+                ]);
+                
+                // Delete all answers associated with this attempt
+                ExamAnswer::where('attempt_id', $attemptId)->delete();
+                
+                // Delete the attempt
+                $attempt->delete();
+                
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Exam attempt deleted successfully'
+                ]);
+            });
+            
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json(['error' => 'Attempt not found or you do not have permission to delete it'], 404);
+        } catch (\Exception $e) {
+            \Log::error('Error in deleteAttempt: ' . $e->getMessage(), [
+                'exam_id' => $examId,
+                'attempt_id' => $attemptId,
+                'instructor_id' => Auth::id(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json(['error' => 'Failed to delete attempt'], 500);
+        }
+    }
+
+    /**
      * Calculate optimal score ranges based on total points
      * Returns array of range labels and boundaries
      */

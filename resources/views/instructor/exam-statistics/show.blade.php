@@ -875,6 +875,43 @@
         </div>
     </div>
 
+    <!-- Delete Attempt Confirmation Modal -->
+    <div id="deleteAttemptModal" class="modal fade" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-exclamation-triangle-fill"></i> Confirm Delete Attempt
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div style="padding: 20px; text-align: center;">
+                        <i class="bi bi-trash3" style="font-size: 48px; color: #dc2626; margin-bottom: 20px;"></i>
+                        <h5 style="margin-bottom: 15px; color: #1f2937;">Are you sure you want to delete this attempt?</h5>
+                        <p style="color: #6b7280; margin-bottom: 10px;">
+                            This will permanently delete all answers and scores for this student's exam attempt.
+                        </p>
+                        <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 15px; margin-top: 20px;">
+                            <strong style="color: #991b1b;">
+                                <i class="bi bi-exclamation-circle"></i> Warning: This action cannot be undone!
+                            </strong>
+                        </div>
+                    </div>
+                    <input type="hidden" id="delete_attempt_id">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg"></i> Cancel
+                    </button>
+                    <button type="button" class="btn btn-danger" onclick="confirmDeleteAttempt()">
+                        <i class="bi bi-trash3"></i> Yes, Delete Attempt
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Chart.js Library -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
@@ -2013,7 +2050,21 @@
                 `;
             }).join('');
             
-            container.innerHTML = questionsHtml;
+            // Add delete attempt button below questions
+            const deleteButtonHtml = `
+                <div style="margin-top: 30px; padding: 20px; text-align: center; border-top: 2px solid #e5e7eb;">
+                    <button onclick="openDeleteAttemptModal(${student.attempt_id})" 
+                            class="btn btn-danger" 
+                            style="background: #dc2626; color: white; border: none; padding: 10px 30px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600;">
+                        <i class="bi bi-trash3"></i> Delete This Attempt
+                    </button>
+                    <p style="margin-top: 10px; color: #6c757d; font-size: 13px;">
+                        <i class="bi bi-exclamation-triangle"></i> This action cannot be undone
+                    </p>
+                </div>
+            `;
+            
+            container.innerHTML = questionsHtml + deleteButtonHtml;
         }
         
         // ==================== HELPER FUNCTIONS ====================
@@ -2129,6 +2180,74 @@
             .catch(error => {
                 console.error('Error updating answer:', error);
                 alert('An error occurred while updating the answer.');
+            });
+        }
+        
+        // ==================== DELETE ATTEMPT FUNCTIONS ====================
+        function openDeleteAttemptModal(attemptId) {
+            document.getElementById('delete_attempt_id').value = attemptId;
+            const modal = new bootstrap.Modal(document.getElementById('deleteAttemptModal'));
+            modal.show();
+        }
+        
+        function confirmDeleteAttempt() {
+            const attemptId = document.getElementById('delete_attempt_id').value;
+            
+            if (!attemptId) {
+                alert('No attempt selected for deletion.');
+                return;
+            }
+            
+            // Send delete request
+            fetch(`/instructor/exams-statistics/${examId}/attempt/${attemptId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Close modal
+                    bootstrap.Modal.getInstance(document.getElementById('deleteAttemptModal')).hide();
+                    
+                    // Remove the deleted student from studentsData
+                    studentsData = studentsData.filter(student => student.attempt_id !== parseInt(attemptId));
+                    
+                    // Update the display
+                    if (studentsData.length > 0) {
+                        // If there are still students, show the previous or next one
+                        if (selectedStudentIndex >= studentsData.length) {
+                            selectedStudentIndex = studentsData.length - 1;
+                        }
+                        updateStudentNavigation();
+                        renderStudentPerformance(selectedStudentIndex);
+                    } else {
+                        // No more students, show empty state
+                        document.getElementById('studentsNav').style.display = 'none';
+                        document.getElementById('studentPerformanceContainer').innerHTML = `
+                            <div style="text-align: center; padding: 60px; color: #6c757d;">
+                                <i class="bi bi-inbox" style="font-size: 48px; margin-bottom: 15px; opacity: 0.3;"></i>
+                                <p style="font-size: 18px;">No student attempts found for this exam.</p>
+                            </div>
+                        `;
+                    }
+                    
+                    // Show success message
+                    alert(data.message || 'Attempt deleted successfully!');
+                    
+                    // Optionally reload the page to refresh all statistics
+                    location.reload();
+                } else {
+                    alert(data.message || 'Failed to delete attempt. Please try again.');
+                }
+            })
+            .catch(error => {
+                console.error('Error deleting attempt:', error);
+                alert('An error occurred while deleting the attempt.');
             });
         }
         

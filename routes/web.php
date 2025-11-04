@@ -11,7 +11,6 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\ExamStatisticsController as AdminExamStatisticsController;
 use App\Http\Controllers\Instructor\ExamController;
 use App\Http\Controllers\Admin\ExamController as AdminExamController;
-use App\Http\Controllers\ProgramChair\ExamStatisticsController as ProgramChairExamStatisticsController;
 use App\Http\Controllers\DashboardController;
 
 
@@ -130,15 +129,13 @@ Route::
 
   
 
-            // Exam Statistics - rate limited
-            Route::get('/exam-statistics', [AdminExamStatisticsController::class, 'index'])->middleware('throttle:60,1')
-                ->name('exam-statistics.index');
-            Route::get('/exam-statistics/{id}/show', [AdminExamStatisticsController::class, 'show'])->middleware('throttle:60,1')
-                ->name('exam-statistics.show');
-            Route::get('/exam-statistics/{id}/stats', [AdminExamStatisticsController::class, 'stats'])->middleware('throttle:60,1')
-                ->name('exam-statistics.stats');
-            Route::post('/exam-statistics/{id}/approve', [AdminExamStatisticsController::class, 'approve'])->middleware('throttle:20,1')
-                ->name('exam-statistics.approve');
+            // Exams - rate limited
+            Route::get('/exams', [AdminExamStatisticsController::class, 'index'])->middleware('throttle:60,1')
+                ->name('exams.index');
+            Route::get('/exams/{id}/show', [AdminExamStatisticsController::class, 'show'])->middleware('throttle:60,1')
+                ->name('exams.show');
+            Route::get('/exams/{id}/stats', [AdminExamStatisticsController::class, 'stats'])->middleware('throttle:60,1')
+                ->name('exams.stats');
 
 
 
@@ -166,9 +163,6 @@ Route::
                 Route::post('/{exam}/rescind', [ManageApprovalController::class, 'rescind'])->middleware('throttle:20,1')
                     ->name('rescind');
             });
-            // Exam Statistics - rate limited
-            Route::get('/exam-statistics', [ProgramChairExamStatisticsController::class, 'index'])->middleware('throttle:60,1')->name('exam-statistics.index');
-
 
         });
 
@@ -194,6 +188,7 @@ Route::
 
         // Questions - rate limited
         Route::get('/exams/{examId}/questions/{itemId}', [ExamController::class, 'getQuestion'])->middleware('throttle:60,1')->name('exams.questions.get');
+        Route::post('/exams/{examId}/questions/instant', [ExamController::class, 'createQuestionInstantly'])->middleware('throttle:30,1')->name('exams.questions.instant');
         Route::post('/exams/{examId}/questions', [ExamController::class, 'addQuestion'])->middleware('throttle:30,1')->name('exams.questions.add');
         Route::put('/exams/{examId}/questions/{itemId}', [ExamController::class, 'updateQuestion'])->middleware('throttle:30,1')->name('exams.questions.update');
         Route::delete('/exams/{examId}/questions/{itemId}', [ExamController::class, 'deleteQuestion'])->middleware('throttle:20,1')->name('exams.questions.delete');

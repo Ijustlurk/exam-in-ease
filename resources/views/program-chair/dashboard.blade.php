@@ -10,16 +10,6 @@
                 font-family: 'Segoe UI', sans-serif; 
                 background-color: #f8f9fa; 
             }
-            
-            .main { 
-                margin-left: 60px; 
-                transition: margin-left 0.3s; 
-                padding: 2rem; 
-            }
-            
-            .main.expanded { 
-                margin-left: 220px; 
-            }
 
             /* Dashboard Header */
             .dashboard-header {
@@ -251,7 +241,7 @@
             </div>
         @endif
 
-        <div id="mainContent" class="main">
+        <div id="mainContent" class="main-content" style="padding: 2rem;">
             <!-- Dashboard Header -->
             <div class="dashboard-header">
                 <h4>Dashboard</h4>

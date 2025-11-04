@@ -2,7 +2,7 @@
 <style>
     .sidebar {
         background-color: rgb(207, 218, 225);
-        height: calc(100vh - 90px);
+        height: 550px;
         display: flex;
         flex-direction: column;
         padding-top: 1rem;
@@ -76,7 +76,6 @@
     .main-content {
         margin-left: 60px;
         transition: margin-left 0.3s;
-        padding: 2rem;
     }
 
     .main-content.expanded {
@@ -85,51 +84,40 @@
 </style>
 
 <!-- Navbar -->
-<nav x-data="{ open: false }" class="bg-white border-b border-gray-100 sticky-top">
+<nav class="bg-white border-b border-gray-100 sticky-top">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between h-16">
-            <div class="flex">
-                <!-- Logo -->
-                <div class="shrink-0 flex items-center">
-                    <a href="{{ route('dashboard') }}">
-                        <i class="bi bi-clipboard-data text-dark fs-2"></i>
-                    </a>
-                </div>
+            <div class="flex items-center">
+                <a href="{{ route('dashboard') }}" class="text-dark fs-2">
+                    <i class="bi bi-clipboard-data"></i>
+                </a>
             </div>
 
-            <!-- Settings Dropdown -->
-            <div class="d-flex sm:items-center sm:ms-6">
-                <x-dropdown align="right" width="48">
-                    <x-slot name="trigger">
-                        <button
-                            class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 bg-white hover:text-gray-700 focus:outline-none transition ease-in-out duration-150">
-                            <div>{{ Auth::user()->name }}</div>
-                            <div class="ms-1">
-                                <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg"
-                                    viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd"
-                                        d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                                        clip-rule="evenodd" />
-                                </svg>
-                            </div>
-                        </button>
-                    </x-slot>
-
-                    <x-slot name="content">
-                        <!-- Logout -->
-                        <form method="POST" action="{{ route('logout') }}">
-                            @csrf
-                            <x-dropdown-link :href="route('logout')"
-                                onclick="event.preventDefault(); this.closest('form').submit();">
-                                {{ __('Log Out') }}
-                            </x-dropdown-link>
-                        </form>
-
-                        <x-dropdown-link>
-                            Logged in as {{ Auth::user()->roles[0]->name }}
-                        </x-dropdown-link>
-                    </x-slot>
-                </x-dropdown>
+            <div class="hidden sm:flex sm:items-center sm:ms-6 gap-4">
+                <!-- User Dropdown -->
+                <div class="dropdown">
+                    <button class="btn btn-link text-decoration-none d-inline-flex align-items-center px-3 py-2 text-secondary dropdown-toggle" 
+                            type="button" 
+                            id="userDropdown" 
+                            data-bs-toggle="dropdown" 
+                            aria-expanded="false">
+                        {{ Auth::user()->name }}
+                    </button>
+                    
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                        <li>
+                            <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#logoutModal">
+                                <i class="bi bi-box-arrow-right me-2"></i>Log Out
+                            </button>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <span class="dropdown-item-text small text-muted">
+                                Logged in as {{ Auth::user()->roles[0]->name ?? 'Program Chair' }}
+                            </span>
+                        </li>
+                    </ul>
+                </div>
             </div>
         </div>
     </div>
@@ -150,11 +138,6 @@
     <a href="{{ route('programchair.manage-approval.index') }}" class="nav-item {{ request()->routeIs('programchair.manage-approval.*') ? 'active' : '' }}">
         <i class="bi bi-clipboard-check nav-icon"></i>
         <span class="nav-label">Manage Approval</span>
-    </a>
-
-    <a href="{{ route('programchair.exam-statistics.index') }}" class="nav-item {{ request()->routeIs('programchair.exam-statistics.*') ? 'active' : '' }}">
-        <i class="bi bi-graph-up-arrow nav-icon"></i>
-        <span class="nav-label">Exam Statistics</span>
     </a>
 
     <button type="button" class="nav-item mt-auto mb-3" style="width: 100%;" data-bs-toggle="modal" data-bs-target="#logoutModal">

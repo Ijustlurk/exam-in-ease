@@ -30,27 +30,6 @@
         margin-right: 0.5rem;
     }
 
-    .approve-btn {
-        background-color: #5a94aa;
-        color: white;
-        border: none;
-        padding: 12px 30px;
-        border-radius: 8px;
-        font-size: 15px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: background-color 0.2s;
-    }
-
-    .approve-btn:hover {
-        background-color: #4a7d8f;
-    }
-
-    .approve-btn:disabled {
-        background-color: #95a5a6;
-        cursor: not-allowed;
-    }
-
     .tabs-container {
         background: white;
         border-bottom: 2px solid #e0e0e0;
@@ -165,7 +144,7 @@
 </style>
 
 <div id="mainContent" class="main exam-view-container">
-    <a href="{{ route('admin.exam-statistics.index') }}" class="back-btn">
+    <a href="{{ route('admin.exams.index') }}" class="back-btn">
         <i class="fas fa-arrow-left"></i> Back to Exams
     </a>
 
@@ -201,17 +180,12 @@
                             Unknown
                         @endif
                     </div>
+                    <div>
+                        <i class="fas fa-info-circle"></i>
+                        <strong>Status:</strong> {{ ucfirst($exam->status) }}
+                    </div>
                 </div>
             </div>
-            @if($exam->status === 'draft' || $exam->status === 'pending')
-            <button class="approve-btn" onclick="approveExam({{ $exam->exam_id }})">
-                Approve Exam
-            </button>
-            @else
-            <button class="approve-btn" disabled>
-                {{ ucfirst($exam->status) }}
-            </button>
-            @endif
         </div>
 
         <!-- Tabs -->
@@ -332,33 +306,5 @@
         </div>
     </div>
 </div>
-
-<script>
-    function approveExam(examId) {
-        if (confirm('Are you sure you want to approve this exam?')) {
-            fetch(`/admin/exam-statistics/${examId}/approve`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert(data.message);
-                    location.reload();
-                } else {
-                    alert('Error: ' + data.message);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('An error occurred while approving the exam');
-            });
-        }
-    }
-</script>
 @endsection
 @endcan

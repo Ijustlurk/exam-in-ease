@@ -19,11 +19,14 @@ class ExamAnswer extends Model
         'is_correct',
         'points_earned',
         'ai_feedback',
+        'ai_confidence',
+        'requires_manual_review',
     ];
 
     protected $casts = [
         'is_correct' => 'boolean',
         'points_earned' => 'decimal:2',
+        'requires_manual_review' => 'boolean',
     ];
 
     /**

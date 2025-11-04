@@ -81,7 +81,7 @@
 </style>
 
 <div id="mainContent" class="main stats-container">
-    <a href="{{ route('admin.exam-statistics.index') }}" class="back-btn">
+    <a href="{{ route('admin.exams.index') }}" class="back-btn">
         <i class="fas fa-arrow-left"></i> Back to Exams
     </a>
 

@@ -248,9 +248,11 @@
     .question-wrapper {
         display: flex;
         gap: 12px;
-        margin-bottom: 20px;
+        margin-bottom: 0;
         position: relative;
         min-height: 60px; /* Ensure minimum drop target size */
+        max-width: 100%;
+        overflow: visible; /* Allow floating panes to show outside */
     }
     
     .question-card {
@@ -261,6 +263,9 @@
         overflow: hidden;
         transition: all 0.2s;
         cursor: pointer;
+        min-width: 0; /* Allow card to shrink below content size */
+        max-width: 100%;
+        margin: 16px 0;
     }
     
     .question-card.active {
@@ -308,25 +313,11 @@
         position: relative;
     }
     
-    .question-type-badge {
-        position: absolute;
-        top: 24px;
-        right: 24px;
-        background-color: #f3f4f6;
-        padding: 6px 14px;
-        border-radius: 20px;
-        font-size: 0.8rem;
-        color: #6b7280;
-        font-weight: 600;
-        text-transform: uppercase;
-    }
-    
     .question-text {
         font-size: 0.95rem;
         font-weight: 600;
         color: #212529;
         margin-bottom: 20px;
-        padding-right: 100px;
     }
     
     .options-list {
@@ -396,22 +387,21 @@
     
     /* Drag Handle */
     .drag-handle {
-        background-color: white;
-        border-radius: 12px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-        padding: 8px;
-        display: none;
+        padding: 0;
+        display: flex;
         align-items: center;
         justify-content: center;
         cursor: grab;
         color: #7ca5b8;
-        font-size: 1.2rem;
+        font-size: 1.8rem;
         min-width: 40px;
-        transition: all 0.2s;
+        height: 60px;
+        align-self: center;
+        opacity: 0.2;
+        transition: opacity 0.2s;
     }
     
     .drag-handle:hover {
-        background-color: #f0f4f6;
         color: #5a8399;
     }
     
@@ -419,9 +409,14 @@
         cursor: grabbing;
     }
     
-    /* Show drag handle when question card is active */
-    .question-wrapper:has(.question-card.active) .drag-handle {
-        display: flex;
+    /* Hide drag handles for collaborators */
+    body.is-collaborator .drag-handle {
+        display: none;
+    }
+    
+    /* Increase opacity when question wrapper is hovered */
+    .question-wrapper:hover .drag-handle {
+        opacity: 1;
     }
     
     /* Dragging states */
@@ -486,8 +481,26 @@
         z-index: 10;
     }
     
-    /* Show floating pane when question card is active */
-    .question-wrapper:has(.question-card.active) .floating-action-pane {
+    /* Create invisible bridge area for collaborators to prevent hover gap */
+    body.is-collaborator .question-wrapper::after {
+        content: '';
+        position: absolute;
+        right: -70px;
+        top: 0;
+        width: 70px;
+        height: 100%;
+        pointer-events: auto;
+    }
+    
+    /* Show floating pane when question card is active or expanded */
+    .question-wrapper:has(.question-card.active) .floating-action-pane,
+    .question-wrapper:has(.question-card.expanded) .floating-action-pane {
+        display: flex;
+    }
+    
+    /* Show floating pane on hover for collaborators (including hover over the pane or bridge area) */
+    body.is-collaborator .question-wrapper:hover .floating-action-pane,
+    body.is-collaborator .floating-action-pane:hover {
         display: flex;
     }
     
@@ -534,6 +547,14 @@
     
     .floating-btn:hover {
         background-color: #f3f4f6;
+    }
+    
+    .floating-btn-danger {
+        color: #ef4444;
+    }
+    
+    .floating-btn-danger:hover {
+        background-color: #fee2e2;
     }
     
     /* Floating Comments Box */
@@ -858,24 +879,6 @@
         box-shadow: 0 0 0 3px rgba(124,165,184,0.1);
     }
     
-    .option-input-group {
-        display: flex;
-        gap: 8px;
-        align-items: center;
-        margin-bottom: 12px;
-    }
-    
-    .option-input-group input[type="text"] {
-        flex: 1;
-    }
-    
-    .correct-checkbox {
-        width: 24px;
-        height: 24px;
-        cursor: pointer;
-        accent-color: #10b981;
-    }
-    
     .btn-add-option {
         background: #7ca5b8;
         color: white;
@@ -1103,155 +1106,25 @@
                 </button>
                 @endif
             </div>
-            <!-- Floating dropdown for section add button -->
-            @if($exam->is_owner)
-            <div class="floating-question-dropdown" id="floatingSectionDropdown_{{ $section->section_id }}" style="display: none;">
-                <button class="dropdown-item" onclick="event.stopPropagation(); openQuestionModal('mcq', {{ $section->section_id }}, 'start')">
-                    <i class="bi bi-ui-radios"></i>
-                    <span>New MCQ</span>
-                </button>
-                <button class="dropdown-item" onclick="event.stopPropagation(); openQuestionModal('torf', {{ $section->section_id }}, 'start')">
-                    <i class="bi bi-toggle-on"></i>
-                    <span>New True or False</span>
-                </button>
-                <button class="dropdown-item" onclick="event.stopPropagation(); openQuestionModal('iden', {{ $section->section_id }}, 'start')">
-                    <i class="bi bi-pencil-square"></i>
-                    <span>New Identification</span>
-                </button>
-                <button class="dropdown-item" onclick="event.stopPropagation(); openQuestionModal('enum', {{ $section->section_id }}, 'start')">
-                    <i class="bi bi-list-ol"></i>
-                    <span>New Enumeration</span>
-                </button>
-                <button class="dropdown-item" onclick="event.stopPropagation(); openQuestionModal('essay', {{ $section->section_id }}, 'start')">
-                    <i class="bi bi-textarea-t"></i>
-                    <span>New Essay</span>
-                </button>
-            </div>
-            @endif
         </div>
 
-        <!-- Question Cards -->
+        <!-- Question Cards (Inline Editable) -->
         @forelse($section->items->sortBy('order') as $item)
         <div class="question-wrapper" data-item-id="{{ $item->item_id }}">
-            @if($exam->is_owner)
+            {{-- Drag Handle --}}
             <div class="drag-handle" draggable="true" title="Drag to reorder">
                 <i class="bi bi-grip-vertical"></i>
             </div>
-            @endif
-            <div class="question-card" 
-                 data-item-id="{{ $item->item_id }}"
-                 onclick="setActiveQuestion(this)">
-                <div class="question-header">
-                    <h4 class="question-header-title">Exam Item {{ $loop->iteration }}</h4>
-                    @if($exam->is_owner)
-                    <div class="question-header-actions">
-                        <button class="question-header-btn" onclick="event.stopPropagation(); editQuestion({{ $item->item_id }})" title="Edit">
-                            <i class="bi bi-pencil"></i>
-                        </button>
-                        @if($item->item_type !== 'enum' || ($item->enum_type ?? 'ordered') === 'ordered')
-                        <button class="question-header-btn" onclick="event.stopPropagation(); duplicateQuestion({{ $exam->exam_id }}, {{ $item->item_id }})" title="Duplicate">
-                            <i class="bi bi-files"></i>
-                        </button>
-                        @endif
-                        <button class="question-header-btn" onclick="event.stopPropagation(); deleteQuestion({{ $exam->exam_id }}, {{ $item->item_id }})" title="Delete">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                    </div>
-                    @endif
-                </div>
-                <div class="question-body">
-                    @php
-                        $displayType = strtoupper($item->item_type);
-                        if ($item->item_type === 'enum') {
-                            $enumType = $item->enum_type ?? 'ordered';
-                            $displayType = $enumType === 'ordered' ? 'ORDERED ENUMERATION' : 'UNORDERED ENUMERATION';
-                        }
-                    @endphp
-                    <div class="question-type-badge">{{ $displayType }}</div>
-                    
-                    <div class="question-text">{{ $item->question }}</div>
-
-                    @if($item->item_type === 'mcq')
-                        @php 
-                            $options = json_decode($item->options, true); 
-                            $answers = json_decode($item->answer, true);
-                        @endphp
-                        <ul class="options-list">
-                            @foreach($options as $key => $option)
-                            <li class="option-item">
-                                <span class="option-text">{{ chr(65 + $key) }}. {{ $option }}</span>
-                                @if(in_array($key, $answers ?? []))
-                                <span class="correct-badge">✓ Correct</span>
-                                @endif
-                            </li>
-                            @endforeach
-                        </ul>
-                    @elseif($item->item_type === 'torf')
-                        @php $answer = json_decode($item->answer, true); @endphp
-                        <ul class="options-list">
-                            <li class="option-item">
-                                <span class="option-text">True</span>
-                                @if($answer['correct'] === 'true')
-                                <span class="correct-badge">✓ Correct</span>
-                                @endif
-                            </li>
-                            <li class="option-item">
-                                <span class="option-text">False</span>
-                                @if($answer['correct'] === 'false')
-                                <span class="correct-badge">✓ Correct</span>
-                                @endif
-                            </li>
-                        </ul>
-                    @elseif($item->item_type === 'iden')
-                        <div class="expected-answer-box">
-                            <strong>Expected Answer:</strong> 
-                            <span>{{ $item->expected_answer }}</span>
-                        </div>
-                    @elseif($item->item_type === 'enum')
-                        @php 
-                            $answers = json_decode($item->answer, true);
-                            $enumType = $item->enum_type ?? 'ordered';
-                        @endphp
-                        <ul class="options-list">
-                            @foreach($answers as $index => $answer)
-                            <li class="option-item">
-                                @if($enumType === 'ordered')
-                                    <span class="option-text">
-                                        <strong>{{ $index + 1 }}.</strong> {{ $answer }}
-                                    </span>
-                                @else
-                                    <span class="option-text">{{ $answer }}</span>
-                                    <span style="color: #9ca3af; font-size: 0.9rem; margin-left: auto;">
-                                        <i class="bi bi-grip-vertical"></i>
-                                    </span>
-                                @endif
-                            </li>
-                            @endforeach
-                        </ul>
-                    @elseif($item->item_type === 'essay')
-                        <div class="expected-answer-box">
-                            <span style="font-style: italic; color: #6b7280;">Essay question - Student will provide written answer</span>
-                        </div>
-                    @endif
-
-                    <div class="points-display">
-                        @if($item->item_type === 'enum' && ($item->enum_type ?? 'ordered') === 'unordered')
-                            <?php
-                                $answerCount = count(json_decode($item->answer, true) ?? []);
-                                $pointPerAnswer = $answerCount > 0 ? round($item->points_awarded / $answerCount, 2) : $item->points_awarded;
-                            ?>
-                            <strong>Total Points:</strong> {{ $item->points_awarded }} 
-                            <span style="color: #6c757d; font-size: 0.9em;">({{ $pointPerAnswer }} pt per correct answer)</span>
-                        @else
-                            <strong>Points:</strong> {{ $item->points_awarded }}
-                        @endif
-                    </div>
-                </div>
-            </div>
             
+            @include('instructor.exam.components.question-card', ['item' => $item])
+            
+            {{-- Floating Action Pane --}}
             <div class="floating-action-pane">
                 @if($exam->is_owner)
-                <button class="floating-btn" title="Add Question" onclick="event.stopPropagation(); toggleFloatingDropdown(this, {{ $section->section_id }}, {{ $item->item_id }})">
+                <button class="floating-btn floating-btn-danger" title="Delete Question" onclick="event.stopPropagation(); deleteQuestion({{ $exam->exam_id }}, {{ $item->item_id }})">
+                    <i class="bi bi-trash"></i>
+                </button>
+                <button class="floating-btn" title="Add Question After" onclick="event.stopPropagation(); addQuestionInstantly({{ $section->section_id }}, {{ $item->item_id }})">
                     <i class="bi bi-plus-lg"></i>
                 </button>
                 <button class="floating-btn" title="Duplicate" onclick="event.stopPropagation(); duplicateQuestion({{ $exam->exam_id }}, {{ $item->item_id }})">
@@ -1269,32 +1142,8 @@
                     <span id="commentBadge_{{ $item->item_id }}" style="position: absolute; top: -4px; right: -4px; background-color: #ef4444; color: white; border-radius: 10px; padding: 2px 6px; font-size: 0.7rem; font-weight: 600; min-width: 18px; text-align: center; {{ $item->comments_count > 0 ? '' : 'display: none;' }}">{{ $item->comments_count }}</span>
                 </button>
             </div>
-            <!-- Floating dropdown for add button -->
-            @if($exam->is_owner)
-            <div class="floating-question-dropdown" id="floatingDropdown_{{ $item->item_id }}" style="display: none;">
-                <button class="dropdown-item" onclick="event.stopPropagation(); openQuestionModalAfter('mcq', {{ $section->section_id }}, {{ $item->item_id }})">
-                    <i class="bi bi-ui-radios"></i>
-                    <span>New MCQ</span>
-                </button>
-                <button class="dropdown-item" onclick="event.stopPropagation(); openQuestionModalAfter('torf', {{ $section->section_id }}, {{ $item->item_id }})">
-                    <i class="bi bi-toggle-on"></i>
-                    <span>New True or False</span>
-                </button>
-                <button class="dropdown-item" onclick="event.stopPropagation(); openQuestionModalAfter('iden', {{ $section->section_id }}, {{ $item->item_id }})">
-                    <i class="bi bi-pencil-square"></i>
-                    <span>New Identification</span>
-                </button>
-                <button class="dropdown-item" onclick="event.stopPropagation(); openQuestionModalAfter('enum', {{ $section->section_id }}, {{ $item->item_id }})">
-                    <i class="bi bi-list-ol"></i>
-                    <span>New Enumeration</span>
-                </button>
-                <button class="dropdown-item" onclick="event.stopPropagation(); openQuestionModalAfter('essay', {{ $section->section_id }}, {{ $item->item_id }})">
-                    <i class="bi bi-textarea-t"></i>
-                    <span>New Essay</span>
-                </button>
-            </div>
-            @endif
-            <!-- Floating Comments Box -->
+
+            {{-- Comments Box --}}
             <div class="floating-comments-box" id="commentsBox_{{ $item->item_id }}">
                 <div class="comments-header">
                     <span>Comments</span>
@@ -1357,25 +1206,9 @@
                         <i class="bi bi-file-earmark-plus"></i>
                         <span>New Section</span>
                     </button>
-                    <button class="dropdown-item" onclick="openQuestionModal('mcq', activeSectionId)">
-                        <i class="bi bi-ui-radios"></i>
-                        <span>New MCQ</span>
-                    </button>
-                    <button class="dropdown-item" onclick="openQuestionModal('torf', activeSectionId)">
-                        <i class="bi bi-toggle-on"></i>
-                        <span>New True or False</span>
-                    </button>
-                    <button class="dropdown-item" onclick="openQuestionModal('iden', activeSectionId)">
-                        <i class="bi bi-pencil-square"></i>
-                        <span>New Identification</span>
-                    </button>
-                    <button class="dropdown-item" onclick="openQuestionModal('enum', activeSectionId)">
-                        <i class="bi bi-list-ol"></i>
-                        <span>New Enumeration</span>
-                    </button>
-                    <button class="dropdown-item" onclick="openQuestionModal('essay', activeSectionId)">
-                        <i class="bi bi-textarea-t"></i>
-                        <span>New Essay</span>
+                    <button class="dropdown-item" onclick="addQuestionInstantly(activeSectionId)">
+                        <i class="bi bi-plus-circle"></i>
+                        <span>New Question</span>
                     </button>
                     @endif
                 </div>
@@ -1565,7 +1398,7 @@
     </div>
 </div>
 
-@include('instructor.exam.question-modal')
+{{-- Removed question-modal - Using inline editing now --}}
 
 <script>
 // Exam variables
@@ -1574,6 +1407,20 @@ var approvalStatus = '{{ $exam->status ?? "draft" }}';
 var isLocked = (approvalStatus === 'for approval' || approvalStatus === 'approved' || approvalStatus === 'archived');
 var isOwner = @json($exam->is_owner ?? false);
 var isCollaborator = @json($exam->is_collaborator ?? false);
+
+// Add collaborator class to body for CSS targeting
+if (isCollaborator) {
+    document.body.classList.add('is-collaborator');
+}
+
+// Apply locked state to question cards
+if (isLocked) {
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.question-card').forEach(card => {
+            card.style.cursor = 'default';
+        });
+    });
+}
 
 console.log('Exam Debug:', {
     examId: examId,
@@ -1872,8 +1719,38 @@ function duplicateQuestion(examId, itemId) {
     .then(response => response.json())
     .then(result => {
         if (result.success) {
-            location.reload();
+            // Find the current question wrapper
+            const questionCard = document.querySelector(`.question-card[data-question-id="${itemId}"]`);
+            const questionWrapper = questionCard ? questionCard.closest('.question-wrapper') : null;
+            
+            if (questionWrapper && result.html) {
+                // Insert the new question after the current one
+                questionWrapper.insertAdjacentHTML('afterend', result.html);
+                
+                // Animate the new question
+                const newWrapper = questionWrapper.nextElementSibling;
+                if (newWrapper) {
+                    newWrapper.style.opacity = '0';
+                    newWrapper.style.transform = 'scale(0.95)';
+                    setTimeout(() => {
+                        newWrapper.style.transition = 'all 0.3s ease';
+                        newWrapper.style.opacity = '1';
+                        newWrapper.style.transform = 'scale(1)';
+                    }, 10);
+                }
+                
+                showToast('Question duplicated successfully', 'success');
+            } else {
+                // Fallback to reload if DOM manipulation fails
+                location.reload();
+            }
+        } else {
+            showToast(result.message || 'Failed to duplicate question', 'error');
         }
+    })
+    .catch(error => {
+        console.error('Duplicate error:', error);
+        showToast('An error occurred while duplicating the question', 'error');
     });
 }
 
@@ -1884,7 +1761,11 @@ function deleteQuestion(examId, itemId) {
         return;
     }
     
-    if (confirm('Are you sure you want to delete this question?')) {
+    if (confirm('Are you sure you want to delete this question? This action cannot be undone.')) {
+        // Find the question wrapper element
+        const questionCard = document.querySelector(`.question-card[data-question-id="${itemId}"]`);
+        const questionWrapper = questionCard ? questionCard.closest('.question-wrapper') : null;
+        
         fetch(`/instructor/exams/${examId}/questions/${itemId}`, {
             method: 'DELETE',
             headers: {
@@ -1894,8 +1775,27 @@ function deleteQuestion(examId, itemId) {
         .then(response => response.json())
         .then(result => {
             if (result.success) {
-                location.reload();
+                // Remove the question from DOM with animation
+                if (questionWrapper) {
+                    questionWrapper.style.opacity = '0';
+                    questionWrapper.style.transform = 'scale(0.95)';
+                    questionWrapper.style.transition = 'all 0.3s ease';
+                    
+                    setTimeout(() => {
+                        questionWrapper.remove();
+                        showToast('Question deleted successfully', 'success');
+                    }, 300);
+                } else {
+                    // Fallback to reload if DOM manipulation fails
+                    location.reload();
+                }
+            } else {
+                showToast(result.message || 'Failed to delete question', 'error');
             }
+        })
+        .catch(error => {
+            console.error('Delete error:', error);
+            showToast('An error occurred while deleting the question', 'error');
         });
     }
 }
@@ -1918,8 +1818,35 @@ function moveQuestion(itemId, direction) {
     .then(response => response.json())
     .then(result => {
         if (result.success) {
-            location.reload();
+            // Find the question wrapper
+            const questionCard = document.querySelector(`.question-card[data-question-id="${itemId}"]`);
+            const questionWrapper = questionCard ? questionCard.closest('.question-wrapper') : null;
+            
+            if (questionWrapper) {
+                if (direction === 'up') {
+                    const previousWrapper = questionWrapper.previousElementSibling;
+                    if (previousWrapper && previousWrapper.classList.contains('question-wrapper')) {
+                        // Swap with previous element
+                        questionWrapper.parentNode.insertBefore(questionWrapper, previousWrapper);
+                    }
+                } else if (direction === 'down') {
+                    const nextWrapper = questionWrapper.nextElementSibling;
+                    if (nextWrapper && nextWrapper.classList.contains('question-wrapper')) {
+                        // Swap with next element
+                        questionWrapper.parentNode.insertBefore(nextWrapper, questionWrapper);
+                    }
+                }
+            } else {
+                // Fallback to reload if DOM manipulation fails
+                location.reload();
+            }
+        } else {
+            showToast(result.message || 'Failed to move question', 'error');
         }
+    })
+    .catch(error => {
+        console.error('Move error:', error);
+        showToast('An error occurred while moving the question', 'error');
     });
 }
 
@@ -2157,9 +2084,26 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
     });
+    
+    // Close expanded question cards when clicking outside
+    document.addEventListener('click', function(e) {
+        const expandedCards = document.querySelectorAll('.question-card.expanded');
+        expandedCards.forEach(card => {
+            // Check if click is outside the card
+            if (!card.contains(e.target)) {
+                collapseQuestionCard(card, false, false);
+            }
+        });
+    });
 });
 
 function initDragAndDrop() {
+    // Don't initialize drag and drop for collaborators
+    if (isCollaborator) {
+        console.log('Drag and drop disabled for collaborators');
+        return;
+    }
+    
     const dragHandles = document.querySelectorAll('.drag-handle');
     console.log('Initializing drag and drop for', dragHandles.length, 'handles');
     
@@ -2411,9 +2355,84 @@ function handleSectionDrop(e) {
     
     console.log('Drop on section detected');
     
-    // If we have a lastDropTarget from hovering over a wrapper, use that
-    if (lastDropTarget) {
-        handleDrop.call(lastDropTarget, e);
+    const section = e.currentTarget;
+    const sectionId = section.dataset.sectionId;
+    
+    // Check if in same section
+    if (sectionId !== draggedItem.sectionId) {
+        alert('Cannot move questions between different sections');
+        return false;
+    }
+    
+    const wrappers = Array.from(section.querySelectorAll('.question-wrapper'));
+    
+    if (wrappers.length === 0) {
+        console.log('No questions in section');
+        return false;
+    }
+    
+    // Remove the dragged wrapper from the list to find actual target
+    const otherWrappers = wrappers.filter(w => w !== draggedItem.wrapper);
+    
+    if (otherWrappers.length === 0) {
+        console.log('Only one question in section, nothing to reorder');
+        return false;
+    }
+    
+    // Get mouse position
+    const mouseY = e.clientY;
+    
+    // Find the wrapper to insert before/after based on mouse position
+    let targetWrapper = null;
+    let insertBefore = true;
+    
+    for (let i = 0; i < otherWrappers.length; i++) {
+        const wrapper = otherWrappers[i];
+        const rect = wrapper.getBoundingClientRect();
+        const midPoint = rect.top + rect.height / 2;
+        
+        if (mouseY < midPoint) {
+            // Drop before this wrapper
+            targetWrapper = wrapper;
+            insertBefore = true;
+            break;
+        }
+    }
+    
+    // If no wrapper found, drop at the end
+    if (!targetWrapper) {
+        targetWrapper = otherWrappers[otherWrappers.length - 1];
+        insertBefore = false;
+    }
+    
+    const targetItemId = targetWrapper.dataset.itemId;
+    
+    if (!targetItemId) {
+        console.error('Target wrapper has no item ID');
+        return false;
+    }
+    
+    console.log('Section drop:', { targetItemId, insertBefore });
+    
+    // Update DOM
+    try {
+        if (insertBefore) {
+            section.insertBefore(draggedItem.wrapper, targetWrapper);
+        } else {
+            const nextSibling = targetWrapper.nextSibling;
+            if (nextSibling) {
+                section.insertBefore(draggedItem.wrapper, nextSibling);
+            } else {
+                section.appendChild(draggedItem.wrapper);
+            }
+        }
+        
+        // Call API to persist
+        reorderQuestionByDrag(draggedItem.itemId, targetItemId, insertBefore);
+    } catch (err) {
+        console.error('Error in handleSectionDrop:', err);
+        alert('Error reordering questions. Page will reload.');
+        location.reload();
     }
     
     return false;
@@ -2561,17 +2580,18 @@ function reorderQuestionByDrag(draggedItemId, targetItemId, insertBefore = true)
     .then(response => response.json())
     .then(result => {
         if (result.success) {
-            // Reload to ensure database and UI are in sync
-            location.reload();
+            console.log('Question reordered successfully');
+            // No reload needed - DOM is already updated
+            showToast('Question order updated', 'success');
         } else {
             alert('Error reordering questions: ' + (result.error || 'Unknown error'));
-            location.reload(); // Reload to restore correct order
+            location.reload(); // Reload to restore correct order on error
         }
     })
     .catch(error => {
         console.error('Error reordering questions:', error);
         alert('Failed to reorder questions. Please try again.');
-        location.reload(); // Reload to restore correct order
+        location.reload(); // Reload to restore correct order on error
     });
 }
 
@@ -3033,6 +3053,838 @@ function downloadExam(format) {
 function showDownloadNotAvailable() {
     alert('Download feature is not yet available. This feature is currently under development.');
 }
+
+//==============================================
+// GOOGLE FORMS-STYLE INLINE QUESTION EDITING
+//==============================================
+
+/**
+ * Add a question instantly with default MCQ configuration
+ */
+function addQuestionInstantly(sectionId, afterItemId = null) {
+    const btn = event ? event.target.closest('button') : null;
+    const originalHTML = btn ? btn.innerHTML : '';
+    
+    // Show loading state
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Adding...';
+    }
+    
+    // Prepare request data
+    const data = {
+        section_id: sectionId
+    };
+    
+    if (afterItemId) {
+        data.after_item_id = afterItemId;
+    }
+    
+    // Send AJAX request
+    fetch(`/instructor/exams/${examId}/questions/instant`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => {
+        if (!response.ok) {
+            // Log the actual error for debugging
+            return response.text().then(text => {
+                console.error('Server response:', text);
+                throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            showToast('Question created successfully', 'success');
+            
+            // Insert the new question card into the DOM
+            if (data.html) {
+                if (afterItemId) {
+                    // Find the question wrapper with the afterItemId
+                    const afterCard = document.querySelector(`.question-card[data-question-id="${afterItemId}"]`);
+                    const afterWrapper = afterCard ? afterCard.closest('.question-wrapper') : null;
+                    
+                    if (afterWrapper) {
+                        // Insert after the specified item
+                        afterWrapper.insertAdjacentHTML('afterend', data.html);
+                    } else {
+                        // Fallback: append to end of section
+                        const sectionContainer = document.querySelector(`.exam-section[data-section-id="${sectionId}"]`);
+                        if (sectionContainer) {
+                            sectionContainer.insertAdjacentHTML('beforeend', data.html);
+                        }
+                    }
+                } else {
+                    // Add to end of section
+                    const sectionContainer = document.querySelector(`.exam-section[data-section-id="${sectionId}"]`);
+                    if (sectionContainer) {
+                        sectionContainer.insertAdjacentHTML('beforeend', data.html);
+                    }
+                }
+                
+                // Animate the new question
+                const newWrapper = document.querySelector(`.question-wrapper[data-item-id="${data.item.item_id}"]`);
+                if (newWrapper) {
+                    newWrapper.style.opacity = '0';
+                    newWrapper.style.transform = 'scale(0.95)';
+                    setTimeout(() => {
+                        newWrapper.style.transition = 'all 0.3s ease';
+                        newWrapper.style.opacity = '1';
+                        newWrapper.style.transform = 'scale(1)';
+                        
+                        // Auto-expand the new card
+                        const newCard = newWrapper.querySelector('.question-card');
+                        if (newCard) {
+                            setTimeout(() => expandQuestionCard(newCard), 300);
+                        }
+                    }, 10);
+                }
+                
+                // Reset button state
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = originalHTML;
+                }
+            } else {
+                // Fallback to reload if HTML is not provided
+                setTimeout(() => {
+                    location.reload();
+                }, 500);
+            }
+        } else {
+            throw new Error(data.error || 'Failed to create question');
+        }
+    })
+    .catch(error => {
+        console.error('Error creating question:', error);
+        showToast('Failed to create question: ' + error.message, 'error');
+        
+        // Reset button state
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = originalHTML;
+        }
+    });
+}
+
+/**
+ * Expand a question card to show editing form
+ */
+function expandQuestionCard(cardElement) {
+    // Don't expand if exam is not in draft status
+    if (isLocked) {
+        return;
+    }
+    
+    // Don't expand if user is a collaborator (they can only comment)
+    if (isCollaborator) {
+        return;
+    }
+    
+    // Don't expand if clicking on a button or input
+    if (event && event.target.closest('button, input, textarea, select')) {
+        return;
+    }
+    
+    // Collapse all other cards first
+    document.querySelectorAll('.question-card.expanded').forEach(card => {
+        if (card !== cardElement) {
+            collapseQuestionCard(card, false, false);
+        }
+    });
+    
+    // Expand this card
+    cardElement.classList.add('expanded');
+    
+    // If essay type, ensure points are calculated from weights
+    const itemType = cardElement.getAttribute('data-item-type');
+    if (itemType === 'essay') {
+        const pointsInput = cardElement.querySelector('.points-input');
+        if (pointsInput) {
+            pointsInput.setAttribute('readonly', 'readonly');
+            pointsInput.style.backgroundColor = '#f3f4f6';
+            pointsInput.style.cursor = 'not-allowed';
+        }
+        
+        // Calculate points from current weights
+        const weights = cardElement.querySelectorAll('.essay-weight');
+        let total = 0;
+        weights.forEach(weight => {
+            total += parseInt(weight.value) || 0;
+        });
+        if (pointsInput) {
+            pointsInput.value = total;
+        }
+    }
+    
+    // Focus on question input after a short delay
+    setTimeout(() => {
+        const questionInput = cardElement.querySelector('.question-input');
+        if (questionInput && !questionInput.value) {
+            questionInput.focus();
+        }
+    }, 100);
+}
+
+/**
+ * Collapse a question card (with optional save)
+ */
+function collapseQuestionCard(elementOrEvent, shouldSave = true, useEvent = true) {
+    let cardElement;
+    
+    if (useEvent && elementOrEvent && typeof elementOrEvent.closest === 'function') {
+        // Called from button click
+        cardElement = elementOrEvent.closest('.question-card');
+    } else {
+        // Called directly with card element
+        cardElement = elementOrEvent;
+    }
+    
+    if (!cardElement) return;
+    
+    // If should save and question has content, save it first
+    if (shouldSave) {
+        const questionInput = cardElement.querySelector('.question-input');
+        if (questionInput && questionInput.value.trim()) {
+            saveQuestionInline(cardElement, true);
+            return; // Save function will handle collapse
+        }
+    }
+    
+    // Just collapse without saving
+    cardElement.classList.remove('expanded');
+}
+
+/**
+ * Save question inline (AJAX)
+ */
+function saveQuestionInline(elementOrEvent, shouldCollapse = false) {
+    let cardElement;
+    
+    if (elementOrEvent instanceof HTMLElement && elementOrEvent.classList.contains('question-card')) {
+        // Called directly with card element
+        cardElement = elementOrEvent;
+    } else if (elementOrEvent && typeof elementOrEvent.closest === 'function') {
+        // Called from button click
+        cardElement = elementOrEvent.closest('.question-card');
+    } else {
+        return;
+    }
+    
+    if (!cardElement) return;
+    
+    const questionId = cardElement.getAttribute('data-question-id');
+    const form = cardElement.querySelector('.question-edit-form');
+    
+    // Get active question type
+    const activeTypeBtn = form.querySelector('.type-btn.active');
+    const itemType = activeTypeBtn ? activeTypeBtn.getAttribute('data-type') : 'mcq';
+    
+    // Get form data
+    const question = form.querySelector('[name="question"]').value.trim();
+    const pointsAwarded = parseInt(form.querySelector('[name="points_awarded"]').value) || 1;
+    
+    // Validate question text
+    if (!question) {
+        showToast('Please enter a question', 'error');
+        form.querySelector('[name="question"]').focus();
+        return;
+    }
+    
+    // Prepare data based on question type
+    let formData = {
+        question: question,
+        item_type: itemType,
+        points_awarded: pointsAwarded
+    };
+    
+    // Add type-specific data
+    if (itemType === 'mcq') {
+        const options = [];
+        const correctAnswers = [];
+        
+        form.querySelectorAll('.option-input').forEach(input => {
+            const value = input.value.trim();
+            options.push(value);
+        });
+        
+        form.querySelectorAll('.correct-answer-checkbox:checked').forEach(checkbox => {
+            correctAnswers.push(parseInt(checkbox.value));
+        });
+        
+        if (options.filter(o => o).length < 2) {
+            showToast('Please add at least 2 options', 'error');
+            return;
+        }
+        
+        if (correctAnswers.length === 0) {
+            showToast('Please select at least one correct answer', 'error');
+            return;
+        }
+        
+        formData.options = JSON.stringify(options);
+        formData.answer = JSON.stringify(correctAnswers);
+        
+    } else if (itemType === 'torf') {
+        const torfAnswer = form.querySelector(`input[name^="torf_answer"]:checked`);
+        if (!torfAnswer) {
+            showToast('Please select the correct answer', 'error');
+            return;
+        }
+        formData.answer = JSON.stringify({ correct: torfAnswer.value });
+        
+    } else if (itemType === 'iden') {
+        const expectedAnswer = form.querySelector('[name="expected_answer"]').value.trim();
+        if (!expectedAnswer) {
+            showToast('Please enter the expected answer', 'error');
+            return;
+        }
+        formData.expected_answer = expectedAnswer;
+        
+    } else if (itemType === 'enum') {
+        const enumType = form.querySelector(`input[name^="enum_type"]:checked`);
+        const answers = [];
+        
+        form.querySelectorAll('.enum-answer-input').forEach(input => {
+            const value = input.value.trim();
+            if (value) {
+                answers.push(value);
+            }
+        });
+        
+        if (answers.length < 2) {
+            showToast('Please add at least 2 answers', 'error');
+            return;
+        }
+        
+        formData.enum_type = enumType ? enumType.value : 'ordered';
+        formData.answer = JSON.stringify(answers);
+        
+    } else if (itemType === 'essay') {
+        // Get rubric data (talking points and weights)
+        const talkingPoints = [];
+        const weights = [];
+        
+        form.querySelectorAll('.essay-talking-point').forEach(input => {
+            const value = input.value.trim();
+            if (value) {
+                talkingPoints.push(value);
+            }
+        });
+        
+        form.querySelectorAll('.essay-weight').forEach(input => {
+            const value = parseInt(input.value) || 0;
+            weights.push(value);
+        });
+        
+        // Validate rubric
+        if (talkingPoints.length < 2) {
+            showToast('Please add at least 2 rubric items', 'error');
+            return;
+        }
+        
+        if (weights.some(w => w <= 0)) {
+            showToast('All rubric weights must be greater than 0', 'error');
+            return;
+        }
+        
+        // Build rubric array
+        const rubric = talkingPoints.map((point, index) => ({
+            talking_point: point,
+            weight: weights[index] || 0
+        }));
+        
+        formData.expected_answer = JSON.stringify(rubric);
+    }
+    
+    // Show saving state
+    const saveBtn = form.querySelector('.btn-primary');
+    const originalBtnText = saveBtn ? saveBtn.innerHTML : '';
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving...';
+    }
+    
+    // Determine if this is a new question or update
+    const isNew = !questionId || questionId === 'new';
+    const url = isNew 
+        ? `/instructor/exams/${examId}/questions` 
+        : `/instructor/exams/${examId}/questions/${questionId}`;
+    const method = isNew ? 'POST' : 'PUT';
+    
+    // Add section_id for new questions
+    if (isNew) {
+        const wrapper = cardElement.closest('.question-wrapper');
+        const sectionCard = wrapper ? wrapper.closest('.exam-section') : null;
+        formData.section_id = sectionCard ? sectionCard.getAttribute('data-section-id') : null;
+    }
+    
+    // Send AJAX request
+    fetch(url, {
+        method: method,
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+        },
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast('Question saved successfully', 'success');
+            
+            // Update the card with new data instead of reloading
+            if (data.item) {
+                updateQuestionCardData(cardElement, data.item);
+            }
+            
+            // Collapse the card
+            if (shouldCollapse) {
+                cardElement.classList.remove('expanded');
+            }
+            
+            // Reset button state
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = originalBtnText;
+            }
+        } else {
+            throw new Error(data.error || 'Failed to save question');
+        }
+    })
+    .catch(error => {
+        console.error('Error saving question:', error);
+        showToast('Failed to save question: ' + error.message, 'error');
+        
+        // Reset button state
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = originalBtnText;
+        }
+    });
+}
+
+/**
+ * Update question card data after save
+ */
+function updateQuestionCardData(cardElement, item) {
+    // Update card attributes
+    cardElement.setAttribute('data-question-id', item.item_id);
+    cardElement.setAttribute('data-item-type', item.item_type);
+    
+    // Update wrapper data-item-id
+    const wrapper = cardElement.closest('.question-wrapper');
+    if (wrapper) {
+        wrapper.setAttribute('data-item-id', item.item_id);
+    }
+    
+    // Parse data
+    const options = item.options ? JSON.parse(item.options) : [];
+    const answer = item.answer ? JSON.parse(item.answer) : [];
+    
+    // Type badge labels
+    const typeLabels = {
+        'mcq': 'MCQ',
+        'torf': 'T/F',
+        'iden': 'IDEN',
+        'enum': 'ENUM',
+        'essay': 'ESSAY'
+    };
+    
+    // Update collapsed view
+    const collapsedView = cardElement.querySelector('.question-card-collapsed');
+    if (collapsedView) {
+        // Update type badge
+        const typeBadge = collapsedView.querySelector('.question-type-badge');
+        if (typeBadge) {
+            typeBadge.className = `question-type-badge badge-${item.item_type}`;
+            typeBadge.textContent = typeLabels[item.item_type] || 'MCQ';
+        }
+        
+        // Update question text
+        const textPreview = collapsedView.querySelector('.question-text-preview');
+        if (textPreview) {
+            textPreview.textContent = item.question || 'Click to add question text';
+        }
+        
+        // Update points
+        const pointsBadge = collapsedView.querySelector('.question-points-badge');
+        if (pointsBadge) {
+            pointsBadge.textContent = `${item.points_awarded} ${item.points_awarded == 1 ? 'point' : 'points'}`;
+        }
+        
+        // Update options preview for MCQ
+        let optionsPreview = collapsedView.querySelector('.question-options-preview');
+        if (item.item_type === 'mcq' && options.filter(o => o).length > 0) {
+            if (!optionsPreview) {
+                optionsPreview = document.createElement('div');
+                optionsPreview.className = 'question-options-preview';
+                collapsedView.appendChild(optionsPreview);
+            }
+            
+            optionsPreview.innerHTML = '';
+            options.forEach((option, index) => {
+                if (option) {
+                    const isCorrect = answer.includes(index);
+                    const optionDiv = document.createElement('div');
+                    optionDiv.className = `option-preview ${isCorrect ? 'correct' : ''}`;
+                    optionDiv.innerHTML = `
+                        <span class="option-letter">${String.fromCharCode(65 + index)}.</span>
+                        <span class="option-text">${option}</span>
+                        ${isCorrect ? '<i class="bi bi-check-circle-fill text-success"></i>' : ''}
+                    `;
+                    optionsPreview.appendChild(optionDiv);
+                }
+            });
+        } else if (optionsPreview) {
+            optionsPreview.remove();
+        }
+    }
+    
+    // Update expanded view form values
+    const form = cardElement.querySelector('.question-edit-form');
+    if (form) {
+        // Update question text
+        const questionInput = form.querySelector('[name="question"]');
+        if (questionInput) {
+            questionInput.value = item.question || '';
+        }
+        
+        // Update points
+        const pointsInput = form.querySelector('[name="points_awarded"]');
+        if (pointsInput) {
+            pointsInput.value = item.points_awarded || 1;
+        }
+        
+        // Update type-specific fields
+        if (item.item_type === 'mcq') {
+            const optionInputs = form.querySelectorAll('.option-input');
+            optionInputs.forEach((input, index) => {
+                input.value = options[index] || '';
+            });
+            
+            const checkboxes = form.querySelectorAll('.correct-answer-checkbox');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = answer.includes(parseInt(checkbox.value));
+            });
+        } else if (item.item_type === 'iden') {
+            const expectedAnswerInput = form.querySelector('[name="expected_answer"]');
+            if (expectedAnswerInput) {
+                expectedAnswerInput.value = item.expected_answer || '';
+            }
+        } else if (item.item_type === 'enum') {
+            const enumInputs = form.querySelectorAll('.enum-answer-input');
+            enumInputs.forEach((input, index) => {
+                input.value = answer[index] || '';
+            });
+            
+            const enumTypeRadios = form.querySelectorAll(`input[name^="enum_type"]`);
+            enumTypeRadios.forEach(radio => {
+                radio.checked = radio.value === item.enum_type;
+            });
+        } else if (item.item_type === 'torf') {
+            const torfRadios = form.querySelectorAll(`input[name^="torf_answer"]`);
+            torfRadios.forEach(radio => {
+                radio.checked = radio.value === answer.correct;
+            });
+        }
+    }
+}
+
+/**
+ * Switch question type
+ */
+function switchQuestionType(button, type) {
+    const form = button.closest('.question-edit-form');
+    const cardElement = button.closest('.question-card');
+    
+    // Update active button
+    form.querySelectorAll('.type-btn').forEach(btn => btn.classList.remove('active'));
+    button.classList.add('active');
+    
+    // Hide all type-specific fields
+    form.querySelectorAll('.question-type-fields').forEach(fields => {
+        fields.classList.add('d-none');
+    });
+    
+    // Show selected type fields
+    const typeFields = form.querySelector(`.${type}-fields`);
+    if (typeFields) {
+        typeFields.classList.remove('d-none');
+    }
+    
+    // Handle points field for essay type
+    const pointsInput = form.querySelector('.points-input');
+    const pointsNote = form.querySelector('.essay-points-note');
+    if (type === 'essay') {
+        // Make readonly and calculate from weights
+        pointsInput.setAttribute('readonly', 'readonly');
+        pointsInput.style.backgroundColor = '#f3f4f6';
+        pointsInput.style.cursor = 'not-allowed';
+        if (pointsNote) pointsNote.style.display = 'inline';
+        
+        // Calculate total from existing weights
+        calculateEssayPointsInline(button);
+    } else {
+        // Make editable
+        pointsInput.removeAttribute('readonly');
+        pointsInput.style.backgroundColor = '';
+        pointsInput.style.cursor = '';
+        if (pointsNote) pointsNote.style.display = 'none';
+    }
+    
+    // Update type badge in collapsed view
+    const typeBadge = cardElement.querySelector('.question-type-badge');
+    const typeLabels = {
+        'mcq': 'MCQ',
+        'torf': 'T/F',
+        'iden': 'IDEN',
+        'enum': 'ENUM',
+        'essay': 'ESSAY'
+    };
+    if (typeBadge) {
+        typeBadge.textContent = typeLabels[type] || 'MCQ';
+        typeBadge.className = `question-type-badge badge-${type}`;
+    }
+    
+    // Update data attribute
+    cardElement.setAttribute('data-item-type', type);
+}
+
+/**
+ * Add MCQ option
+ */
+function addMCQOption(button) {
+    const container = button.previousElementSibling;
+    const optionRows = container.querySelectorAll('.mcq-option-row');
+    const newIndex = optionRows.length;
+    
+    if (newIndex >= 26) {
+        showToast('Maximum 26 options allowed (A-Z)', 'error');
+        return;
+    }
+    
+    const newRow = document.createElement('div');
+    newRow.className = 'mcq-option-row';
+    newRow.innerHTML = `
+        <div class="option-letter-label">${String.fromCharCode(65 + newIndex)}</div>
+        <input type="text" class="form-control option-input" placeholder="Option ${String.fromCharCode(65 + newIndex)}" value="" data-index="${newIndex}">
+        <label class="correct-checkbox">
+            <input type="checkbox" class="correct-answer-checkbox" value="${newIndex}">
+            <span>Correct</span>
+        </label>
+        <button type="button" class="btn-remove-option" onclick="removeMCQOption(this)" title="Remove option">
+            <i class="bi bi-x-circle"></i>
+        </button>
+    `;
+    
+    container.appendChild(newRow);
+}
+
+/**
+ * Remove MCQ option
+ */
+function removeMCQOption(button) {
+    const container = button.closest('.mcq-options-container');
+    const optionRows = container.querySelectorAll('.mcq-option-row');
+    
+    if (optionRows.length <= 2) {
+        showToast('At least 2 options are required', 'error');
+        return;
+    }
+    
+    button.closest('.mcq-option-row').remove();
+    
+    // Re-index remaining options
+    container.querySelectorAll('.mcq-option-row').forEach((row, index) => {
+        row.querySelector('.option-letter-label').textContent = String.fromCharCode(65 + index);
+        row.querySelector('.option-input').placeholder = `Option ${String.fromCharCode(65 + index)}`;
+        row.querySelector('.option-input').setAttribute('data-index', index);
+        row.querySelector('.correct-answer-checkbox').value = index;
+    });
+}
+
+/**
+ * Add enumeration answer
+ */
+function addEnumAnswer(button) {
+    const container = button.previousElementSibling;
+    const answerRows = container.querySelectorAll('.enum-answer-row');
+    const newIndex = answerRows.length;
+    
+    const newRow = document.createElement('div');
+    newRow.className = 'enum-answer-row';
+    newRow.innerHTML = `
+        <div class="enum-number">${newIndex + 1}.</div>
+        <input type="text" class="form-control enum-answer-input" placeholder="Answer ${newIndex + 1}" value="" data-index="${newIndex}">
+        <button type="button" class="btn-remove-enum" onclick="removeEnumAnswer(this)" title="Remove answer">
+            <i class="bi bi-x-circle"></i>
+        </button>
+    `;
+    
+    container.appendChild(newRow);
+}
+
+/**
+ * Remove enumeration answer
+ */
+function removeEnumAnswer(button) {
+    const container = button.closest('.enum-answers-container');
+    const answerRows = container.querySelectorAll('.enum-answer-row');
+    
+    if (answerRows.length <= 2) {
+        showToast('At least 2 answers are required', 'error');
+        return;
+    }
+    
+    button.closest('.enum-answer-row').remove();
+    
+    // Re-number remaining answers
+    container.querySelectorAll('.enum-answer-row').forEach((row, index) => {
+        row.querySelector('.enum-number').textContent = `${index + 1}.`;
+        row.querySelector('.enum-answer-input').placeholder = `Answer ${index + 1}`;
+        row.querySelector('.enum-answer-input').setAttribute('data-index', index);
+    });
+}
+
+/**
+ * Add Essay Rubric Row (Inline)
+ */
+function addEssayRubricInline(button) {
+    const container = button.closest('.essay-fields').querySelector('.essay-rubrics-container');
+    const currentRows = container.querySelectorAll('.essay-rubric-row');
+    const newIndex = currentRows.length;
+    
+    const div = document.createElement('div');
+    div.className = 'essay-rubric-row';
+    div.innerHTML = `
+        <input type="text" class="form-control essay-talking-point" placeholder="Write a talking point here..." value="" data-index="${newIndex}" required>
+        <input type="number" class="form-control essay-weight" placeholder="0" min="1" value="0" data-index="${newIndex}" oninput="calculateEssayPointsInline(this)" required>
+        <button type="button" class="btn-remove-rubric-inline" onclick="removeEssayRubricInline(this)" title="Remove rubric">
+            <i class="bi bi-x-circle"></i>
+        </button>
+    `;
+    container.appendChild(div);
+}
+
+/**
+ * Remove Essay Rubric Row (Inline)
+ */
+function removeEssayRubricInline(button) {
+    const container = button.closest('.essay-rubrics-container');
+    const rubricRows = container.querySelectorAll('.essay-rubric-row');
+    
+    if (rubricRows.length <= 2) {
+        showToast('At least 2 rubric items are required', 'error');
+        return;
+    }
+    
+    button.closest('.essay-rubric-row').remove();
+    
+    // Re-index remaining rubrics
+    container.querySelectorAll('.essay-rubric-row').forEach((row, index) => {
+        row.querySelector('.essay-talking-point').setAttribute('data-index', index);
+        row.querySelector('.essay-weight').setAttribute('data-index', index);
+    });
+    
+    // Recalculate total points
+    calculateEssayPointsInline(button);
+}
+
+/**
+ * Calculate Essay Points (Sum of Weights) - Inline
+ */
+function calculateEssayPointsInline(element) {
+    const card = element.closest('.question-card');
+    if (!card) return;
+    
+    const weights = card.querySelectorAll('.essay-weight');
+    let total = 0;
+    
+    weights.forEach(weight => {
+        const value = parseInt(weight.value) || 0;
+        total += value;
+    });
+    
+    const pointsInput = card.querySelector('.points-input');
+    if (pointsInput) {
+        pointsInput.value = total;
+    }
+}
+
+/**
+ * Show toast notification
+ */
+function showToast(message, type = 'info') {
+    // Create toast container if it doesn't exist
+    let toastContainer = document.querySelector('.toast-notification-container');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.className = 'toast-notification-container';
+        toastContainer.style.cssText = 'position: fixed; top: 80px; right: 20px; z-index: 10000;';
+        document.body.appendChild(toastContainer);
+    }
+    
+    const toast = document.createElement('div');
+    toast.className = `toast-notification toast-${type}`;
+    toast.style.cssText = `
+        background: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#3b82f6'};
+        color: white;
+        padding: 16px 24px;
+        border-radius: 8px;
+        margin-bottom: 12px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        animation: slideInRight 0.3s ease;
+        max-width: 400px;
+    `;
+    toast.textContent = message;
+    
+    toastContainer.appendChild(toast);
+    
+    // Auto-remove after 3 seconds
+    setTimeout(() => {
+        toast.style.animation = 'slideOutRight 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+// Add CSS animations for toast
+if (!document.getElementById('toast-animations')) {
+    const toastStyle = document.createElement('style');
+    toastStyle.id = 'toast-animations';
+    toastStyle.textContent = `
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes slideOutRight {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+    `;
+    document.head.appendChild(toastStyle);
+}
+
 </script>
 
 @endsection
