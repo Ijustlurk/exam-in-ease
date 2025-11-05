@@ -41,17 +41,22 @@
             background-clip: text;
         }
         .btn-login {
-            background: var(--primary-gradient);
+            background: linear-gradient(135deg, #5f9eb7 0%, #4a7a8f 50%, #5f9eb7 100%);
+            background-size: 300% 300%;
+            background-position: left center;
             color: white;
             border: none;
             padding: 0.5rem 1.5rem;
             border-radius: 25px;
             font-weight: 600;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            transition: transform 0.3s ease, box-shadow 0.3s ease, background-position 0.3s ease;
         }
         .btn-login:hover {
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(95, 158, 183, 0.4);
+            background: linear-gradient(135deg, #a7d7e9ff 0%, #7ab3ccff 50%, #4e9cb8ff 100%);
+            background-size: 300% 300%;
+            background-position: right center;
             color: white;
         }
         .btn-dashboard {
@@ -262,7 +267,36 @@
                 A modern, all-in-one exam administration platform designed for the College of Information and Computing Sciences. Streamline your exam management with powerful tools and intuitive design.
             </p>
         </div>
+        
+        @guest
+        <div class="mt-4">
+            <a href="{{ route('login') }}" id="loginBtn" class="btn btn-login btn-lg" style="padding: 1rem 3rem; font-size: 1.25rem; border-radius: 30px; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);">
+                <i class="fas fa-sign-in-alt me-2"></i> Login to Get Started
+            </a>
+        </div>
+        @endguest
     </section>
+
+    <script>
+        // Dynamic gradient following mouse movement
+        const loginBtn = document.getElementById('loginBtn');
+        if (loginBtn) {
+            loginBtn.addEventListener('mousemove', function(e) {
+                const rect = this.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                const xPercent = (x / rect.width) * 100;
+                const yPercent = (y / rect.height) * 100;
+                
+                this.style.backgroundPosition = `${xPercent}% ${yPercent}%`;
+            });
+            
+            loginBtn.addEventListener('mouseleave', function() {
+                this.style.backgroundPosition = 'left center';
+            });
+        }
+    </script>
 
     <!-- Features Section -->
     <section class="features-section">
