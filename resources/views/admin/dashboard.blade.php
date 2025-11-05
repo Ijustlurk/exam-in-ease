@@ -329,7 +329,7 @@
                 @empty
                     <div class="empty-state">
                         <i class="bi bi-inbox"></i>
-                        <p>No ongoing exams found.</p>
+                        <p>No exams found.</p>
                     </div>
                 @endforelse
             </div>
