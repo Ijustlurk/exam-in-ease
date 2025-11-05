@@ -39,9 +39,11 @@
                     </x-slot>
 
                     <x-slot name="content">
+                        {{-- Profile link temporarily disabled - route not defined
                         <x-dropdown-link :href="route('profile.edit')">
                             {{ __('Profile') }}
                         </x-dropdown-link>
+                        --}}
 
                         <!-- Authentication -->
                         <form method="POST" action="{{ route('logout') }}">
@@ -96,9 +98,11 @@
                 <div class="font-medium text-sm text-gray-500">{{ Auth::user()->email }}</div>
             </div>
             <div class="mt-3 space-y-1">
+                {{-- Profile link temporarily disabled - route not defined
                 <x-responsive-nav-link :href="route('profile.edit')">
                     {{ __('Profile') }}
                 </x-responsive-nav-link>
+                --}}
 
                 <!-- Authentication -->
                 <form method="POST" action="{{ route('logout') }}">
@@ -114,10 +118,3 @@
         </div>
     </div>
 </nav>
-
-<li class="nav-item">
-    <a href="{{ route('exam.statistics') }}" 
-       class="nav-link {{ request()->routeIs('exam.statistics') ? 'active' : '' }}">
-        <i class="bi bi-bar-chart"></i> Exam Statistics
-    </a>
-</li>

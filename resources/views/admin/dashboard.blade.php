@@ -157,6 +157,41 @@
             .exam-details p strong {
                 color: #495057;
             }
+            
+            .status-badge {
+                display: inline-block;
+                padding: 0.25rem 0.75rem;
+                border-radius: 12px;
+                font-size: 0.75rem;
+                font-weight: 600;
+                text-transform: uppercase;
+                margin-left: 0.5rem;
+            }
+            
+            .status-draft {
+                background-color: #e9ecef;
+                color: #495057;
+            }
+            
+            .status-for-approval {
+                background-color: #fff3cd;
+                color: #856404;
+            }
+            
+            .status-approved {
+                background-color: #d1ecf1;
+                color: #0c5460;
+            }
+            
+            .status-ongoing {
+                background-color: #d4edda;
+                color: #155724;
+            }
+            
+            .status-archived {
+                background-color: #f8d7da;
+                color: #721c24;
+            }
 
             .monitor-btn {
                 background-color: #28a745;
@@ -277,34 +312,53 @@
                 </div>
             </div>
 
-            <!-- Ongoing Exams Section -->
-            <h5 class="section-header">Ongoing Exams</h5>
+            <!--Exams Section -->
+            <h5 class="section-header">Exams</h5>
 
             <div class="exam-list">
                 @forelse ($recentExams ?? [] as $exam)
                     @php
-                        /** @var object $exam */
-                        $examTitle = property_exists($exam, 'exam_title') ? : 'N/A';
-                        $examId = property_exists($exam, 'exam_id') ? $exam->exam_id : 0;
-                        
-                        // Get collaborator name
-                        $collaboratorName = 'N/A';
-                        if (property_exists($exam, 'user') && $exam->user) {
-                            if (property_exists($exam->user, 'teacher') && $exam->user->teacher) {
-                                $firstName = property_exists($exam->user->teacher, 'first_name') ? $exam->user->teacher->first_name : '';
-                                $lastName = property_exists($exam->user->teacher, 'last_name') ? $exam->user->teacher->last_name : '';
-                                $collaboratorName = trim($firstName . ' ' . $lastName);
-                            }
+                        // Get teacher name
+                        $teacherName = 'N/A';
+                        if ($exam->user) {
+                            $teacherName = $exam->user->name ?? 'N/A';
                         }
                         
                         // Get subject name
-                        $subjectName = 'N/A';
-                        if (property_exists($exam, 'subject') && $exam->subject) {
-                            $subjectName = property_exists($exam->subject, 'subject_name') ? : 'N/A';
+                        $subjectName = $exam->subject->subject_name ?? 'N/A';
+                        
+                        // Get assigned classes
+                        $classesList = 'No classes assigned';
+                        if (isset($exam->examAssignments) && $exam->examAssignments->count() > 0) {
+                            $classes = $exam->examAssignments
+                                ->filter(function($assignment) {
+                                    return $assignment->class !== null;
+                                })
+                                ->map(function($assignment) {
+                                    $class = $assignment->class;
+                                    return ($class->year_level ?? '') . '-' . $class->section . ' ' . $class->title;
+                                })
+                                ->unique()
+                                ->values();
+                            
+                            if ($classes->count() > 0) {
+                                $classesList = $classes->take(3)->implode(', ');
+                                if ($classes->count() > 3) {
+                                    $classesList .= ', and others';
+                                }
+                            }
                         }
                         
-                        // Get semester
-                        $semester = property_exists($exam, 'semester') ?  : '1st';
+                        // Status badge
+                        $statusMap = [
+                            'draft' => 'Draft',
+                            'for approval' => 'For Approval',
+                            'approved' => 'Approved',
+                            'ongoing' => 'Ongoing',
+                            'archived' => 'Archived'
+                        ];
+                        $statusLabel = $statusMap[$exam->status] ?? ucfirst($exam->status);
+                        $statusClass = 'status-' . str_replace(' ', '-', $exam->status);
                     @endphp
                     <div class="exam-card">
                         <div class="exam-card-content">
@@ -312,24 +366,26 @@
                                 <i class="bi bi-file-earmark-text"></i>
                             </div>
                             <div class="exam-details">
-                                <h5>{{ $exam->exam_title }}</h5>
-                                <p><strong>Collaborators:</strong> {{ $exam->user->name }}</p>
-                                <p><strong>Subject:</strong> {{ $exam->subject->subject_name  }}</p>
-                                <p><strong>Department:</strong> Computer Science</p>
-                                <p><strong>Classes Undertaking:</strong> 1A Comp Prog, 1B Comp Prog, and others</p>
-                                <p><strong>Semester:</strong> {{ $exam->semester }}</p>
-                                <p><strong>Term:</strong> Midterm</p>
+                                <h5>
+                                    {{ $exam->exam_title }}
+                                    <span class="status-badge {{ $statusClass }}">{{ $statusLabel }}</span>
+                                </h5>
+                                <p><strong>Instructor:</strong> {{ $teacherName }}</p>
+                                <p><strong>Subject:</strong> {{ $subjectName }}</p>
+                                <p><strong>Classes:</strong> {{ $classesList }}</p>
+                                <p><strong>Semester:</strong> {{ $exam->semester ?? 'N/A' }}</p>
+                                <p><strong>Created:</strong> {{ $exam->created_at->format('M d, Y') }}</p>
                             </div>
                         </div>
-                        <button class="monitor-btn" onclick="window.location.href='{{ route('admin.monitor.show', $exam->exam_id) }}'">
-                            <i class="bi bi-display"></i>
-                            Monitor
+                        <button class="monitor-btn" onclick="window.location.href='{{ route('admin.exam-statistics.show', $exam->exam_id) }}'">
+                            <i class="bi bi-eye"></i>
+                            View
                         </button>
                     </div>
                 @empty
                     <div class="empty-state">
                         <i class="bi bi-inbox"></i>
-                        <p>No ongoing exams found.</p>
+                        <p>No exams found.</p>
                     </div>
                 @endforelse
             </div>

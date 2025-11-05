@@ -20,7 +20,7 @@
 
     <!-- Header with Search -->
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="fw-bold mb-0">Exams for Approval</h2>
+        <h2 class="fw-bold mb-0">Exams </h2>
 
         <!-- Search -->
         <form method="GET" action="{{ route('programchair.manage-approval.index') }}" class="position-relative" style="width: 350px;">
@@ -39,7 +39,6 @@
                 <thead class="table-light">
                     <tr>
                         <th scope="col">
-                            <input type="checkbox" class="form-check-input">
                         </th>
                         <th scope="col">Exam Name <i class="bi bi-caret-down-fill small"></i></th>
                         <th scope="col">Subject <i class="bi bi-caret-down-fill small"></i></th>
@@ -51,7 +50,7 @@
                 <tbody>
                     @forelse($exams as $exam)
                     <tr>
-                        <td><input type="checkbox" class="form-check-input"></td>
+                        <td></td>
                         <td>
                             <div class="fw-semibold">{{ $exam->exam_title }}</div>
                             <small class="text-muted fst-italic">

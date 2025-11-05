@@ -275,8 +275,8 @@
                 </div>
             </div>
 
-            <!-- Ongoing Exams Section -->
-            <h5 class="section-header">Ongoing Exams</h5>
+            <!--  Exams Section -->
+            <h5 class="section-header">Exams</h5>
 
             <div class="exam-list">
                 @forelse ($recentExams ?? [] as $exam)

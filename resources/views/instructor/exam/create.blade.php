@@ -1242,7 +1242,7 @@
         @endforelse
         
         <!-- Add Section -->
-        @if($exam->status !== 'for approval' && $exam->status !== 'approved' && $exam->status !== 'archived')
+        @if($exam->status !== 'for approval' && $exam->status !== 'approved' && $exam->status !== 'archived' && $exam->is_owner)
         <div class="add-section">
             <div class="add-dropdown-wrapper">
                 <button class="add-main-btn" onclick="toggleAddDropdown()">
@@ -3195,6 +3195,16 @@ function addQuestionInstantly(sectionId, afterItemId = null) {
                             setTimeout(() => expandQuestionCard(newCard), 300);
                         }
                     }, 10);
+                }
+                
+                // Remove "no questions yet" message if it exists
+                const noQuestionsMsg = document.querySelector('.no-questions-yet');
+                if (noQuestionsMsg) {
+                    noQuestionsMsg.style.transition = 'opacity 0.3s ease';
+                    noQuestionsMsg.style.opacity = '0';
+                    setTimeout(() => {
+                        noQuestionsMsg.remove();
+                    }, 300);
                 }
                 
                 // Reset button state

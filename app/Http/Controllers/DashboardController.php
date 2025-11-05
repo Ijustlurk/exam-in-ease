@@ -23,10 +23,9 @@ class DashboardController extends Controller
             })->count();
             $totalSubjects = Subject::count();
             $totalActiveUsers = User::count();
-            $recentExams = Exam::with('user', 'subject')
-                ->where('status', 'ongoing')
+            $recentExams = Exam::with(['user', 'subject', 'examAssignments.class'])
                 ->orderBy('created_at', 'desc')
-                ->limit(5)
+                ->limit(10)
                 ->get();
 
             $data = [
@@ -48,9 +47,9 @@ class DashboardController extends Controller
             })->count();
             $totalSubjects = Subject::count();
             $totalActiveUsers = User::count();
-            $recentExams = Exam::with('user', 'subject')
+            $recentExams = Exam::with(['user', 'subject', 'examAssignments.class'])
                 ->orderBy('created_at', 'desc')
-                ->limit(5)
+                ->limit(10)
                 ->get();
 
             $data = [
