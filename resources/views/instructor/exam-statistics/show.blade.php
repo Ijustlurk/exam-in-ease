@@ -42,6 +42,12 @@
             font-weight: 400;
         }
 
+        .exam-header-right {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
         .class-filter-dropdown {
             background-color: white;
             border: none;
@@ -58,6 +64,37 @@
         .class-filter-dropdown:focus {
             outline: none;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .download-btn {
+            background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+
+        .download-btn:hover {
+            background: linear-gradient(135deg, #45a049 0%, #3d8b40 100%);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+            transform: translateY(-1px);
+        }
+
+        .download-btn:active {
+            transform: translateY(0);
+        }
+
+        .download-btn i {
+            font-size: 16px;
         }
 
         /* Navigation Tabs */
@@ -619,6 +656,16 @@
                 gap: 15px;
             }
 
+            .exam-header-right {
+                width: 100%;
+                flex-direction: column;
+            }
+
+            .download-btn {
+                width: 100%;
+                justify-content: center;
+            }
+
             .class-filter-dropdown {
                 width: 100%;
             }
@@ -655,6 +702,10 @@
                 </div>
             </div>
             <div class="exam-header-right">
+                <button class="download-btn" onclick="downloadScores()" title="Download class scores as Excel">
+                    <i class="bi bi-download"></i>
+                    Download Scores
+                </button>
                 <select class="class-filter-dropdown" id="classFilter" onchange="handleClassFilterChange()">
                     <option value="all">All Classes ({{ $assignedClasses->count() }})</option>
                     @foreach($assignedClasses as $class)
@@ -2249,6 +2300,32 @@
                 console.error('Error deleting attempt:', error);
                 alert('An error occurred while deleting the attempt.');
             });
+        }
+        
+        // ==================== DOWNLOAD SCORES FUNCTION ====================
+        function downloadScores() {
+            const filterValue = document.getElementById('classFilter').value;
+            const url = `/instructor/exams-statistics/${examId}/download-scores?class_id=${encodeURIComponent(filterValue)}`;
+            
+            // Show loading state
+            const btn = event.target.closest('.download-btn');
+            const originalContent = btn.innerHTML;
+            btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Generating...';
+            btn.disabled = true;
+            
+            // Create a temporary link and trigger download
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = '';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            // Reset button after a short delay
+            setTimeout(() => {
+                btn.innerHTML = originalContent;
+                btn.disabled = false;
+            }, 2000);
         }
         
         // Add CSS for students navigation grid

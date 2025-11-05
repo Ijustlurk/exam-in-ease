@@ -7,6 +7,11 @@ use Illuminate\Http\Request;
 use App\Models\Exam;
 use App\Models\ExamAnswer;
 use Illuminate\Support\Facades\Auth;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Style\Border;
 
 class ExamStatisticsController extends Controller
 {
@@ -1340,6 +1345,306 @@ class ExamStatisticsController extends Controller
             ]);
             
             return response()->json(['error' => 'An error occurred while fetching score distribution'], 500);
+        }
+    }
+
+    /**
+     * Download class scores as Excel
+     */
+    public function downloadScores(Request $request, $examId)
+    {
+        // Validate inputs
+        $validated = $request->validate([
+            'class_id' => 'nullable|string|max:255'
+        ]);
+        
+        $classId = $validated['class_id'] ?? 'all';
+        
+        // Validate exam_id is numeric
+        if (!is_numeric($examId)) {
+            abort(400, 'Invalid exam ID');
+        }
+        
+        try {
+            // Get exam and verify ownership
+            $exam = Exam::with(['subject', 'examItems', 'examAssignments.class'])
+                ->where('exam_id', $examId)
+                ->where('teacher_id', Auth::id())
+                ->firstOrFail();
+            
+            // Filter by class if specified
+            $assignmentsQuery = $exam->examAssignments();
+            $classFilter = 'All Classes';
+            
+            if ($classId && $classId !== 'all') {
+                // Verify class belongs to this exam
+                $validClass = $exam->examAssignments()
+                    ->where('class_id', $classId)
+                    ->exists();
+                
+                if (!$validClass) {
+                    abort(403, 'Unauthorized access to class data');
+                }
+                
+                $assignmentsQuery->where('class_id', $classId);
+                
+                // Get class display name
+                $classModel = $exam->examAssignments()
+                    ->where('class_id', $classId)
+                    ->with('class')
+                    ->first()
+                    ->class;
+                
+                if ($classModel) {
+                    $classFilter = ($classModel->year_level ?? '') . '-' . $classModel->section . ' ' . $classModel->title;
+                }
+            }
+            
+            $assignmentIds = $assignmentsQuery->pluck('assignment_id');
+            
+            // Get all submitted attempts with student info
+            $attempts = \DB::table('exam_attempts')
+                ->join('user_student', 'exam_attempts.student_id', '=', 'user_student.user_id')
+                ->join('exam_assignments', 'exam_attempts.exam_assignment_id', '=', 'exam_assignments.assignment_id')
+                ->leftJoin('class', 'exam_assignments.class_id', '=', 'class.class_id')
+                ->whereIn('exam_attempts.exam_assignment_id', $assignmentIds)
+                ->where('exam_attempts.status', 'submitted')
+                ->select(
+                    'exam_attempts.attempt_id',
+                    'exam_attempts.student_id',
+                    'exam_attempts.score',
+                    'exam_attempts.start_time',
+                    'exam_attempts.end_time',
+                    'user_student.first_name',
+                    'user_student.middle_name',
+                    'user_student.last_name',
+                    'user_student.id_number',
+                    'class.year_level',
+                    'class.section',
+                    'class.title as class_title'
+                )
+                ->orderBy('user_student.last_name')
+                ->orderBy('user_student.first_name')
+                ->get();
+            
+            // Create new spreadsheet
+            $spreadsheet = new Spreadsheet();
+            $sheet = $spreadsheet->getActiveSheet();
+            
+            // Set document properties
+            $spreadsheet->getProperties()
+                ->setCreator('Exam-in-Ease')
+                ->setTitle('Exam Scores - ' . $exam->exam_title)
+                ->setSubject('Student Scores')
+                ->setDescription('Student scores for ' . $exam->exam_title);
+            
+            // Set header styles
+            $headerStyle = [
+                'font' => [
+                    'bold' => true,
+                    'color' => ['rgb' => 'FFFFFF'],
+                    'size' => 12
+                ],
+                'fill' => [
+                    'fillType' => Fill::FILL_SOLID,
+                    'startColor' => ['rgb' => '6ba5b3']
+                ],
+                'alignment' => [
+                    'horizontal' => Alignment::HORIZONTAL_CENTER,
+                    'vertical' => Alignment::VERTICAL_CENTER
+                ],
+                'borders' => [
+                    'allBorders' => [
+                        'borderStyle' => Border::BORDER_THIN,
+                        'color' => ['rgb' => '000000']
+                    ]
+                ]
+            ];
+            
+            // Add title
+            $sheet->setCellValue('A1', $exam->exam_title);
+            $sheet->mergeCells('A1:F1');
+            $sheet->getStyle('A1')->applyFromArray([
+                'font' => [
+                    'bold' => true,
+                    'size' => 16,
+                    'color' => ['rgb' => '1a1a1a']
+                ],
+                'alignment' => [
+                    'horizontal' => Alignment::HORIZONTAL_CENTER,
+                    'vertical' => Alignment::VERTICAL_CENTER
+                ]
+            ]);
+            $sheet->getRowDimension(1)->setRowHeight(30);
+            
+            // Add exam info
+            $sheet->setCellValue('A2', 'Subject: ' . $exam->subject->subject_name);
+            $sheet->setCellValue('D2', 'Total Points: ' . $exam->total_points);
+            $sheet->mergeCells('A2:C2');
+            $sheet->mergeCells('D2:F2');
+            
+            $sheet->setCellValue('A3', 'Class: ' . $classFilter);
+            $sheet->setCellValue('D3', 'Total Items: ' . $exam->no_of_items);
+            $sheet->mergeCells('A3:C3');
+            $sheet->mergeCells('D3:F3');
+            
+            $sheet->setCellValue('A4', 'Generated: ' . now()->format('F d, Y H:i'));
+            $sheet->mergeCells('A4:F4');
+            
+            $sheet->getStyle('A2:F4')->applyFromArray([
+                'font' => ['size' => 11],
+                'alignment' => ['horizontal' => Alignment::HORIZONTAL_LEFT]
+            ]);
+            
+            // Add empty row
+            $currentRow = 6;
+            
+            // Add column headers
+            $headers = ['#', 'Student ID', 'Student Name', 'Class', 'Score', 'Percentage'];
+            $col = 'A';
+            foreach ($headers as $header) {
+                $sheet->setCellValue($col . $currentRow, $header);
+                $col++;
+            }
+            
+            $sheet->getStyle('A' . $currentRow . ':F' . $currentRow)->applyFromArray($headerStyle);
+            $sheet->getRowDimension($currentRow)->setRowHeight(25);
+            
+            // Set column widths
+            $sheet->getColumnDimension('A')->setWidth(6);
+            $sheet->getColumnDimension('B')->setWidth(15);
+            $sheet->getColumnDimension('C')->setWidth(30);
+            $sheet->getColumnDimension('D')->setWidth(20);
+            $sheet->getColumnDimension('E')->setWidth(12);
+            $sheet->getColumnDimension('F')->setWidth(12);
+            
+            // Add data rows
+            $currentRow++;
+            $rowNumber = 1;
+            $totalScore = 0;
+            
+            foreach ($attempts as $attempt) {
+                $middleInitial = $attempt->middle_name ? ' ' . substr($attempt->middle_name, 0, 1) . '.' : '';
+                $fullName = $attempt->last_name . ', ' . $attempt->first_name . $middleInitial;
+                $classDisplay = ($attempt->year_level ?? '') . '-' . ($attempt->section ?? 'N/A');
+                if ($attempt->class_title) {
+                    $classDisplay .= ' ' . $attempt->class_title;
+                }
+                $percentage = round(($attempt->score / $exam->total_points) * 100, 2);
+                
+                $sheet->setCellValue('A' . $currentRow, $rowNumber);
+                $sheet->setCellValue('B' . $currentRow, $attempt->id_number);
+                $sheet->setCellValue('C' . $currentRow, $fullName);
+                $sheet->setCellValue('D' . $currentRow, $classDisplay);
+                $sheet->setCellValue('E' . $currentRow, $attempt->score);
+                $sheet->setCellValue('F' . $currentRow, $percentage . '%');
+                
+                // Apply row styling
+                $sheet->getStyle('A' . $currentRow . ':F' . $currentRow)->applyFromArray([
+                    'borders' => [
+                        'allBorders' => [
+                            'borderStyle' => Border::BORDER_THIN,
+                            'color' => ['rgb' => 'CCCCCC']
+                        ]
+                    ],
+                    'alignment' => [
+                        'vertical' => Alignment::VERTICAL_CENTER
+                    ]
+                ]);
+                
+                $sheet->getStyle('A' . $currentRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+                $sheet->getStyle('E' . $currentRow . ':F' . $currentRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+                
+                // Color code based on percentage
+                $fillColor = 'FFFFFF'; // White default
+                if ($percentage >= 90) {
+                    $fillColor = 'D1FAE5'; // Green
+                } elseif ($percentage >= 80) {
+                    $fillColor = 'DBEAFE'; // Blue
+                } elseif ($percentage >= 70) {
+                    $fillColor = 'FEF3C7'; // Yellow
+                } elseif ($percentage >= 60) {
+                    $fillColor = 'FED7AA'; // Orange
+                } else {
+                    $fillColor = 'FEE2E2'; // Red
+                }
+                
+                $sheet->getStyle('F' . $currentRow)->applyFromArray([
+                    'fill' => [
+                        'fillType' => Fill::FILL_SOLID,
+                        'startColor' => ['rgb' => $fillColor]
+                    ]
+                ]);
+                
+                $totalScore += $attempt->score;
+                $currentRow++;
+                $rowNumber++;
+            }
+            
+            // Add summary statistics
+            $currentRow += 2;
+            $sheet->setCellValue('A' . $currentRow, 'Summary Statistics');
+            $sheet->mergeCells('A' . $currentRow . ':F' . $currentRow);
+            $sheet->getStyle('A' . $currentRow)->applyFromArray([
+                'font' => [
+                    'bold' => true,
+                    'size' => 14
+                ],
+                'alignment' => [
+                    'horizontal' => Alignment::HORIZONTAL_CENTER
+                ]
+            ]);
+            
+            $currentRow++;
+            $totalStudents = $attempts->count();
+            $averageScore = $totalStudents > 0 ? round($totalScore / $totalStudents, 2) : 0;
+            $highestScore = $totalStudents > 0 ? $attempts->max('score') : 0;
+            $lowestScore = $totalStudents > 0 ? $attempts->min('score') : 0;
+            $passingScore = $exam->total_points * 0.6;
+            $passingCount = $attempts->filter(fn($a) => $a->score >= $passingScore)->count();
+            $passRate = $totalStudents > 0 ? round(($passingCount / $totalStudents) * 100, 2) : 0;
+            
+            $summaryData = [
+                ['Total Students:', $totalStudents],
+                ['Highest Score:', $highestScore . ' / ' . $exam->total_points],
+                ['Lowest Score:', $lowestScore . ' / ' . $exam->total_points],
+                ['Average Score:', $averageScore . ' / ' . $exam->total_points],
+                ['Passing Score (60%):', round($passingScore, 2)],
+                ['Pass Rate:', $passRate . '%']
+            ];
+            
+            foreach ($summaryData as $data) {
+                $sheet->setCellValue('B' . $currentRow, $data[0]);
+                $sheet->setCellValue('C' . $currentRow, $data[1]);
+                $sheet->getStyle('B' . $currentRow)->getFont()->setBold(true);
+                $currentRow++;
+            }
+            
+            // Generate filename
+            $fileName = 'Exam_Scores_' . preg_replace('/[^A-Za-z0-9_\-]/', '_', $exam->exam_title) . '_' . date('Y-m-d_His') . '.xlsx';
+            
+            // Create writer and download
+            $writer = new Xlsx($spreadsheet);
+            
+            // Set headers for download
+            header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+            header('Content-Disposition: attachment;filename="' . $fileName . '"');
+            header('Cache-Control: max-age=0');
+            
+            $writer->save('php://output');
+            exit;
+            
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            abort(404, 'Exam not found');
+        } catch (\Exception $e) {
+            \Log::error('Error in downloadScores: ' . $e->getMessage(), [
+                'exam_id' => $examId,
+                'class_id' => $classId,
+                'instructor_id' => Auth::id(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            abort(500, 'Failed to generate Excel file');
         }
     }
 

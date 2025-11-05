@@ -252,6 +252,9 @@ Route::
         Route::delete('/exams-statistics/{id}/attempt/{attemptId}', [ExamStatisticsController::class, 'deleteAttempt'])
             ->middleware('throttle:20,1')
             ->name('exam-statistics.delete-attempt');
+        Route::get('/exams-statistics/{id}/download-scores', [ExamStatisticsController::class, 'downloadScores'])
+            ->middleware('throttle:10,1')
+            ->name('exam-statistics.download-scores');
         Route::get('/exams-statistics/{id}/download', [ExamStatisticsController::class, 'downloadExcel'])
             ->middleware('throttle:10,1')
             ->name('exam-statistics.download');
