@@ -414,6 +414,45 @@
         display: none;
     }
     
+    /* Disable all input fields for collaborators */
+    body.is-collaborator input:not([type="text"][class*="comment"]),
+    body.is-collaborator textarea:not([class*="comment"]),
+    body.is-collaborator select {
+        pointer-events: none;
+        opacity: 0.6;
+        cursor: not-allowed !important;
+        background-color: #f3f4f6 !important;
+    }
+    
+    /* Disable type selection buttons for collaborators */
+    body.is-collaborator .type-btn {
+        pointer-events: none;
+        opacity: 0.6;
+        cursor: not-allowed !important;
+    }
+    
+    /* Disable checkboxes for collaborators */
+    body.is-collaborator .correct-answer-checkbox,
+    body.is-collaborator .correct-checkbox {
+        pointer-events: none;
+        opacity: 0.6;
+        cursor: not-allowed !important;
+    }
+    
+    /* Disable add/remove option buttons for collaborators */
+    body.is-collaborator .btn-remove-option,
+    body.is-collaborator .btn-add-option,
+    body.is-collaborator .btn-add-talking-point,
+    body.is-collaborator .btn-remove-talking-point {
+        display: none !important;
+    }
+    
+    /* Hide floating action buttons for adding questions (collaborators) */
+    body.is-collaborator .floating-btn[title="Add Question"],
+    body.is-collaborator .floating-btn[title="Add Question After"] {
+        display: none !important;
+    }
+    
     /* Increase opacity when question wrapper is hovered */
     .question-wrapper:hover .drag-handle {
         opacity: 1;
@@ -970,15 +1009,15 @@
                        class="exam-title-input" 
                        value="{{ $exam->exam_title }}" 
                        id="examTitle"
-                       @if($exam->status === 'for approval' || $exam->status === 'approved' || $exam->status === 'archived')
+                       @if($exam->status === 'for approval' || $exam->status === 'approved' || $exam->status === 'archived' || !$exam->is_owner)
                        readonly
-                       style="cursor: not-allowed;"
+                       style="cursor: not-allowed; background-color: #f3f4f6;"
                        @else
                        onchange="updateExamTitle()"
                        @endif>
                 <span class="exam-subtitle" id="examSubtitle">{{ $exam->subject->subject_name ?? 'Edit Exam.' }}</span>
             </div>
-            @if($exam->status !== 'for approval' && $exam->status !== 'approved' && $exam->status !== 'archived')
+            @if($exam->status !== 'for approval' && $exam->status !== 'approved' && $exam->status !== 'archived' && $exam->is_owner)
             <button class="header-icon-btn" title="Edit Title">
                 <i class="bi bi-pencil"></i>
             </button>
@@ -1005,6 +1044,17 @@
             @endif
         </div>
     </div>
+    
+    @if(!$exam->is_owner && $exam->status !== 'for approval' && $exam->status !== 'approved' && $exam->status !== 'archived')
+    <div class="container-fluid" style="max-width: 1400px; margin-bottom: 20px;">
+        <div class="alert alert-primary d-flex align-items-center" role="alert">
+            <i class="bi bi-people-fill me-2"></i>
+            <div>
+                <strong>Collaborator View:</strong> You are viewing this exam as a collaborator. All fields are read-only, but you can add comments to questions.
+            </div>
+        </div>
+    </div>
+    @endif
     
     @if($exam->status === 'for approval')
     <div class="container-fluid" style="max-width: 1400px; margin-bottom: 20px;">
@@ -3602,6 +3652,11 @@ function updateQuestionCardData(cardElement, item) {
  * Switch question type
  */
 function switchQuestionType(button, type) {
+    // Prevent switching for collaborators
+    if (isCollaborator) {
+        return;
+    }
+    
     const form = button.closest('.question-edit-form');
     const cardElement = button.closest('.question-card');
     
