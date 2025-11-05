@@ -275,8 +275,8 @@
                 </div>
             </div>
 
-            <!--  Exams Section -->
-            <h5 class="section-header">Exams</h5>
+            <!--  Exams for Approval Section -->
+            <h5 class="section-header">Exams for Approval</h5>
 
             <div class="exam-list">
                 @forelse ($recentExams ?? [] as $exam)
@@ -319,7 +319,7 @@
                                 <p><strong>Term:</strong> Midterm</p>
                             </div>
                         </div>
-                        <button class="monitor-btn" onclick="window.location.href='{{ route('programchair.manage-approval.index', $exam->exam_id) }}'">
+                        <button class="monitor-btn" onclick="window.location.href='{{ route('programchair.manage-approval.show', $exam->exam_id) }}'">
                             <i class="bi bi-display"></i>
                             View
                         </button>
@@ -327,7 +327,7 @@
                 @empty
                     <div class="empty-state">
                         <i class="bi bi-inbox"></i>
-                        <p>No ongoing exams found.</p>
+                        <p>No exams slated for approval.</p>
                     </div>
                 @endforelse
             </div>
