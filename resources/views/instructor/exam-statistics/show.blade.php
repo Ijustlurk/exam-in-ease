@@ -883,7 +883,7 @@
     
     <!-- Override Modal -->
     <div id="overrideModal" class="modal fade" tabindex="-1">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">Override Answer</h5>
@@ -2091,11 +2091,7 @@
                                 <strong>Points:</strong> 
                                 <span class="points-display">${answer.points_earned} / ${answer.points_possible}</span>
                             </div>
-                            <button onclick="openOverrideModal(${student.attempt_id}, ${answer.answer_id}, ${answer.is_correct}, ${answer.points_earned}, ${answer.points_possible})" 
-                                    class="btn btn-sm" 
-                                    style="background: #6ba5b3; color: white; border: none; padding: 6px 16px; border-radius: 6px; cursor: pointer; font-size: 13px;">
-                                <i class="bi bi-pencil-square"></i> Override
-                            </button>
+                            ${answer.item_type === 'essay' ? `<button onclick="openOverrideModal(${student.attempt_id}, ${answer.answer_id}, ${answer.is_correct}, ${answer.points_earned}, ${answer.points_possible}, 'essay')" class="btn btn-sm" style="background: #6ba5b3; color: white; border: none; padding: 6px 16px; border-radius: 6px; cursor: pointer; font-size: 13px;"><i class='bi bi-pencil-square'></i> Override</button>` : ''}
                         </div>
                     </div>
                 `;
@@ -2151,20 +2147,23 @@
         let currentOverrideAttemptId = null;
         
         function openOverrideModal(attemptId, answerId, isCorrect, pointsEarned, maxPoints) {
+            // Only allow override for essay questions
+            if (arguments.length < 6 || arguments[5] !== 'essay') {
+                alert('Override is only allowed for essay questions.');
+                return;
+            }
             currentOverrideAttemptId = attemptId;
             document.getElementById('override_attempt_id').value = attemptId;
             document.getElementById('override_answer_id').value = answerId;
             document.getElementById('points_earned').value = pointsEarned;
             document.getElementById('max_points').textContent = maxPoints;
             document.getElementById('points_earned').max = maxPoints;
-            
             // Set correct/incorrect radio
             if (isCorrect) {
                 document.getElementById('markCorrect').checked = true;
             } else {
                 document.getElementById('markIncorrect').checked = true;
             }
-            
             // Show modal
             const modal = new bootstrap.Modal(document.getElementById('overrideModal'));
             modal.show();
@@ -2172,20 +2171,31 @@
         
         function submitOverride() {
             const answerId = document.getElementById('override_answer_id').value;
-            const isCorrect = document.querySelector('input[name="is_correct"]:checked').value;
+            const isCorrectRadio = document.querySelector('input[name="is_correct"]:checked');
             const pointsEarned = parseFloat(document.getElementById('points_earned').value);
             const maxPoints = parseFloat(document.getElementById('max_points').textContent);
-            
+
+            // Validation: require answerId
+            if (!answerId) {
+                alert('No answer found to override.');
+                return;
+            }
+            // Validation: require correct/incorrect selection
+            if (!isCorrectRadio) {
+                alert('Please select whether the answer is correct or incorrect.');
+                return;
+            }
+            const isCorrect = isCorrectRadio.value;
+
             if (pointsEarned > maxPoints) {
                 alert('Points earned cannot exceed maximum points!');
                 return;
             }
-            
             if (pointsEarned < 0) {
                 alert('Points earned cannot be negative!');
                 return;
             }
-            
+
             // Send update request
             fetch(`/instructor/exams-statistics/${examId}/answer/${answerId}/override`, {
                 method: 'POST',
@@ -2205,7 +2215,7 @@
                 if (data.success) {
                     // Close modal
                     bootstrap.Modal.getInstance(document.getElementById('overrideModal')).hide();
-                    
+
                     // Update the question card
                     const questionCard = document.querySelector(`.question-analysis-card[data-answer-id="${answerId}"]`);
                     if (questionCard) {
@@ -2214,14 +2224,20 @@
                             pointsDisplay.textContent = `${pointsEarned} / ${maxPoints}`;
                         }
                     }
-                    
+
                     // Update student data in memory
                     const studentIndex = selectedStudentIndex;
                     studentsData[studentIndex].score = data.new_score;
-                    
+
                     // Update navigation to reflect new score
                     updateStudentNavigation();
-                    
+
+                    // Refresh summary statistics and score distribution
+                    const classFilter = document.getElementById('classFilter');
+                    const filterValue = classFilter ? classFilter.value : 'all';
+                    fetchFilteredStats(filterValue);
+                    fetchScoreDistribution();
+
                     // Show success message
                     alert('Answer updated successfully!');
                 } else {

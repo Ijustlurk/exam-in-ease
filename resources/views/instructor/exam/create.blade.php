@@ -1311,6 +1311,15 @@
                                {{ ($exam->status === 'for approval' || $exam->status === 'approved' || $exam->status === 'archived') ? 'readonly' : '' }}>
                     </div>
 
+                    <div class="mb-3">
+                        <label class="form-label-custom"><i class="bi bi-key-fill me-1"></i>Exam Password <span class="text-muted">(Optional)</span></label>
+                        <input type="text" class="form-control-custom" name="exam_password" id="settingsExamPassword"
+                               value="{{ $exam->exam_password }}"
+                               placeholder="Enter password for exam access"
+                               {{ ($exam->status === 'for approval' || $exam->status === 'approved' || $exam->status === 'archived') ? 'readonly' : '' }}>
+                        <small class="text-muted">Leave empty if no password is required. Students will need this password to access the exam.</small>
+                    </div>
+
                     <label class="form-label-custom" style="margin-bottom: 12px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px; display: block;">Settings</label>
                     
                     <div class="row">

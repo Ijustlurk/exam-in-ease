@@ -149,7 +149,8 @@
                 <form id="revisionForm" method="POST">
                     @csrf
                     <input type="hidden" id="revision_exam_id" name="exam_id">
-                    
+                    <!-- Pass the route template from Blade to JS as a hidden input -->
+                    <input type="hidden" id="revision_route_template" value="{{ route('programchair.manage-approval.revise', ['exam' => 'EXAM_ID']) }}">
                     <div class="mb-4">
                         <label class="form-label fw-semibold">Add Notes</label>
                         <textarea class="form-control" name="notes" rows="4" 
@@ -161,7 +162,7 @@
                     <div class="d-flex justify-content-end">
                         <button type="submit" class="btn btn-primary" 
                                 style="background-color: #6ba5b3; border: none; border-radius: 8px; padding: 10px 28px; font-weight: 500;">
-                            For Revision
+                            Send for Revision
                         </button>
                     </div>
                 </form>
@@ -362,8 +363,10 @@
 
     function openRevisionModal(examId, examTitle) {
         document.getElementById('revision_exam_id').value = examId;
-        document.getElementById('revisionForm').action = `/programchair/manage-approval/${examId}/revise`;
-        
+        // Use the data-route attribute from the hidden input to get the correct URL
+        const routeTemplate = document.getElementById('revision_route_template').value;
+        // Replace the placeholder with the actual examId
+        document.getElementById('revisionForm').action = routeTemplate.replace('EXAM_ID', examId);
         const modal = new bootstrap.Modal(document.getElementById('revisionModal'));
         modal.show();
     }

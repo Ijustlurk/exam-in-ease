@@ -112,6 +112,7 @@ class ExamController extends Controller
             'duration' => 'required|integer|min:0',
             'schedule_start' => 'required|date',
             'schedule_end' => 'required|date|after:schedule_start',
+            'exam_password' => 'nullable|string|max:255',
         ]);
 
         DB::beginTransaction();
@@ -126,7 +127,8 @@ class ExamController extends Controller
                 'total_points' => 0,
                 'no_of_items' => 0,
                 'teacher_id' => Auth::id(),
-                'status' => 'draft'
+                'status' => 'draft',
+                'exam_password' => $validated['exam_password'] ?? null
             ]);
 
             // Create exam assignments for selected classes

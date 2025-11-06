@@ -953,18 +953,24 @@ class ExamStatisticsController extends Controller
      */
     public function overrideAnswer(Request $request, $examId, $answerId)
     {
-        // Validate inputs
-        $validated = $request->validate([
-            'is_correct' => 'required|boolean',
-            'points_earned' => 'required|numeric|min:0'
-        ]);
-        
-        // Validate IDs are numeric
-        if (!is_numeric($examId) || !is_numeric($answerId)) {
-            return response()->json(['error' => 'Invalid ID format'], 400);
-        }
-        
         try {
+            \Log::info('overrideAnswer called', [
+                'examId' => $examId,
+                'answerId' => $answerId,
+                'request' => $request->all()
+            ]);
+
+            // Validate inputs
+            $validated = $request->validate([
+                'is_correct' => 'required|boolean',
+                'points_earned' => 'required|numeric|min:0'
+            ]);
+
+            // Validate IDs are numeric
+            if (!is_numeric($examId) || !is_numeric($answerId)) {
+                return response()->json(['error' => 'Invalid ID format'], 400);
+            }
+
             // Use database transaction with row locking to prevent race conditions
             return \DB::transaction(function () use ($examId, $answerId, $validated) {
                 // Get the exam to verify ownership
@@ -972,7 +978,7 @@ class ExamStatisticsController extends Controller
                     ->where('teacher_id', Auth::id())
                     ->lockForUpdate() // Lock the exam row
                     ->firstOrFail();
-                
+
                 // Get the answer and verify it belongs to this exam
                 $answer = ExamAnswer::where('answer_id', $answerId)
                     ->whereHas('attempt.examAssignment', function($query) use ($examId) {
@@ -980,13 +986,13 @@ class ExamStatisticsController extends Controller
                     })
                     ->lockForUpdate() // Lock the answer row
                     ->firstOrFail();
-                
+
                 // Get the item to validate max points
-                $item = $answer->item;
+                $item = $answer->examItem;
                 if (!$item) {
                     return response()->json(['error' => 'Question not found'], 404);
                 }
-                
+
                 // Validate points don't exceed maximum
                 if ($validated['points_earned'] > $item->points_awarded) {
                     return response()->json([
@@ -994,7 +1000,7 @@ class ExamStatisticsController extends Controller
                         'max_points' => $item->points_awarded
                     ], 422);
                 }
-                
+
                 // Log the override for audit trail
                 \Log::info('Answer override', [
                     'exam_id' => $examId,
@@ -1006,37 +1012,35 @@ class ExamStatisticsController extends Controller
                     'instructor_id' => Auth::id(),
                     'student_id' => $answer->attempt->student_id
                 ]);
-                
+
                 // Update the answer
                 $answer->is_correct = $validated['is_correct'];
                 $answer->points_earned = $validated['points_earned'];
                 $answer->save();
-                
+
                 // Recalculate attempt score with lock
                 $attempt = $answer->attempt()->lockForUpdate()->first();
                 $totalScore = ExamAnswer::where('attempt_id', $attempt->attempt_id)
                     ->sum('points_earned');
-                
+
                 $attempt->score = $totalScore;
                 $attempt->save();
-                
+
                 return response()->json([
                     'success' => true,
                     'message' => 'Answer updated successfully',
                     'new_score' => $totalScore
                 ]);
             });
-            
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return response()->json(['error' => 'Resource not found'], 404);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             \Log::error('Error in overrideAnswer: ' . $e->getMessage(), [
                 'exam_id' => $examId,
                 'answer_id' => $answerId,
-                'instructor_id' => Auth::id()
+                'instructor_id' => Auth::id(),
+                'trace' => $e->getTraceAsString(),
+                'request' => $request->all()
             ]);
-            
-            return response()->json(['error' => 'Failed to update answer'], 500);
+            return response()->json(['error' => 'Failed to update answer', 'details' => $e->getMessage()], 500);
         }
     }
 

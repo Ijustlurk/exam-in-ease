@@ -84,8 +84,6 @@ Route::
             Route::delete('/users/{userId}', [UserController::class, 'destroy'])->middleware('throttle:10,1')->name('users.destroy');
             Route::get('/users/template/{role}', [UserController::class, 'downloadTemplate'])->middleware('throttle:10,1')->name('users.download-template');
             Route::post('/users/import', [UserController::class, 'import'])->middleware('throttle:5,1')->name('users.import');
-            Route::post('/users/{id}/reset-password', [UserController::class, 'resetPassword'])->middleware('throttle:10,1')
-                ->name('users.reset-password');
 
             // Monitoring - rate limited
             Route::get('admin/{exam}', [MonitoringController::class, 'show'])->middleware('throttle:60,1')->name('monitor.show');
