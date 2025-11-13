@@ -3400,8 +3400,9 @@ function saveQuestionInline(elementOrEvent, shouldCollapse = false) {
         
         formData.options = JSON.stringify(options);
         formData.answer = JSON.stringify(correctAnswers);
-        
     } else if (itemType === 'torf') {
+        // Always save options as ['True', 'False'] for True/False questions
+        formData.options = JSON.stringify(['True', 'False']);
         const torfAnswer = form.querySelector(`input[name^="torf_answer"]:checked`);
         if (!torfAnswer) {
             showToast('Please select the correct answer', 'error');

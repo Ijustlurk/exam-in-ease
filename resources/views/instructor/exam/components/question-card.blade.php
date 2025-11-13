@@ -58,7 +58,7 @@
         <div class="question-card-header-collapsed">
             <div class="question-type-badge badge-{{ $itemType }}">{{ $typeBadge }}</div>
             <div class="question-text-preview">
-                {{ $questionText ?: 'Click to add question text' }}
+                {!! e($questionText) ?: 'Click to add question text' !!}
             </div>
             <div class="question-points-badge">{{ $points }} {{ $points == 1 ? 'point' : 'points' }}</div>
         </div>

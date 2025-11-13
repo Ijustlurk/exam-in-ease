@@ -87,7 +87,8 @@ class AuthController extends Controller
             'student_id' => $student->user_id,
             'id_number' => $student->id_number,
             'email' => $student->email_address,
-            'device_name' => $deviceName
+            'device_name' => $deviceName,
+            'auth_token' => $token
         ]);
 
         return response()->json([

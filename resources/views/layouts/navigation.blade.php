@@ -39,9 +39,16 @@
                     </x-slot>
 
                     <x-slot name="content">
+
                         <x-dropdown-link :href="route('profile.edit')">
                             {{ __('Profile') }}
                         </x-dropdown-link>
+
+                        @if (in_array(Auth::user()->roles[0]->name, ['instructor', 'programchair']))
+                            <x-dropdown-link :href="route('password.change')">
+                                {{ __('Change Password') }}
+                            </x-dropdown-link>
+                        @endif
 
                         <!-- Authentication -->
                         <form method="POST" action="{{ route('logout') }}">
@@ -56,7 +63,7 @@
 
 
                         <x-dropdown-link>
-                            logged in as {{ Auth::user()->roles[0]->name}}
+                            logged in as {{ Auth::user()->roles[0]->name }}
                         </x-dropdown-link>
 
                     </x-slot>

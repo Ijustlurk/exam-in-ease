@@ -241,6 +241,11 @@
                     
                     <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
                         <li>
+                            <a class="dropdown-item" href="{{ route('password.change') }}">
+                                <i class="bi bi-key me-2"></i>Change Password
+                            </a>
+                        </li>
+                        <li>
                             <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#logoutModal">
                                 <i class="bi bi-box-arrow-right me-2"></i>Log Out
                             </button>

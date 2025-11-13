@@ -71,7 +71,8 @@
     }
 
     .exams-table tbody td {
-        padding: 20px;
+        padding: 24px 24px;
+        vertical-align: middle;
     }
 
     .action-btn {
@@ -79,7 +80,9 @@
         text-decoration: none;
         display: inline-flex;
         align-items: center;
-        gap: 6px;
+        gap: 8px;
+        margin-right: 12px;
+        margin-bottom: 6px;
     }
 
     .action-btn:hover {
@@ -177,10 +180,22 @@
                         </span>
                     </td>
                     <td>
-                        <a href="{{ route('instructor.exam-statistics.show', $exam->exam_id) }}" class="action-btn">
-                            <i class="bi bi-bar-chart-fill"></i>
-                            View Stats
-                        </a>
+                        <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
+                            <a href="{{ route('instructor.exam-statistics.show', $exam->exam_id) }}" class="action-btn">
+                                <i class="bi bi-bar-chart-fill"></i>
+                                View Stats
+                            </a>
+                            @if(empty($exam->release_results) || !$exam->release_results)
+                            <form method="POST" action="{{ route('instructor.exams.release-results', $exam->exam_id) }}" style="display:inline; margin: 0;">
+                                @csrf
+                                @method('PATCH')
+                                <button type="submit" class="action-btn" title="Release Results" onclick="return confirm('Are you sure you want to release the results for this exam?')">
+                                    <i class="bi bi-upload"></i>
+                                    Release Results
+                                </button>
+                            </form>
+                            @endif
+                        </div>
                     </td>
                 </tr>
                 @empty

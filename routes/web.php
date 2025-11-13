@@ -12,7 +12,7 @@ use App\Http\Controllers\Admin\ExamStatisticsController as AdminExamStatisticsCo
 use App\Http\Controllers\Instructor\ExamController;
 use App\Http\Controllers\Admin\ExamController as AdminExamController;
 use App\Http\Controllers\DashboardController;
-
+use App\Http\Controllers\Auth\ChangePasswordController;
 
 
 // route for the landing page 
@@ -64,7 +64,11 @@ Route::get('/finished', function () {
 })->name('teacher.partial.finishe');
 
 
-
+// Change Password routes for authenticated users (instructors, program chair, etc.)
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/change-password', [ChangePasswordController::class, 'showChangePasswordForm'])->name('password.change');
+    Route::post('/change-password', [ChangePasswordController::class, 'changePassword'])->name('password.update.custom');
+});
 
 // This route will handle the logic for redirecting users based on their role.
 Route::get('/dashboard', [DashboardController::class, 'index'])
@@ -135,6 +139,9 @@ Route::
             Route::get('/exams/{id}/stats', [AdminExamStatisticsController::class, 'stats'])->middleware('throttle:60,1')
                 ->name('exams.stats');
 
+             // Admin reset user password to 00000
+            Route::post('/users/{id}/reset-password', [UserController::class, 'resetPassword'])->middleware('throttle:10,1')->name('users.reset-password');
+
 
 
         });
@@ -173,10 +180,12 @@ Route::
     ->name('instructor.')
     ->middleware(['auth', 'can:instructor-access'])
     ->group(function () {
-        // Exam Dashboard - rate limited
-        Route::get('/exams', [ExamController::class, 'index'])->middleware('throttle:60,1')->name('exams.index');
-        Route::delete('/exams/{examId}', [ExamController::class, 'destroy'])->middleware('throttle:10,1')->name('exams.destroy');
-        Route::get('/exams/{id}', [ExamController::class, 'show'])->middleware('throttle:60,1')->name('exams.show');
+    // Exam Dashboard - rate limited
+    Route::get('/exams', [ExamController::class, 'index'])->middleware('throttle:60,1')->name('exams.index');
+    Route::delete('/exams/{examId}', [ExamController::class, 'destroy'])->middleware('throttle:10,1')->name('exams.destroy');
+    Route::get('/exams/{id}', [ExamController::class, 'show'])->middleware('throttle:60,1')->name('exams.show');
+    // Release Results
+    Route::patch('/exams/{exam}/release-results', [ExamController::class, 'releaseResults'])->name('exams.release-results');
 
         // Create/Edit Exam - rate limited
         Route::get('/exams/create/{examId?}', [ExamController::class, 'create'])->middleware('throttle:60,1')->name('exams.create');

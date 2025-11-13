@@ -539,9 +539,11 @@
         <div id="mainContent" class="main">
             <div class="users-container">
                 <div class="users-header">
+
                     <div class="users-title-section">
                         <h4 class="users-title" id="usersTitle">All Users</h4>
                         <span class="users-count" id="usersCount">{{ number_format($users->count() ?? 0) }}</span>
+                        <span class="badge bg-primary ms-3" id="selectedUsersLabel" style="display:none; font-size:1rem; font-weight:500;">0 selected</span>
                     </div>
 
                     <div class="role-filter-wrapper">
@@ -663,10 +665,26 @@
                                 </td>
                                 <td>
                                     <div class="status-cell">
-                                        <span class="status-trigger {{ $statusClass }}" onclick="toggleStatusDropdown(event, {{ $userId }})">
+                                        <span class="status-trigger {{ $statusClass }}">
                                             {{ $userStatus }}
                                         </span>
-                                        <div class="status-dropdown" id="status-dropdown-{{ $userId }}">
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="action-buttons" style="position: relative;">
+                                        <button class="action-btn reset" onclick="resetUserPassword({{ $userId }}, '{{ $userName }}')" title="Reset Password">
+                                            <i class="bi bi-arrow-clockwise"></i>
+                                            <span>Reset Password</span>
+                                        </button>
+                                        <button class="action-btn delete" onclick="deleteUser({{ $userId }}, '{{ $userName }}')" title="Delete User">
+                                            <i class="bi bi-trash"></i>
+                                            <span>Delete User</span>
+                                        </button>
+                                        <button class="action-btn more" onclick="toggleStatusDropdown(event, {{ $userId }})" title="More" id="more-btn-{{ $userId }}">
+                                            <i class="bi bi-three-dots"></i>
+                                            <span>More</span>
+                                        </button>
+                                        <div class="status-dropdown" id="status-dropdown-{{ $userId }}" style="right:0; left:auto; top:100%; min-width:220px;">
                                             <button class="dropdown-item-custom" onclick="openEditUserModal({{ $userId }})">
                                                 <i class="bi bi-pencil"></i>
                                                 <span>Edit User</span>
@@ -684,18 +702,6 @@
                                                 <span>Delete User</span>
                                             </button>
                                         </div>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div class="action-buttons">
-                                        <button class="action-btn reset" onclick="resetUserPassword({{ $userId }}, '{{ $userName }}')" title="Reset Password">
-                                            <i class="bi bi-arrow-clockwise"></i>
-                                            <span>Reset Password</span>
-                                        </button>
-                                        <button class="action-btn delete" onclick="deleteUser({{ $userId }}, '{{ $userName }}')" title="Delete User">
-                                            <i class="bi bi-trash"></i>
-                                            <span>Delete User</span>
-                                        </button>
                                     </div>
                                 </td>
                             </tr>
@@ -902,17 +908,15 @@
                 }
             });
 
-            // Toggle Status Dropdown (when clicking Active/Inactive)
+            // Toggle Status Dropdown (when clicking More in actions)
             function toggleStatusDropdown(event, userId) {
                 event.stopPropagation();
-                
                 // Close all other dropdowns
                 document.querySelectorAll('.status-dropdown').forEach(dropdown => {
                     if (dropdown.id !== `status-dropdown-${userId}`) {
                         dropdown.classList.remove('show');
                     }
                 });
-                
                 // Toggle current dropdown
                 const dropdown = document.getElementById(`status-dropdown-${userId}`);
                 dropdown.classList.toggle('show');
@@ -1089,14 +1093,30 @@
                 // Select All Checkbox
                 const selectAll = document.getElementById('selectAllUsers');
                 const userCheckboxes = document.querySelectorAll('.user-checkbox:not(#selectAllUsers)');
+                const selectedUsersLabel = document.getElementById('selectedUsersLabel');
+
+                function updateSelectedUsersLabel() {
+                    const selectedCount = Array.from(userCheckboxes).filter(cb => cb.checked).length;
+                    if (selectedCount > 0) {
+                        selectedUsersLabel.textContent = selectedCount + ' selected';
+                        selectedUsersLabel.style.display = '';
+                    } else {
+                        selectedUsersLabel.style.display = 'none';
+                    }
+                }
 
                 if (selectAll) {
                     selectAll.addEventListener('change', function() {
                         userCheckboxes.forEach(checkbox => {
                             checkbox.checked = selectAll.checked;
                         });
+                        updateSelectedUsersLabel();
                     });
                 }
+
+                userCheckboxes.forEach(cb => {
+                    cb.addEventListener('change', updateSelectedUsersLabel);
+                });
 
                 // Search Functionality
                 const searchInput = document.getElementById('searchInput');

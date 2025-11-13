@@ -64,19 +64,27 @@ class ExamController extends Controller
                 ->first();
 
             // Determine exam status
-            $status = 'available';
-            $now = Carbon::now();
 
-            if ($exam->schedule_start && $now->lt(Carbon::parse($exam->schedule_start))) {
+            $status = 'available';
+            $now = Carbon::now('Asia/Manila');
+
+            $scheduleStart = $exam->schedule_start ? Carbon::parse($exam->schedule_start)->timezone('Asia/Manila') : null;
+            $scheduleEnd = $exam->schedule_end ? Carbon::parse($exam->schedule_end)->timezone('Asia/Manila') : null;
+
+            if ($scheduleStart && $now->lt($scheduleStart)) {
                 $status = 'scheduled';
-            } elseif ($exam->schedule_end && $now->gt(Carbon::parse($exam->schedule_end))) {
+            } elseif ($scheduleEnd && $now->gt($scheduleEnd)) {
                 $status = 'expired';
+            } elseif ($scheduleStart && $scheduleEnd && $now->gte($scheduleStart) && $now->lte($scheduleEnd)) {
+                $status = 'available';
             } elseif ($attempt && $attempt->status === 'submitted') {
                 $status = 'completed';
             } elseif ($attempt && $attempt->status === 'in_progress') {
                 $status = 'in_progress';
             }
 
+            // Validate release_results from DB: 1 = true, 0 = false
+            $releaseResults = ($exam->release_results === 1 || $exam->release_results === '1');
             return [
                 'assignment_id' => $assignment->assignment_id,
                 'exam_id' => $exam->exam_id,
@@ -91,17 +99,17 @@ class ExamController extends Controller
                     'id' => $assignment->class->class_id ?? null,
                     'title' => $assignment->class->title ?? null,
                 ],
-                'schedule_start' => $exam->schedule_start,
-                'schedule_end' => $exam->schedule_end,
+                'schedule_start' => $scheduleStart ? $scheduleStart->format('Y-m-d H:i:s') : null,
+                'schedule_end' => $scheduleEnd ? $scheduleEnd->format('Y-m-d H:i:s') : null,
                 'duration' => $exam->duration, // in minutes
                 'duration_seconds' => $exam->duration * 60, // in seconds
                 'total_points' => $exam->total_points,
                 'no_of_items' => $exam->no_of_items,
-                'status' => $status,
+                'status' => '$status',
                 // Additional fields for Flutter integration guide compatibility
                 'requiresOtp' => !empty($exam->exam_password),
-                'resultsReleased' => $status === 'completed' && $attempt && $attempt->score !== null,
-                'allowReview' => false, // Set based on your review policy
+                'resultsReleased' =>  $releaseResults,
+                'allowReview' => true, // Set based on your review policy
                 'attempt' => $attempt ? [
                     'attempt_id' => $attempt->attempt_id,
                     'start_time' => $attempt->start_time,
@@ -117,9 +125,15 @@ class ExamController extends Controller
             'exam_count' => $exams->count()
         ]);
 
-        return response()->json([
+
+        $responseData = [
             'exams' => $exams,
+        ];
+        Log::info('API Get Exams Response Body', [
+            'student_id' => $studentId,
+            'response_body' => $responseData
         ]);
+        return response()->json($responseData);
     }
 
     /**
@@ -179,12 +193,18 @@ class ExamController extends Controller
                 if ($itemType === 'enum' && $item->enum_type) {
                     $itemType = 'enum_' . $item->enum_type; // e.g., 'enum_ordered' or 'enum_unordered'
                 }
-                
+
+                // Fix options for True/False questions
+                $options = $item->options;
+                if ($itemType === 'torf') {
+                    $options = ['True', 'False'];
+                }
+
                 return [
                     'item_id' => $item->item_id,
                     'question' => $item->question,
                     'item_type' => $itemType,
-                    'options' => $item->options, // JSON decoded automatically
+                    'options' => $options,
                     'points_awarded' => $item->points_awarded,
                     'order' => $item->order,
                     // Don't send expected_answer or answer to student
@@ -207,7 +227,7 @@ class ExamController extends Controller
             'has_attempt' => $attempt !== null
         ]);
 
-        return response()->json([
+        $responseData = [
             'exam' => [
                 'exam_id' => $exam->exam_id,
                 'title' => $exam->exam_title,
@@ -233,7 +253,13 @@ class ExamController extends Controller
                 'score' => $attempt->score,
                 'status' => $attempt->status,
             ] : null,
+        ];
+        Log::info('API Get Exam Details Response Body', [
+            'student_id' => $studentId,
+            'exam_id' => $examId,
+            'response_body' => $responseData
         ]);
+        return response()->json($responseData);
     }
 
     /**
@@ -363,7 +389,7 @@ class ExamController extends Controller
                     : 0,
                 'completed_at' => $attempt->end_time,
                 'submitted_at' => $attempt->end_time,
-                'resultsReleased' => $attempt->score !== null,
+                'resultsReleased' => $attempt->score !== null ,
             ];
         });
 
@@ -527,6 +553,13 @@ class ExamController extends Controller
         ]);
 
         $studentId = $request->user()->id;
+
+        // Log the full request body sent by the mobile app
+        Log::info('API Submit Attempt - Mobile App Request Body', [
+            'attempt_id' => $attemptId,
+            'student_id' => $studentId,
+            'request_body' => $request->all()
+        ]);
 
         // Get attempt
         $attempt = ExamAttempt::find($attemptId);
@@ -993,7 +1026,25 @@ class ExamController extends Controller
                 return response()->json($errorResponse, 400);
             }
 
+
             $exam = $attempt->examAssignment->exam;
+            // Check if results are released
+            if (!$exam->release_results) {
+                $errorResponse = [
+                    'message' => 'Results have not yet been released.'
+                ];
+                \Log::debug('=== EXAM RESULTS API RESPONSE (NOT RELEASED) ===', [
+                    'attempt_id' => $attemptId,
+                    'student_id' => $studentId,
+                    'exam_id' => $exam->exam_id,
+                    'release_results' => $exam->release_results,
+                    'status_code' => 403,
+                    'error' => 'Results not released by instructor',
+                    'response_data' => $errorResponse,
+                    'timestamp' => now()->toDateTimeString(),
+                ]);
+                return response()->json($errorResponse, 403);
+            }
 
             // Create a map of student answers for quick lookup
             $studentAnswersMap = [];
@@ -1111,6 +1162,15 @@ class ExamController extends Controller
                         'maxPoints' => (float) $item->points_awarded,
                         'order' => $item->order ?? 0,
                     ];
+                    // Add AI feedback for essay items
+                    if ($item->item_type === 'essay' && $studentAnswer) {
+                        if (!empty($studentAnswer->ai_feedback)) {
+                            $resultItem['ai_feedback'] = $studentAnswer->ai_feedback;
+                        }
+                        if (!empty($studentAnswer->ai_confidence)) {
+                            $resultItem['ai_confidence'] = $studentAnswer->ai_confidence;
+                        }
+                    }
 
                     // Add directions if available
                     if (!empty($section->section_directions)) {
@@ -1170,6 +1230,11 @@ class ExamController extends Controller
                 'timestamp' => now()->toDateTimeString(),
             ]);
 
+            Log::info('API GetResults Response Body', [
+                'attempt_id' => $attemptId,
+                'student_id' => $studentId,
+                'response_body' => $responseData
+            ]);
             return response()->json($responseData);
         } catch (\Exception $e) {
             $errorResponse = [

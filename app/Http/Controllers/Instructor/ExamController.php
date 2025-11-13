@@ -2003,4 +2003,20 @@ class ExamController extends Controller
             'message' => $comment->resolved ? 'Comment marked as resolved' : 'Comment marked as unresolved'
         ]);
     }
+    /**
+     * Release results for an exam (set release_results to true)
+     */
+    public function releaseResults($examId)
+    {
+        $exam = Exam::findOrFail($examId);
+        $teacherId = Auth::id();
+        $hasAccess = $exam->teacher_id == $teacherId ||
+                     $exam->collaborations->contains('teacher_id', $teacherId);
+        if (!$hasAccess) {
+            return redirect()->back()->with('error', 'Unauthorized to release results for this exam.');
+        }
+        $exam->release_results = true;
+        $exam->save();
+        return redirect()->back()->with('success', 'Results have been released for this exam.');
+    }
 }
