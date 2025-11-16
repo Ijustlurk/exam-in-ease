@@ -873,7 +873,7 @@
                 </div>
                 
                 <!-- Student Performance Content -->
-                <div id="studentPerformanceContainer" style="display: none;">
+                <div id="studentPerformanceContainer" style="display: none; max-height: 70vh; overflow-y: auto; padding-right: 8px;">
                     <!-- Will be populated when student is selected -->
                 </div>
             </div>

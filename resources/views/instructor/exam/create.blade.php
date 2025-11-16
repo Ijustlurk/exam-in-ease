@@ -3598,7 +3598,6 @@ function updateQuestionCardData(cardElement, item) {
                 optionsPreview.className = 'question-options-preview';
                 collapsedView.appendChild(optionsPreview);
             }
-            
             optionsPreview.innerHTML = '';
             options.forEach((option, index) => {
                 if (option) {
@@ -3615,6 +3614,27 @@ function updateQuestionCardData(cardElement, item) {
             });
         } else if (optionsPreview) {
             optionsPreview.remove();
+        }
+
+        // Update expected answers preview for ENUM
+        let enumPreview = collapsedView.querySelector('.question-answer-preview');
+        if (item.item_type === 'enum' && Array.isArray(answer) && answer.filter(a => a).length > 0) {
+            if (!enumPreview) {
+                enumPreview = document.createElement('div');
+                enumPreview.className = 'question-answer-preview';
+                collapsedView.appendChild(enumPreview);
+            }
+            let enumType = item.enum_type === 'ordered' ? '(Ordered)' : '(Any Order)';
+            let html = `<div class="answer-preview-label"><i class="bi bi-list-ol me-2"></i><span>Expected Answers ${enumType}:</span></div>`;
+            html += '<ol class="enum-preview-list">';
+            answer.forEach(enumAnswer => {
+                if (enumAnswer) html += `<li>${enumAnswer}</li>`;
+            });
+            html += '</ol>';
+            enumPreview.innerHTML = html;
+        } else if (enumPreview && enumPreview.querySelector('.answer-preview-label')) {
+            // Only remove if it's an enum preview
+            enumPreview.remove();
         }
     }
     
