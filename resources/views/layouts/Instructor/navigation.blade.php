@@ -129,8 +129,8 @@
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between h-16">
             <div class="flex items-center">
-                <a href="{{ route('dashboard') }}" class="text-dark fs-2">
-                    <i class="bi bi-clipboard-data"></i>
+                <a href="{{ route('dashboard') }}" class="text-dark fs-2 d-flex align-items-center">
+                    <img src="{{ asset('images/Asset 4.png') }}" alt="ExamInEase logo" style="height:36px; object-fit:contain; margin-right:8px;">
                 </a>
             </div>
 
